@@ -4,6 +4,7 @@ import { Lock, Check, ChevronDown, ChevronUp } from "lucide-react";
 import { MaryAvatar } from "@/components/MaryAvatar";
 import { BottomNav } from "@/components/BottomNav";
 import { useGameState } from "@/hooks/useGameState";
+import { useReviewLog } from "@/hooks/useReviewLog";
 import { useToast } from "@/hooks/use-toast";
 
 const OUTFITS = [
@@ -41,10 +42,11 @@ export default function OptionsScreen() {
   const { toast } = useToast();
   const { state, weeklyReadingCount, xpPercent, actions } = useGameState();
   const { level, xp, hearts, streakCount } = state;
+  const { entries, addSampleEntry, clearLog } = useReviewLog();
 
   const notify = (msg: string) => toast({ description: msg, duration: 1800 });
 
-  const devActions: DevButtonProps[] = [
+  const gameDevActions: DevButtonProps[] = [
     {
       label: "Add 1 XP",
       testId: "dev-add-1xp",
@@ -80,6 +82,30 @@ export default function OptionsScreen() {
       testId: "dev-reset",
       variant: "danger",
       onClick: () => { actions.resetData(); notify("Data reset to defaults"); },
+    },
+  ];
+
+  const reviewLogDevActions: DevButtonProps[] = [
+    {
+      label: "Add Sample Daily Talk Log",
+      testId: "dev-log-daily",
+      onClick: () => { addSampleEntry("Daily Talk", level); notify("Daily Talk log added"); },
+    },
+    {
+      label: "Add Sample Reading Talk Log",
+      testId: "dev-log-reading",
+      onClick: () => { addSampleEntry("Reading Talk", level); notify("Reading Talk log added"); },
+    },
+    {
+      label: "Add Sample Review Challenge Log",
+      testId: "dev-log-review",
+      onClick: () => { addSampleEntry("Review Challenge", level); notify("Review Challenge log added"); },
+    },
+    {
+      label: "Clear Review Log",
+      testId: "dev-log-clear",
+      variant: "danger",
+      onClick: () => { clearLog(); notify("Review Log cleared"); },
     },
   ];
 
@@ -161,7 +187,7 @@ export default function OptionsScreen() {
                 exit={{ opacity: 0, height: 0 }}
                 className="overflow-hidden"
               >
-                <div className="mt-3 bg-card border border-border rounded-2xl p-4 space-y-4">
+                <div className="mt-3 bg-card border border-border rounded-2xl p-4 space-y-5">
 
                   {/* Current State Display */}
                   <div className="bg-secondary/40 rounded-xl p-3 font-mono text-xs text-muted-foreground space-y-1" data-testid="dev-state-display">
@@ -170,14 +196,32 @@ export default function OptionsScreen() {
                     <div>Hearts: <span className="text-foreground font-bold">{hearts} / 2</span></div>
                     <div>Streak: <span className="text-foreground font-bold">{streakCount} / 7 days</span></div>
                     <div>Weekly Reading: <span className="text-foreground font-bold">{weeklyReadingCount} / 3</span></div>
+                    <div>Review Log entries: <span className="text-foreground font-bold">{entries.length}</span></div>
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex flex-wrap gap-2">
-                    {devActions.map((action) => (
-                      <DevButton key={action.testId} {...action} />
-                    ))}
+                  {/* Game Actions */}
+                  <div>
+                    <p className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-wide">Game State</p>
+                    <div className="flex flex-wrap gap-2">
+                      {gameDevActions.map((action) => (
+                        <DevButton key={action.testId} {...action} />
+                      ))}
+                    </div>
                   </div>
+
+                  {/* Divider */}
+                  <div className="border-t border-border" />
+
+                  {/* Review Log Actions */}
+                  <div>
+                    <p className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-wide">Review Log Test</p>
+                    <div className="flex flex-wrap gap-2">
+                      {reviewLogDevActions.map((action) => (
+                        <DevButton key={action.testId} {...action} />
+                      ))}
+                    </div>
+                  </div>
+
                 </div>
               </motion.div>
             )}

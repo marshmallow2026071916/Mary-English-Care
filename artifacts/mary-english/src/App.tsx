@@ -6,6 +6,7 @@ import NotFound from "@/pages/not-found";
 import TopScreen from "@/pages/TopScreen";
 import TasksScreen from "@/pages/TasksScreen";
 import OptionsScreen from "@/pages/OptionsScreen";
+import ReviewLogScreen from "@/pages/ReviewLogScreen";
 
 const queryClient = new QueryClient();
 
@@ -15,6 +16,7 @@ function Router() {
       <Route path="/" component={TopScreen} />
       <Route path="/tasks" component={TasksScreen} />
       <Route path="/options" component={OptionsScreen} />
+      <Route path="/review-log" component={ReviewLogScreen} />
       <Route component={NotFound} />
     </Switch>
   );

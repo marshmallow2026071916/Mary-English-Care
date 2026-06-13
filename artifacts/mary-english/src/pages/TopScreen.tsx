@@ -94,12 +94,12 @@ export default function TopScreen() {
         {/* Navigation Buttons */}
         <div className="flex flex-col gap-3 mt-8">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
-            <Link href="/tasks">
+            <Link href="/review-log">
               <div
                 className="w-full bg-card hover:bg-card/80 active:scale-95 transition-all text-center py-4 rounded-3xl shadow-sm border border-border font-bold text-foreground cursor-pointer"
-                data-testid="btn-history"
+                data-testid="btn-review-log"
               >
-                Conversation History
+                Review Log
               </div>
             </Link>
           </motion.div>
