@@ -1,16 +1,16 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lock, Check, ChevronDown, ChevronUp } from "lucide-react";
+import { Lock, Check, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
 import { MaryAvatar } from "@/components/MaryAvatar";
 import { BottomNav } from "@/components/BottomNav";
-import { useGameState } from "@/hooks/useGameState";
+import { useGame } from "@/context/GameContext";
 import { useReviewLog } from "@/hooks/useReviewLog";
 import { useToast } from "@/hooks/use-toast";
 
 const OUTFITS = [
-  { id: "black", name: "Black Outfit", locked: false, color: "bg-[#2c2c2c]" },
-  { id: "level", name: "Level Reward Outfit", locked: true, color: "bg-secondary" },
-  { id: "seasonal", name: "Seasonal Outfit", locked: true, color: "bg-accent/40" },
+  { id: "black", name: "Black Outfit", swatchClass: "bg-gradient-to-br from-slate-700 to-slate-900" },
+  { id: "level", name: "Level Reward Outfit", swatchClass: "bg-gradient-to-br from-amber-300 to-orange-400" },
+  { id: "seasonal", name: "Seasonal Outfit", swatchClass: "bg-gradient-to-br from-teal-300 to-emerald-400" },
 ];
 
 interface DevButtonProps {
@@ -37,76 +37,41 @@ function DevButton({ label, onClick, testId, variant = "default" }: DevButtonPro
 }
 
 export default function OptionsScreen() {
-  const [selectedOutfit, setSelectedOutfit] = useState("black");
   const [devOpen, setDevOpen] = useState(false);
   const { toast } = useToast();
-  const { state, weeklyReadingCount, xpPercent, actions } = useGameState();
-  const { level, xp, hearts, streakCount } = state;
+  const {
+    gs, weeklyReadingCount, xpPercent, emote, isUnlocked,
+    actions,
+  } = useGame();
+  const { level, xp, hearts, streakCount, equippedOutfit } = gs;
   const { entries, addSampleEntry, clearLog } = useReviewLog();
 
   const notify = (msg: string) => toast({ description: msg, duration: 1800 });
 
   const gameDevActions: DevButtonProps[] = [
-    {
-      label: "Add 1 XP",
-      testId: "dev-add-1xp",
-      onClick: () => { actions.addXP(1); notify("+1 XP"); },
-    },
-    {
-      label: "Add 10 XP",
-      testId: "dev-add-10xp",
-      onClick: () => { actions.addXP(10); notify("+10 XP"); },
-    },
-    {
-      label: "Complete Daily Talk",
-      testId: "dev-complete-daily",
-      onClick: () => { actions.completeDailyTalk(); notify("Daily Talk completed!"); },
-    },
-    {
-      label: "Complete Reading Talk",
-      testId: "dev-complete-reading",
-      onClick: () => { actions.completeReadingTalk(); notify("Reading Talk completed!"); },
-    },
-    {
-      label: "Add Heart",
-      testId: "dev-add-heart",
-      onClick: () => { actions.addHeart(); notify("Heart added"); },
-    },
-    {
-      label: "Remove Heart",
-      testId: "dev-remove-heart",
-      onClick: () => { actions.removeHeart(); notify("Heart removed"); },
-    },
-    {
-      label: "Reset Data",
-      testId: "dev-reset",
-      variant: "danger",
-      onClick: () => { actions.resetData(); notify("Data reset to defaults"); },
-    },
+    { label: "Add 1 XP",         testId: "dev-add-1xp",          onClick: () => { actions.addXP(1);               notify("+1 XP"); } },
+    { label: "Add 10 XP",        testId: "dev-add-10xp",         onClick: () => { actions.addXP(10);              notify("+10 XP"); } },
+    { label: "Complete Daily Talk",   testId: "dev-complete-daily",   onClick: () => { actions.completeDailyTalk();    } },
+    { label: "Complete Reading Talk", testId: "dev-complete-reading", onClick: () => { actions.completeReadingTalk();  notify("Reading Talk completed!"); } },
+    { label: "Add Heart",         testId: "dev-add-heart",        onClick: () => { actions.addHeart();             } },
+    { label: "Remove Heart",      testId: "dev-remove-heart",     onClick: () => { actions.removeHeart();          notify("Heart removed"); } },
+    { label: "Reset Data",        testId: "dev-reset",            variant: "danger", onClick: () => { actions.resetData(); notify("Data reset"); } },
+  ];
+
+  const rewardDevActions: DevButtonProps[] = [
+    { label: "Trigger Small Reward",       testId: "dev-small-reward",    onClick: () => actions.triggerSmallReward() },
+    { label: "Trigger Level Up Reward",    testId: "dev-levelup-reward",  onClick: () => actions.triggerLevelUpReward() },
+    { label: "Trigger Heart Reward",       testId: "dev-heart-reward",    onClick: () => actions.triggerHeartReward() },
+    { label: "Unlock Level Reward Outfit", testId: "dev-unlock-level",    onClick: () => { actions.unlockLevelRewardOutfit(); notify("Level Reward Outfit unlocked!"); } },
+    { label: "Unlock Seasonal Outfit",     testId: "dev-unlock-seasonal", onClick: () => actions.unlockSeasonalOutfit() },
+    { label: "Reset Wardrobe",             testId: "dev-reset-wardrobe",  variant: "danger", onClick: () => { actions.resetWardrobe(); notify("Wardrobe reset"); } },
   ];
 
   const reviewLogDevActions: DevButtonProps[] = [
-    {
-      label: "Add Sample Daily Talk Log",
-      testId: "dev-log-daily",
-      onClick: () => { addSampleEntry("Daily Talk", level); notify("Daily Talk log added"); },
-    },
-    {
-      label: "Add Sample Reading Talk Log",
-      testId: "dev-log-reading",
-      onClick: () => { addSampleEntry("Reading Talk", level); notify("Reading Talk log added"); },
-    },
-    {
-      label: "Add Sample Review Challenge Log",
-      testId: "dev-log-review",
-      onClick: () => { addSampleEntry("Review Challenge", level); notify("Review Challenge log added"); },
-    },
-    {
-      label: "Clear Review Log",
-      testId: "dev-log-clear",
-      variant: "danger",
-      onClick: () => { clearLog(); notify("Review Log cleared"); },
-    },
+    { label: "Add Sample Daily Talk Log",       testId: "dev-log-daily",   onClick: () => { addSampleEntry("Daily Talk", level);       notify("Daily Talk log added"); } },
+    { label: "Add Sample Reading Talk Log",     testId: "dev-log-reading", onClick: () => { addSampleEntry("Reading Talk", level);     notify("Reading Talk log added"); } },
+    { label: "Add Sample Review Challenge Log", testId: "dev-log-review",  onClick: () => { addSampleEntry("Review Challenge", level); notify("Review Challenge log added"); } },
+    { label: "Clear Review Log",                testId: "dev-log-clear",   variant: "danger", onClick: () => { clearLog(); notify("Review Log cleared"); } },
   ];
 
   return (
@@ -119,7 +84,7 @@ export default function OptionsScreen() {
 
         {/* Avatar Preview */}
         <div className="flex justify-center mb-10">
-          <MaryAvatar height={240} showEmote={false} />
+          <MaryAvatar height={240} showEmote={false} outfit={equippedOutfit} emote={emote} />
         </div>
 
         {/* Wardrobe Section */}
@@ -128,39 +93,54 @@ export default function OptionsScreen() {
 
           <div className="grid grid-cols-2 gap-4">
             {OUTFITS.map((outfit) => {
-              const isSelected = selectedOutfit === outfit.id;
+              const unlocked = isUnlocked(outfit.id);
+              const selected = equippedOutfit === outfit.id;
 
               return (
                 <motion.div
                   key={outfit.id}
                   className={`
                     relative rounded-2xl border-2 p-3 flex flex-col items-center gap-3 transition-all
-                    ${outfit.locked
-                      ? "bg-muted/50 border-transparent opacity-70"
-                      : isSelected
+                    ${!unlocked
+                      ? "bg-muted/50 border-transparent opacity-60"
+                      : selected
                         ? "bg-card border-primary shadow-sm"
                         : "bg-card border-border shadow-sm cursor-pointer hover:border-primary/50"}
                   `}
-                  onClick={() => !outfit.locked && setSelectedOutfit(outfit.id)}
-                  whileTap={!outfit.locked ? { scale: 0.96 } : undefined}
+                  onClick={() => unlocked && actions.equipOutfit(outfit.id)}
+                  whileTap={unlocked ? { scale: 0.96 } : undefined}
                   data-testid={`outfit-card-${outfit.id}`}
                 >
-                  <div className={`w-16 h-20 rounded-xl ${outfit.color} flex items-center justify-center shadow-inner relative overflow-hidden`}>
-                    {outfit.locked && (
+                  {/* Swatch */}
+                  <div className={`w-16 h-20 rounded-xl ${outfit.swatchClass} flex items-center justify-center shadow-inner relative overflow-hidden`}>
+                    {!unlocked && (
                       <div className="absolute inset-0 bg-background/40 backdrop-blur-[1px] flex items-center justify-center">
                         <Lock className="w-6 h-6 text-foreground/50" />
                       </div>
                     )}
+                    {unlocked && outfit.id !== "black" && (
+                      <Sparkles className="w-5 h-5 text-white/70" />
+                    )}
                   </div>
 
-                  <span className={`text-xs font-bold text-center ${outfit.locked ? "text-muted-foreground" : "text-foreground"}`}>
+                  <span className={`text-xs font-bold text-center leading-tight ${!unlocked ? "text-muted-foreground" : "text-foreground"}`}>
                     {outfit.name}
                   </span>
 
-                  {!outfit.locked && isSelected && (
+                  {/* Selected checkmark */}
+                  {unlocked && selected && (
                     <div className="absolute -top-2 -right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center shadow-sm">
                       <Check className="w-4 h-4 text-primary-foreground" strokeWidth={3} />
                     </div>
+                  )}
+
+                  {/* Newly unlocked glow */}
+                  {unlocked && outfit.id !== "black" && !selected && (
+                    <motion.div
+                      className="absolute inset-0 rounded-2xl border-2 border-primary/40"
+                      animate={{ opacity: [0.4, 1, 0.4] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    />
                   )}
                 </motion.div>
               );
@@ -189,36 +169,44 @@ export default function OptionsScreen() {
               >
                 <div className="mt-3 bg-card border border-border rounded-2xl p-4 space-y-5">
 
-                  {/* Current State Display */}
+                  {/* State readout */}
                   <div className="bg-secondary/40 rounded-xl p-3 font-mono text-xs text-muted-foreground space-y-1" data-testid="dev-state-display">
                     <div>Level: <span className="text-foreground font-bold">{level}</span></div>
                     <div>XP: <span className="text-foreground font-bold">{xp} / 200</span> ({xpPercent.toFixed(0)}%)</div>
                     <div>Hearts: <span className="text-foreground font-bold">{hearts} / 2</span></div>
                     <div>Streak: <span className="text-foreground font-bold">{streakCount} / 7 days</span></div>
                     <div>Weekly Reading: <span className="text-foreground font-bold">{weeklyReadingCount} / 3</span></div>
+                    <div>Outfit: <span className="text-foreground font-bold">{equippedOutfit}</span></div>
+                    <div>Unlocked: <span className="text-foreground font-bold">{gs.unlockedOutfits.join(", ")}</span></div>
+                    <div>Emote: <span className="text-foreground font-bold">{emote}</span></div>
                     <div>Review Log entries: <span className="text-foreground font-bold">{entries.length}</span></div>
                   </div>
 
-                  {/* Game Actions */}
+                  {/* Game State */}
                   <div>
                     <p className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-wide">Game State</p>
                     <div className="flex flex-wrap gap-2">
-                      {gameDevActions.map((action) => (
-                        <DevButton key={action.testId} {...action} />
-                      ))}
+                      {gameDevActions.map((a) => <DevButton key={a.testId} {...a} />)}
                     </div>
                   </div>
 
-                  {/* Divider */}
                   <div className="border-t border-border" />
 
-                  {/* Review Log Actions */}
+                  {/* Rewards & Wardrobe */}
+                  <div>
+                    <p className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-wide">Rewards &amp; Wardrobe</p>
+                    <div className="flex flex-wrap gap-2">
+                      {rewardDevActions.map((a) => <DevButton key={a.testId} {...a} />)}
+                    </div>
+                  </div>
+
+                  <div className="border-t border-border" />
+
+                  {/* Review Log */}
                   <div>
                     <p className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-wide">Review Log Test</p>
                     <div className="flex flex-wrap gap-2">
-                      {reviewLogDevActions.map((action) => (
-                        <DevButton key={action.testId} {...action} />
-                      ))}
+                      {reviewLogDevActions.map((a) => <DevButton key={a.testId} {...a} />)}
                     </div>
                   </div>
 

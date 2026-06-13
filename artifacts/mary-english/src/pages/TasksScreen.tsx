@@ -4,7 +4,7 @@ import { Copy, CheckCircle2 } from "lucide-react";
 import { MaryAvatar } from "@/components/MaryAvatar";
 import { BottomNav } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
-import { useGameState } from "@/hooks/useGameState";
+import { useGame } from "@/context/GameContext";
 
 const COMMANDS = [
   { id: "daily", label: "Daily Talk", text: "Let's have our daily English conversation." },
@@ -26,9 +26,7 @@ function ProgressRow({ label, current, max, completed, showBar }: ProgressRowPro
   return (
     <div
       className={`p-4 rounded-2xl shadow-sm border flex justify-between items-center ${
-        completed
-          ? "bg-primary/10 border-primary/20"
-          : "bg-card border-border"
+        completed ? "bg-primary/10 border-primary/20" : "bg-card border-border"
       }`}
     >
       <span className={`font-bold ${completed ? "text-primary" : "text-foreground"}`}>{label}</span>
@@ -59,8 +57,8 @@ function ProgressRow({ label, current, max, completed, showBar }: ProgressRowPro
 export default function TasksScreen() {
   const { toast } = useToast();
   const [showStartMessage, setShowStartMessage] = useState(false);
-  const { state, dailyTalkDone, weeklyReadingCount } = useGameState();
-  const { streakCount } = state;
+  const { gs, dailyTalkDone, weeklyReadingCount, emote } = useGame();
+  const { streakCount, equippedOutfit } = gs;
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -77,7 +75,7 @@ export default function TasksScreen() {
 
         {/* Header Avatar & Message */}
         <div className="flex items-center gap-4 mb-10">
-          <MaryAvatar height={140} showEmote={false} className="scale-90 origin-left" />
+          <MaryAvatar height={140} showEmote={false} outfit={equippedOutfit} emote={emote} className="scale-90 origin-left" />
 
           <motion.div
             className="bg-white px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm border border-border flex-1"
@@ -85,20 +83,13 @@ export default function TasksScreen() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ type: "spring", bounce: 0.4 }}
           >
-            <p className="text-sm font-medium text-foreground">
-              Can we talk today?
-            </p>
+            <p className="text-sm font-medium text-foreground">Can we talk today?</p>
           </motion.div>
         </div>
 
         {/* Progress Sections */}
         <div className="space-y-4 mb-10">
-          <ProgressRow
-            label="Daily Talk"
-            current={dailyTalkDone ? 1 : 0}
-            max={1}
-            completed={dailyTalkDone}
-          />
+          <ProgressRow label="Daily Talk" current={dailyTalkDone ? 1 : 0} max={1} completed={dailyTalkDone} />
 
           <div className="bg-card p-4 rounded-2xl shadow-sm border border-border">
             <div className="flex justify-between items-center mb-2">
@@ -113,7 +104,7 @@ export default function TasksScreen() {
                 style={{ width: `${Math.min(100, (streakCount / 7) * 100)}%` }}
               />
             </div>
-            {state.hearts === 0 && (
+            {gs.hearts === 0 && (
               <p className="text-xs text-muted-foreground mt-2 italic">
                 Restore a heart to continue streak progress.
               </p>
@@ -128,19 +119,12 @@ export default function TasksScreen() {
             showBar
           />
 
-          <ProgressRow
-            label="Special Tasks"
-            current={3}
-            max={3}
-            completed
-          />
+          <ProgressRow label="Special Tasks" current={3} max={3} completed />
         </div>
 
         {/* Talk Commands */}
         <div className="mb-10">
-          <h2 className="text-lg font-bold text-foreground mb-4 pl-2 border-l-4 border-primary">
-            Talk Commands
-          </h2>
+          <h2 className="text-lg font-bold text-foreground mb-4 pl-2 border-l-4 border-primary">Talk Commands</h2>
           <div className="space-y-3">
             {COMMANDS.map((cmd, i) => (
               <motion.div
@@ -168,7 +152,7 @@ export default function TasksScreen() {
           </div>
         </div>
 
-        {/* Start Talk Action */}
+        {/* Start Talk */}
         <div className="pb-8">
           <button
             onClick={() => setShowStartMessage(true)}

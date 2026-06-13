@@ -2,13 +2,13 @@ import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { MaryAvatar } from "@/components/MaryAvatar";
 import { BottomNav } from "@/components/BottomNav";
-import { useGameState } from "@/hooks/useGameState";
+import { useGame } from "@/context/GameContext";
 
 const MAX_HEARTS = 2;
 
 export default function TopScreen() {
-  const { state, xpPercent } = useGameState();
-  const { level, xp, hearts } = state;
+  const { gs, xpPercent, emote } = useGame();
+  const { level, xp, hearts, equippedOutfit } = gs;
 
   return (
     <div className="min-h-[100dvh] w-full bg-background flex flex-col pb-24 items-center">
@@ -54,12 +54,14 @@ export default function TopScreen() {
 
           <div className="flex items-center gap-1 font-bold" data-testid="badge-hearts">
             {Array.from({ length: MAX_HEARTS }).map((_, i) => (
-              <span
+              <motion.span
                 key={i}
                 className={i < hearts ? "text-accent" : "text-muted-foreground/40"}
+                animate={i < hearts ? { scale: [1, 1.15, 1] } : {}}
+                transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.3 }}
               >
                 ❤
-              </span>
+              </motion.span>
             ))}
             <span className="ml-1 text-sm text-foreground">{hearts} / {MAX_HEARTS}</span>
           </div>
@@ -87,7 +89,7 @@ export default function TopScreen() {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
           >
-            <MaryAvatar />
+            <MaryAvatar outfit={equippedOutfit} emote={emote} showEmote />
           </motion.div>
         </div>
 
