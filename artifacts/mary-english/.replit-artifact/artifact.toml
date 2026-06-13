@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Mary English"
+version = "1.0.0"
+id = "artifacts/mary-english"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18206
+
+[services.development]
+run = "pnpm --filter @workspace/mary-english run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/mary-english", "run", "build" ]
+publicDir = "artifacts/mary-english/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18206"
+BASE_PATH = "/"
