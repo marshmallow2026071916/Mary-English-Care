@@ -14,8 +14,7 @@ export type ModalType =
   | "daily-talk"
   | "heart"
   | "seasonal"
-  | "small-reward"
-  | null;
+  | "small-reward";
 
 export interface GameState {
   level: number;
@@ -30,13 +29,31 @@ export interface GameState {
   equippedOutfit: string;
 }
 
+export interface SessionImportData {
+  session_id?: string;
+  date: string;
+  task_type: string;
+  xp_gained: number;
+  daily_completed?: boolean;
+  reading_talk_completed?: boolean;
+  special_completed?: boolean;
+  rallies?: number;
+  summary?: string;
+}
+
+export interface ImportResult {
+  dailyNewlyCompleted: boolean;
+  readingNewlyCompleted: boolean;
+  leveledUp: boolean;
+}
+
 interface GameContextValue {
   gs: GameState;
   dailyTalkDone: boolean;
   weeklyReadingCount: number;
   xpPercent: number;
   emote: EmoteState;
-  activeModal: ModalType;
+  activeModal: ModalType | null;
   closeModal: () => void;
   isUnlocked: (id: string) => boolean;
   actions: {
@@ -54,6 +71,7 @@ interface GameContextValue {
     triggerLevelUpReward: () => void;
     triggerHeartReward: () => void;
     unlockLevelRewardOutfit: () => void;
+    importSessionData: (data: SessionImportData) => ImportResult;
   };
 }
 
@@ -86,6 +104,11 @@ function getMondayStr(date: Date) {
   d.setUTCDate(d.getUTCDate() + (day === 0 ? -6 : 1 - day));
   return d.toISOString().slice(0, 10);
 }
+function getDayBefore(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00Z");
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
 function loadState(): GameState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -99,6 +122,7 @@ function persist(state: GameState) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
 function applyXP(state: GameState, amount: number): GameState {
+  if (amount <= 0) return state;
   let xp = state.xp + amount;
   let level = state.level;
   while (xp >= XP_PER_LEVEL) {
@@ -109,6 +133,11 @@ function applyXP(state: GameState, amount: number): GameState {
 }
 function effectiveWeeklyReading(state: GameState) {
   const monday = getMondayStr(new Date());
+  if (state.weeklyReadingMondayStr !== monday) return { count: 0, monday };
+  return { count: state.weeklyReadingCount, monday };
+}
+function effectiveWeeklyReadingForDate(state: GameState, dateStr: string) {
+  const monday = getMondayStr(new Date(dateStr + "T00:00:00Z"));
   if (state.weeklyReadingMondayStr !== monday) return { count: 0, monday };
   return { count: state.weeklyReadingCount, monday };
 }
@@ -124,10 +153,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [gs, setGsRaw] = useState<GameState>(() => loadState());
   const gsRef = useRef<GameState>(gs);
   const [emote, setEmoteRaw] = useState<EmoteState>("idle");
-  const [activeModal, setActiveModal] = useState<ModalType>(null);
+  // Modal queue — modals are shown in order, next appears when current closes
+  const [modalQueue, setModalQueue] = useState<ModalType[]>([]);
+  const activeModal: ModalType | null = modalQueue[0] ?? null;
   const emoteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Sync ref on every render (cheap)
   gsRef.current = gs;
 
   // ─ Core updater ─────────────────────────────────────────────────────────────
@@ -146,11 +176,18 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // ─ closeModal ────────────────────────────────────────────────────────────────
+  // ─ Modal queue helpers ───────────────────────────────────────────────────────
+  const showModal = useCallback((type: ModalType) => {
+    setModalQueue((prev) => [...prev, type]);
+  }, []);
+
   const closeModal = useCallback(() => {
-    setActiveModal(null);
-    setEmote("idle", false);
-  }, [setEmote]);
+    setModalQueue((prev) => {
+      const next = prev.slice(1);
+      if (next.length === 0) setEmoteRaw("idle");
+      return next;
+    });
+  }, []);
 
   // ─── Actions ─────────────────────────────────────────────────────────────────
 
@@ -161,11 +198,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const withOutfit = addOutfit(next, "level");
       update(withOutfit);
       setEmote("celebration", false);
-      setActiveModal("level-up");
+      showModal("level-up");
     } else {
       update(next);
     }
-  }, [update, setEmote]);
+  }, [update, setEmote, showModal]);
 
   const completeDailyTalk = useCallback(() => {
     const prev = gsRef.current;
@@ -173,30 +210,27 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (prev.lastDailyDate === today) return;
 
     let next = applyXP(prev, 10);
-    next = { ...next, lastDailyDate: today };
+    const dayBefore = getDayBefore(today);
+    const newStreak = prev.lastDailyDate === dayBefore ? prev.streakCount + 1 : 1;
+    next = { ...next, lastDailyDate: today, streakCount: newStreak };
 
-    if (prev.hearts > 0) {
-      const yesterday = toDateStr(new Date(Date.now() - 86_400_000));
-      const newStreak = prev.lastDailyDate === yesterday ? prev.streakCount + 1 : 1;
-      next = { ...next, streakCount: newStreak };
-      if (newStreak >= 7) {
-        next = applyXP(next, 100);
-        next = { ...next, streakCount: 0 };
-      }
+    if (prev.hearts > 0 && newStreak >= 7) {
+      next = applyXP(next, 100);
+      next = { ...next, streakCount: 0 };
     }
 
-    // detect level-up within this action too
     if (next.level > prev.level) {
       next = addOutfit(next, "level");
       update(next);
       setEmote("celebration", false);
-      setActiveModal("level-up");
+      showModal("daily-talk");
+      showModal("level-up");
     } else {
       update(next);
       setEmote("cheer");
-      setActiveModal("daily-talk");
+      showModal("daily-talk");
     }
-  }, [update, setEmote]);
+  }, [update, setEmote, showModal]);
 
   const completeReadingTalk = useCallback(() => {
     const prev = gsRef.current;
@@ -205,12 +239,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (count >= 3 || prev.lastReadingDate === today) return;
 
     const next = applyXP(
-      {
-        ...prev,
-        weeklyReadingCount: count + 1,
-        weeklyReadingMondayStr: monday,
-        lastReadingDate: today,
-      },
+      { ...prev, weeklyReadingCount: count + 1, weeklyReadingMondayStr: monday, lastReadingDate: today },
       10
     );
 
@@ -218,19 +247,19 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const withOutfit = addOutfit(next, "level");
       update(withOutfit);
       setEmote("celebration", false);
-      setActiveModal("level-up");
+      showModal("level-up");
     } else {
       update(next);
     }
-  }, [update, setEmote]);
+  }, [update, setEmote, showModal]);
 
   const addHeart = useCallback(() => {
     const prev = gsRef.current;
     if (prev.hearts >= MAX_HEARTS) return;
     update({ ...prev, hearts: prev.hearts + 1 });
     setEmote("smile");
-    setActiveModal("heart");
-  }, [update, setEmote]);
+    showModal("heart");
+  }, [update, setEmote, showModal]);
 
   const removeHeart = useCallback(() => {
     const prev = gsRef.current;
@@ -240,7 +269,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const resetData = useCallback(() => {
     update({ ...DEFAULT_STATE });
     setEmoteRaw("idle");
-    setActiveModal(null);
+    setModalQueue([]);
   }, [update]);
 
   const equipOutfit = useCallback((id: string) => {
@@ -251,16 +280,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, [update, setEmote]);
 
   const unlockOutfit = useCallback((id: string) => {
-    const prev = gsRef.current;
-    update(addOutfit(prev, id));
+    update(addOutfit(gsRef.current, id));
   }, [update]);
 
   const unlockSeasonalOutfit = useCallback(() => {
-    const prev = gsRef.current;
-    update(addOutfit(prev, "seasonal"));
+    update(addOutfit(gsRef.current, "seasonal"));
     setEmote("celebration", false);
-    setActiveModal("seasonal");
-  }, [update, setEmote]);
+    showModal("seasonal");
+  }, [update, setEmote, showModal]);
 
   const resetWardrobe = useCallback(() => {
     const prev = gsRef.current;
@@ -269,25 +296,79 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const triggerSmallReward = useCallback(() => {
     setEmote("smile");
-    setActiveModal("small-reward");
-  }, [setEmote]);
+    showModal("small-reward");
+  }, [setEmote, showModal]);
 
   const triggerLevelUpReward = useCallback(() => {
-    const prev = gsRef.current;
-    update(addOutfit(prev, "level"));
+    update(addOutfit(gsRef.current, "level"));
     setEmote("celebration", false);
-    setActiveModal("level-up");
-  }, [update, setEmote]);
+    showModal("level-up");
+  }, [update, setEmote, showModal]);
 
   const triggerHeartReward = useCallback(() => {
     setEmote("smile");
-    setActiveModal("heart");
-  }, [setEmote]);
+    showModal("heart");
+  }, [setEmote, showModal]);
 
   const unlockLevelRewardOutfit = useCallback(() => {
-    const prev = gsRef.current;
-    update(addOutfit(prev, "level"));
+    update(addOutfit(gsRef.current, "level"));
   }, [update]);
+
+  // ─ importSessionData ────────────────────────────────────────────────────────
+  const importSessionData = useCallback((data: SessionImportData): ImportResult => {
+    const prev = gsRef.current;
+    const importDate = data.date;
+    const result: ImportResult = { dailyNewlyCompleted: false, readingNewlyCompleted: false, leveledUp: false };
+
+    let state = { ...prev };
+
+    // 1. Add xp_gained
+    state = applyXP(state, data.xp_gained);
+
+    // 2. daily_completed
+    if (data.daily_completed && state.lastDailyDate !== importDate) {
+      const dayBefore = getDayBefore(importDate);
+      const newStreak = state.lastDailyDate === dayBefore ? state.streakCount + 1 : 1;
+      state = { ...state, lastDailyDate: importDate, streakCount: newStreak };
+      if (prev.hearts > 0 && newStreak >= 7) {
+        state = applyXP(state, 100);
+        state = { ...state, streakCount: 0 };
+      }
+      result.dailyNewlyCompleted = true;
+    }
+
+    // 3. reading_talk_completed
+    if (data.reading_talk_completed && state.lastReadingDate !== importDate) {
+      const { count, monday } = effectiveWeeklyReadingForDate(state, importDate);
+      if (count < 3) {
+        state = applyXP(
+          { ...state, weeklyReadingCount: count + 1, weeklyReadingMondayStr: monday, lastReadingDate: importDate },
+          10
+        );
+        result.readingNewlyCompleted = true;
+      }
+    }
+
+    // 4. Level-up detection
+    if (state.level > prev.level) {
+      state = addOutfit(state, "level");
+      result.leveledUp = true;
+    }
+
+    update(state);
+
+    // 5. Queue modals in correct order + set emote
+    if (result.leveledUp) {
+      setEmote("celebration", false);
+      if (result.dailyNewlyCompleted) showModal("daily-talk");
+      showModal("level-up");
+    } else if (result.dailyNewlyCompleted) {
+      setEmote("cheer");
+      showModal("daily-talk");
+    }
+
+    return result;
+  }, [update, setEmote, showModal]);
 
   // ─ Derived ──────────────────────────────────────────────────────────────────
   const today = toDateStr(new Date());
@@ -320,6 +401,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       triggerLevelUpReward,
       triggerHeartReward,
       unlockLevelRewardOutfit,
+      importSessionData,
     },
   };
 

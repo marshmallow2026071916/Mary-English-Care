@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion, type TargetAndTransition } from "framer-motion";
 import { type EmoteState } from "@/context/GameContext";
 
 interface MaryAvatarProps {
@@ -59,18 +59,18 @@ const EMOTE_COLORS: Record<EmoteState, string> = {
 };
 
 // ─── Avatar animation variants ─────────────────────────────────────────────────
-function getAvatarAnimation(emote: EmoteState) {
+function getAvatarAnimation(emote: EmoteState): TargetAndTransition {
   switch (emote) {
     case "smile":
-      return { y: [0, -3, 0], transition: { duration: 2.5, repeat: Infinity, ease: "easeInOut" } };
+      return { y: [0, -3, 0], transition: { duration: 2.5, repeat: Infinity, ease: "easeInOut" as const } };
     case "cheer":
-      return { y: [0, -10, -2, -8, 0], transition: { duration: 0.65, repeat: Infinity, ease: "easeOut" } };
+      return { y: [0, -10, -2, -8, 0], transition: { duration: 0.65, repeat: Infinity, ease: "easeOut" as const } };
     case "celebration":
       return { scale: [1, 1.06, 1], rotate: [0, 1, -1, 0], transition: { duration: 0.8, repeat: Infinity } };
     case "shy":
-      return { rotate: [-3, 3, -3], x: [0, -3, 0], transition: { duration: 1.6, repeat: Infinity, ease: "easeInOut" } };
+      return { rotate: [-3, 3, -3], x: [0, -3, 0], transition: { duration: 1.6, repeat: Infinity, ease: "easeInOut" as const } };
     default:
-      return { y: [0, -4, 0], transition: { duration: 4, repeat: Infinity, ease: "easeInOut" } };
+      return { y: [0, -4, 0], transition: { duration: 4, repeat: Infinity, ease: "easeInOut" as const } };
   }
 }
 

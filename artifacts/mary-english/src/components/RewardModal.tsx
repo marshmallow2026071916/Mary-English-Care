@@ -1,3 +1,4 @@
+import type { ReactElement } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { Heart, Star, Sparkles } from "lucide-react";
@@ -242,7 +243,7 @@ function SmallRewardModal({ onClose }: { onClose: () => void }) {
 }
 
 // ─── Root export ──────────────────────────────────────────────────────────────
-const MODAL_MAP: Record<Exclude<ModalType, null>, (p: { onClose: () => void }) => JSX.Element> = {
+const MODAL_MAP: Record<ModalType, (p: { onClose: () => void }) => ReactElement> = {
   "level-up": LevelUpModal,
   "daily-talk": DailyTalkModal,
   heart: HeartModal,

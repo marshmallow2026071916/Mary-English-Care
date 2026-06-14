@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { Copy, CheckCircle2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Copy, CheckCircle2, Upload, X, ChevronDown, ChevronUp, AlertCircle, CheckCircle } from "lucide-react";
 import { MaryAvatar } from "@/components/MaryAvatar";
 import { BottomNav } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { useGame } from "@/context/GameContext";
+import { useSessionImport, SAMPLE_JSON } from "@/hooks/useSessionImport";
 
 const COMMANDS = [
   { id: "daily", label: "Daily Talk", text: "Let's have our daily English conversation." },
@@ -12,6 +13,8 @@ const COMMANDS = [
   { id: "review", label: "Review Challenge", text: "Give me a review challenge based on our conversations." },
   { id: "end", label: "End Talk", text: "Let's end today's session. Please give me a summary." },
 ];
+
+const MAX_HEARTS = 2;
 
 interface ProgressRowProps {
   label: string;
@@ -54,6 +57,161 @@ function ProgressRow({ label, current, max, completed, showBar }: ProgressRowPro
   );
 }
 
+// ─── Import Section ───────────────────────────────────────────────────────────
+function ImportSection() {
+  const [devOpen, setDevOpen] = useState(false);
+  const {
+    jsonText, setJsonText,
+    importSession, clearText,
+    status, statusMsg,
+    resetImportHistory,
+  } = useSessionImport();
+
+  const isEmpty = jsonText.trim() === "";
+
+  return (
+    <div className="mb-8">
+      <h2 className="text-lg font-bold text-foreground mb-1 pl-2 border-l-4 border-primary">
+        Import Session Data
+      </h2>
+      <p className="text-xs text-muted-foreground mb-4 pl-3 italic">
+        Paste the JSON from ChatGPT after End Talk.
+      </p>
+
+      {/* Textarea */}
+      <div className="relative">
+        <textarea
+          value={jsonText}
+          onChange={(e) => {
+            setJsonText(e.target.value);
+          }}
+          placeholder={`{\n  "date": "2026-06-14",\n  "task_type": "Daily Talk",\n  "xp_gained": 10,\n  "daily_completed": true,\n  ...\n}`}
+          rows={7}
+          className="w-full bg-card border border-border rounded-2xl p-4 font-mono text-xs text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/60 transition-all"
+          data-testid="import-textarea"
+          spellCheck={false}
+        />
+        {!isEmpty && (
+          <button
+            onClick={clearText}
+            className="absolute top-3 right-3 p-1 text-muted-foreground hover:text-foreground transition-colors"
+            data-testid="import-clear-x"
+            aria-label="Clear"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
+      {/* Status message */}
+      <AnimatePresence>
+        {status !== "idle" && statusMsg && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, y: -4 }}
+            animate={{ opacity: 1, height: "auto", y: 0 }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div
+              className={`mt-3 flex items-start gap-2 px-4 py-3 rounded-xl text-sm font-medium ${
+                status === "success"
+                  ? "bg-green-50 text-green-800 border border-green-200"
+                  : status === "duplicate"
+                    ? "bg-amber-50 text-amber-800 border border-amber-200"
+                    : "bg-destructive/10 text-destructive border border-destructive/20"
+              }`}
+              data-testid="import-status-msg"
+            >
+              {status === "success" ? (
+                <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              ) : (
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              )}
+              <span>{statusMsg}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Buttons */}
+      <div className="flex gap-3 mt-3">
+        <button
+          onClick={importSession}
+          disabled={isEmpty}
+          className="flex-1 flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-primary-foreground font-bold py-3 rounded-2xl shadow-sm border-b-4 border-primary-foreground/20"
+          data-testid="import-btn"
+        >
+          <Upload className="w-4 h-4" />
+          Import
+        </button>
+        <button
+          onClick={clearText}
+          disabled={isEmpty}
+          className="px-5 bg-secondary hover:bg-secondary/80 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-secondary-foreground font-bold py-3 rounded-2xl"
+          data-testid="import-clear-btn"
+        >
+          Clear
+        </button>
+      </div>
+
+      {/* Dev fill buttons */}
+      <div className="mt-4">
+        <button
+          onClick={() => setDevOpen((v) => !v)}
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          data-testid="import-dev-toggle"
+        >
+          {devOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          Developer: fill with sample JSON
+        </button>
+
+        <AnimatePresence>
+          {devOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  onClick={() => { setJsonText(SAMPLE_JSON.dailyTalk()); }}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-secondary text-secondary-foreground border border-border hover:bg-secondary/70 transition-all active:scale-95"
+                  data-testid="import-fill-daily"
+                >
+                  Fill: Daily Talk JSON
+                </button>
+                <button
+                  onClick={() => { setJsonText(SAMPLE_JSON.readingTalk()); }}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-secondary text-secondary-foreground border border-border hover:bg-secondary/70 transition-all active:scale-95"
+                  data-testid="import-fill-reading"
+                >
+                  Fill: Reading Talk JSON
+                </button>
+                <button
+                  onClick={() => { setJsonText(SAMPLE_JSON.specialTask()); }}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-secondary text-secondary-foreground border border-border hover:bg-secondary/70 transition-all active:scale-95"
+                  data-testid="import-fill-special"
+                >
+                  Fill: Special Task JSON
+                </button>
+                <button
+                  onClick={resetImportHistory}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-destructive/10 text-destructive border border-destructive/30 hover:bg-destructive/20 transition-all active:scale-95"
+                  data-testid="import-reset-history"
+                >
+                  Reset Import History
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main screen ──────────────────────────────────────────────────────────────
 export default function TasksScreen() {
   const { toast } = useToast();
   const [showStartMessage, setShowStartMessage] = useState(false);
@@ -76,7 +234,6 @@ export default function TasksScreen() {
         {/* Header Avatar & Message */}
         <div className="flex items-center gap-4 mb-10">
           <MaryAvatar height={140} showEmote={false} outfit={equippedOutfit} emote={emote} className="scale-90 origin-left" />
-
           <motion.div
             className="bg-white px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm border border-border flex-1"
             initial={{ opacity: 0, x: -10 }}
@@ -153,7 +310,7 @@ export default function TasksScreen() {
         </div>
 
         {/* Start Talk */}
-        <div className="pb-8">
+        <div className="mb-10">
           <button
             onClick={() => setShowStartMessage(true)}
             className="w-full bg-primary hover:bg-primary/90 active:scale-95 transition-all text-center py-4 rounded-3xl shadow-sm border-b-4 border-primary-foreground/20 font-bold text-primary-foreground text-lg mb-4"
@@ -173,6 +330,9 @@ export default function TasksScreen() {
             </motion.div>
           )}
         </div>
+
+        {/* Import Session Data */}
+        <ImportSection />
 
       </div>
       <BottomNav />
