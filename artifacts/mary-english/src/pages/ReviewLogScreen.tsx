@@ -6,8 +6,6 @@ import { BottomNav } from "@/components/BottomNav";
 import { useReviewLog, type ReviewLogEntry, type TaskType } from "@/hooks/useReviewLog";
 import { useGame } from "@/context/GameContext";
 
-const LEVEL_TABS = [1, 2, 3] as const;
-
 const TASK_TYPE_COLORS: Record<TaskType, string> = {
   "Daily Talk": "bg-primary/15 text-primary",
   "Reading Talk": "bg-accent/25 text-accent-foreground",
@@ -92,7 +90,7 @@ export default function ReviewLogScreen() {
           >
             Current Level
           </button>
-          {LEVEL_TABS.map((lvl) => (
+          {Array.from({ length: currentLevel - 1 }, (_, i) => currentLevel - 1 - i).map((lvl) => (
             <button
               key={lvl}
               onClick={() => setActiveTab(lvl)}
