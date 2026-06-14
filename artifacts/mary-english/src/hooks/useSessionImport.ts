@@ -70,7 +70,7 @@ export const SAMPLE_JSON = {
         special_completed: false,
         rallies: 8,
         summary:
-          "Yamaguchi talked about his weekend trip to Buzen City. Mary asked follow-up questions about local food and transportation.",
+          "Eikichi talked about his weekend trip to Buzen City. Mary asked follow-up questions about local food and transportation.",
       },
       null,
       2
@@ -86,7 +86,7 @@ export const SAMPLE_JSON = {
         special_completed: false,
         rallies: 5,
         summary:
-          "Yamaguchi read Chapter 27 of Charlie and the Chocolate Factory. We discussed what happened to Mike Teavee and new vocabulary: shrink, restore, transmit.",
+          "Eikichi read Chapter 27 of Charlie and the Chocolate Factory. We discussed what happened to Mike Teavee and new vocabulary: shrink, restore, transmit.",
       },
       null,
       2

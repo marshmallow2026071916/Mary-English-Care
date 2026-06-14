@@ -40,7 +40,7 @@ function EntryCard({ entry, index }: { entry: ReviewLogEntry; index: number }) {
 
       <div className="px-4 pb-4 space-y-3">
         <div className="flex gap-3 items-start">
-          <span className="text-xs font-bold text-primary shrink-0 mt-0.5 w-20 text-right leading-5">Yamaguchi:</span>
+          <span className="text-xs font-bold text-primary shrink-0 mt-0.5 w-20 text-right leading-5">Eikichi:</span>
           <p className="text-sm text-foreground leading-relaxed flex-1" data-testid={`entry-user-${entry.id}`}>{entry.userText}</p>
         </div>
         <div className="flex gap-3 items-start">

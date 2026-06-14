@@ -125,7 +125,7 @@ function DailyTalkModal({ onClose }: { onClose: () => void }) {
         </div>
         <div className="px-5 py-5 flex flex-col items-center gap-4">
           <p className="text-foreground font-medium text-center leading-relaxed text-sm">
-            Good job, Yamaguchi!{"\n"}Daily Talk completed.
+            Good job, Eikichi!{"\n"}Daily Talk completed.
           </p>
           <button
             onClick={onClose}
@@ -228,7 +228,7 @@ function SmallRewardModal({ onClose }: { onClose: () => void }) {
           <h2 className="text-lg font-bold text-foreground mt-2">Nice work!</h2>
         </div>
         <div className="px-5 py-5 flex flex-col items-center gap-4">
-          <p className="text-foreground font-medium text-center text-sm">Keep going, Yamaguchi!</p>
+          <p className="text-foreground font-medium text-center text-sm">Keep going, Eikichi!</p>
           <button
             onClick={onClose}
             className="w-full bg-primary hover:bg-primary/90 active:scale-95 transition-all text-primary-foreground font-bold py-3 rounded-2xl"
