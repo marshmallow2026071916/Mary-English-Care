@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 
 const STORAGE_KEY = "mary-english-review-log";
 
-export type TaskType = "Daily Talk" | "Reading Talk" | "Review Challenge";
+export type TaskType = "Daily Talk" | "Practice Talk" | "Review Talk" | "Reading Talk" | "Review Challenge";
 
 export interface ReviewLogEntry {
   id: string;
@@ -59,6 +59,14 @@ export function useReviewLog() {
         "Daily Talk": {
           userText: "I went to Buzen City for work.",
           maryText: "That sounds like a busy day. How long did it take you to get there?",
+        },
+        "Practice Talk": {
+          userText: "Today I read Chapter 27 of Charlie and the Chocolate Factory.",
+          maryText: "Great. What was the most interesting part of the chapter?",
+        },
+        "Review Talk": {
+          userText: "Mike Teavee became very small.",
+          maryText: "Yes, that's right. He was sent by television and became tiny.",
         },
         "Reading Talk": {
           userText: "Today I read Chapter 27 of Charlie and the Chocolate Factory.",

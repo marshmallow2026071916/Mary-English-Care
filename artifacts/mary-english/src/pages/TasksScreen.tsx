@@ -8,13 +8,14 @@ import { useGame } from "@/context/GameContext";
 import { useSessionImport, SAMPLE_JSON } from "@/hooks/useSessionImport";
 
 const COMMANDS = [
-  { id: "daily", label: "Daily Talk", text: "Let's have our daily English conversation." },
-  { id: "reading", label: "Reading Talk", text: "Let's do a reading talk session." },
-  { id: "review", label: "Review Challenge", text: "Give me a review challenge based on our conversations." },
-  { id: "end", label: "End Talk", text: "Let's end today's session. Please give me a summary." },
+  { id: "daily",    label: "Daily Talk",    text: "Let's have our daily English conversation." },
+  { id: "practice", label: "Practice Talk", text: "Let's do a practice talk session." },
+  { id: "review",   label: "Review Talk",   text: "Give me a review talk based on our conversations." },
+  { id: "end",      label: "End Talk",      text: "Let's end today's session. Please give me a summary." },
 ];
 
-const MAX_HEARTS = 2;
+const DAILY_RALLY_MAX = 10;
+const TASK_RALLY_MAX = 3;
 
 interface ProgressRowProps {
   label: string;
@@ -22,10 +23,14 @@ interface ProgressRowProps {
   max: number;
   completed?: boolean;
   showBar?: boolean;
+  rallies?: number;
+  rallyMax?: number;
 }
 
-function ProgressRow({ label, current, max, completed, showBar }: ProgressRowProps) {
+function ProgressRow({ label, current, max, completed, showBar, rallies, rallyMax }: ProgressRowProps) {
   const pct = Math.min(100, (current / max) * 100);
+  const showRallyCount = !completed && rallies !== undefined && rallyMax !== undefined;
+
   return (
     <div
       className={`p-4 rounded-2xl shadow-sm border flex justify-between items-center ${
@@ -45,11 +50,13 @@ function ProgressRow({ label, current, max, completed, showBar }: ProgressRowPro
         {completed ? (
           <div className="flex items-center gap-2 text-primary">
             <CheckCircle2 className="w-5 h-5 fill-primary text-primary-foreground" />
-            <span className="text-sm font-bold">{current} / {max}</span>
+            <span className="text-sm font-bold">{current}/{max}</span>
           </div>
         ) : (
           <div className={`px-3 py-1 rounded-full text-sm font-bold ${showBar ? "" : "bg-secondary text-secondary-foreground"}`}>
-            <span className={showBar ? "text-muted-foreground" : ""}>{current} / {max}</span>
+            <span className={showBar ? "text-muted-foreground" : ""}>
+              {current}/{max}{showRallyCount ? ` (${rallies}/${rallyMax})` : ""}
+            </span>
           </div>
         )}
       </div>
@@ -182,18 +189,18 @@ function ImportSection() {
                   Fill: Daily Talk JSON
                 </button>
                 <button
-                  onClick={() => { setJsonText(SAMPLE_JSON.readingTalk()); }}
+                  onClick={() => { setJsonText(SAMPLE_JSON.practiceTalk()); }}
                   className="px-3 py-1.5 rounded-xl text-xs font-bold bg-secondary text-secondary-foreground border border-border hover:bg-secondary/70 transition-all active:scale-95"
-                  data-testid="import-fill-reading"
+                  data-testid="import-fill-practice"
                 >
-                  Fill: Reading Talk JSON
+                  Fill: Practice Talk JSON
                 </button>
                 <button
-                  onClick={() => { setJsonText(SAMPLE_JSON.specialTask()); }}
+                  onClick={() => { setJsonText(SAMPLE_JSON.reviewTask()); }}
                   className="px-3 py-1.5 rounded-xl text-xs font-bold bg-secondary text-secondary-foreground border border-border hover:bg-secondary/70 transition-all active:scale-95"
-                  data-testid="import-fill-special"
+                  data-testid="import-fill-review"
                 >
-                  Fill: Special Task JSON
+                  Fill: Review Talk JSON
                 </button>
                 <button
                   onClick={resetImportHistory}
@@ -215,8 +222,12 @@ function ImportSection() {
 export default function TasksScreen() {
   const { toast } = useToast();
   const [showStartMessage, setShowStartMessage] = useState(false);
-  const { gs, dailyTalkDone, weeklyReadingCount, emote } = useGame();
-  const { streakCount, equippedOutfit } = gs;
+  const { gs, dailyTalkDone, emote } = useGame();
+  const { streakCount, equippedOutfit, practiceCount, reviewCount,
+          lastDailyRallies, lastPracticeRallies, lastReviewRallies } = gs;
+
+  const practiceCompleted = practiceCount >= 3;
+  const reviewCompleted = reviewCount >= 3;
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -246,13 +257,20 @@ export default function TasksScreen() {
 
         {/* Progress Sections */}
         <div className="space-y-4 mb-10">
-          <ProgressRow label="Daily Talk" current={dailyTalkDone ? 1 : 0} max={1} completed={dailyTalkDone} />
+          <ProgressRow
+            label="Daily Talk"
+            current={dailyTalkDone ? 1 : 0}
+            max={1}
+            completed={dailyTalkDone}
+            rallies={lastDailyRallies}
+            rallyMax={DAILY_RALLY_MAX}
+          />
 
           <div className="bg-card p-4 rounded-2xl shadow-sm border border-border">
             <div className="flex justify-between items-center mb-2">
               <span className="font-bold text-foreground">Weekly Streak Bonus</span>
               <span className="text-sm font-bold text-muted-foreground" data-testid="text-streak">
-                {streakCount} / 7
+                {streakCount} / 7 days
               </span>
             </div>
             <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
@@ -269,14 +287,24 @@ export default function TasksScreen() {
           </div>
 
           <ProgressRow
-            label="Reading Talk Tasks"
-            current={weeklyReadingCount}
+            label="Practice Tasks"
+            current={practiceCount}
             max={3}
-            completed={weeklyReadingCount >= 3}
+            completed={practiceCompleted}
             showBar
+            rallies={lastPracticeRallies}
+            rallyMax={TASK_RALLY_MAX}
           />
 
-          <ProgressRow label="Special Tasks" current={3} max={3} completed />
+          <ProgressRow
+            label="Review Tasks"
+            current={reviewCount}
+            max={3}
+            completed={reviewCompleted}
+            showBar
+            rallies={lastReviewRallies}
+            rallyMax={TASK_RALLY_MAX}
+          />
         </div>
 
         {/* Talk Commands */}
@@ -319,16 +347,40 @@ export default function TasksScreen() {
             Start Talk
           </button>
 
-          {showStartMessage && (
-            <motion.div
-              initial={{ opacity: 0, height: 0, y: -10 }}
-              animate={{ opacity: 1, height: "auto", y: 0 }}
-              className="bg-accent/20 text-accent-foreground p-4 rounded-2xl border border-accent/30 text-center font-medium text-sm"
-              data-testid="msg-start-talk"
-            >
-              Please open ChatGPT and start with one of the talk commands.
-            </motion.div>
-          )}
+          <AnimatePresence>
+            {showStartMessage && (
+              <motion.div
+                initial={{ opacity: 0, height: 0, y: -10 }}
+                animate={{ opacity: 1, height: "auto", y: 0 }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+                data-testid="msg-start-talk"
+              >
+                <div className="pt-1 pb-2">
+                  <div className="flex items-start gap-3 mb-3">
+                    <MaryAvatar
+                      height={100}
+                      showEmote
+                      outfit={equippedOutfit}
+                      emote="smile"
+                      className="shrink-0"
+                    />
+                    <motion.div
+                      className="bg-white px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm border border-border flex-1 mt-2"
+                      initial={{ opacity: 0, x: -8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ type: "spring", bounce: 0.4, delay: 0.1 }}
+                    >
+                      <p className="text-sm font-medium text-foreground">Yay! Let's talk today, Eikichi!</p>
+                    </motion.div>
+                  </div>
+                  <div className="bg-accent/20 text-accent-foreground px-4 py-3 rounded-2xl border border-accent/30 text-center text-sm font-medium">
+                    Please open ChatGPT and start with one of the talk commands.
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Import Session Data */}

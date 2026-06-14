@@ -8,6 +8,8 @@ import { useGame } from "@/context/GameContext";
 
 const TASK_TYPE_COLORS: Record<TaskType, string> = {
   "Daily Talk": "bg-primary/15 text-primary",
+  "Practice Talk": "bg-accent/25 text-accent-foreground",
+  "Review Talk": "bg-secondary text-secondary-foreground",
   "Reading Talk": "bg-accent/25 text-accent-foreground",
   "Review Challenge": "bg-secondary text-secondary-foreground",
 };

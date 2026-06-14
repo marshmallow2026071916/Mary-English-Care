@@ -31,8 +31,8 @@ function clearImported(): void {
 
 // ─── Validation ───────────────────────────────────────────────────────────────
 function normalizeTaskType(raw: string): TaskType {
-  if (raw === "Reading Talk") return "Reading Talk";
-  if (raw === "Review Challenge") return "Review Challenge";
+  if (raw === "Practice Talk" || raw === "Reading Talk") return "Practice Talk";
+  if (raw === "Review Talk" || raw === "Review Challenge") return "Review Talk";
   return "Daily Talk";
 }
 
@@ -66,24 +66,24 @@ export const SAMPLE_JSON = {
         task_type: "Daily Talk",
         xp_gained: 10,
         daily_completed: true,
-        reading_talk_completed: false,
-        special_completed: false,
-        rallies: 8,
+        practice_completed: false,
+        review_completed: false,
+        rallies: 12,
         summary:
           "Eikichi talked about his weekend trip to Buzen City. Mary asked follow-up questions about local food and transportation.",
       },
       null,
       2
     ),
-  readingTalk: () =>
+  practiceTalk: () =>
     JSON.stringify(
       {
         date: todayStr(),
-        task_type: "Reading Talk",
+        task_type: "Practice Talk",
         xp_gained: 0,
         daily_completed: false,
-        reading_talk_completed: true,
-        special_completed: false,
+        practice_completed: true,
+        review_completed: false,
         rallies: 5,
         summary:
           "Eikichi read Chapter 27 of Charlie and the Chocolate Factory. We discussed what happened to Mike Teavee and new vocabulary: shrink, restore, transmit.",
@@ -91,18 +91,18 @@ export const SAMPLE_JSON = {
       null,
       2
     ),
-  specialTask: () =>
+  reviewTask: () =>
     JSON.stringify(
       {
         date: todayStr(),
-        task_type: "Review Challenge",
+        task_type: "Review Talk",
         xp_gained: 0,
         daily_completed: false,
-        reading_talk_completed: false,
-        special_completed: true,
-        rallies: 0,
+        practice_completed: false,
+        review_completed: true,
+        rallies: 4,
         summary:
-          "Completed a review challenge. Practiced vocabulary from last week and answered comprehension questions about the reading.",
+          "Completed a review talk. Practiced vocabulary from last week and answered comprehension questions about the reading.",
       },
       null,
       2

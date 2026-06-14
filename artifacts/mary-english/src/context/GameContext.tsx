@@ -22,11 +22,21 @@ export interface GameState {
   hearts: number;
   streakCount: number;
   lastDailyDate: string | null;
+  // Practice Tasks — per-level, max 3, reset on level-up
+  practiceCount: number;
+  // Review Tasks — per-level, max 3, reset on level-up
+  reviewCount: number;
+  // Rally counts for progress display
+  lastDailyRallies: number;
+  lastPracticeRallies: number;
+  lastReviewRallies: number;
+  // Wardrobe
+  unlockedOutfits: string[];
+  equippedOutfit: string;
+  // Legacy fields kept for localStorage backwards-compat; no longer drive logic
   weeklyReadingCount: number;
   weeklyReadingMondayStr: string | null;
   lastReadingDate: string | null;
-  unlockedOutfits: string[];
-  equippedOutfit: string;
 }
 
 export interface SessionImportData {
@@ -35,22 +45,24 @@ export interface SessionImportData {
   task_type: string;
   xp_gained: number;
   daily_completed?: boolean;
-  reading_talk_completed?: boolean;
-  special_completed?: boolean;
+  reading_talk_completed?: boolean; // legacy alias for practice_completed
+  practice_completed?: boolean;
+  special_completed?: boolean;      // legacy alias for review_completed
+  review_completed?: boolean;
   rallies?: number;
   summary?: string;
 }
 
 export interface ImportResult {
   dailyNewlyCompleted: boolean;
-  readingNewlyCompleted: boolean;
+  practiceNewlyCompleted: boolean;
+  reviewNewlyCompleted: boolean;
   leveledUp: boolean;
 }
 
 interface GameContextValue {
   gs: GameState;
   dailyTalkDone: boolean;
-  weeklyReadingCount: number;
   xpPercent: number;
   emote: EmoteState;
   activeModal: ModalType | null;
@@ -59,7 +71,8 @@ interface GameContextValue {
   actions: {
     addXP: (n: number) => void;
     completeDailyTalk: () => void;
-    completeReadingTalk: () => void;
+    completePracticeTalk: () => void;
+    completeReviewTalk: () => void;
     addHeart: () => void;
     removeHeart: () => void;
     resetData: () => void;
@@ -80,6 +93,10 @@ const STORAGE_KEY = "mary-english-state";
 const MAX_HEARTS = 2;
 const XP_PER_LEVEL = 200;
 const EMOTE_RESET_MS = 3000;
+const MAX_PRACTICE = 3;
+const MAX_REVIEW = 3;
+const DAILY_RALLY_TARGET = 10;
+const TASK_RALLY_TARGET = 3;
 
 const DEFAULT_STATE: GameState = {
   level: 1,
@@ -87,22 +104,21 @@ const DEFAULT_STATE: GameState = {
   hearts: 1,
   streakCount: 0,
   lastDailyDate: null,
+  practiceCount: 0,
+  reviewCount: 0,
+  lastDailyRallies: 0,
+  lastPracticeRallies: 0,
+  lastReviewRallies: 0,
+  unlockedOutfits: ["black"],
+  equippedOutfit: "black",
   weeklyReadingCount: 0,
   weeklyReadingMondayStr: null,
   lastReadingDate: null,
-  unlockedOutfits: ["black"],
-  equippedOutfit: "black",
 };
 
 // ─── Pure helpers ─────────────────────────────────────────────────────────────
 function toDateStr(date: Date) {
   return date.toISOString().slice(0, 10);
-}
-function getMondayStr(date: Date) {
-  const d = new Date(date);
-  const day = d.getUTCDay();
-  d.setUTCDate(d.getUTCDate() + (day === 0 ? -6 : 1 - day));
-  return d.toISOString().slice(0, 10);
 }
 function getDayBefore(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00Z");
@@ -121,25 +137,22 @@ function loadState(): GameState {
 function persist(state: GameState) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
+// Applies XP and auto-resets practiceCount/reviewCount on level-up
 function applyXP(state: GameState, amount: number): GameState {
   if (amount <= 0) return state;
   let xp = state.xp + amount;
   let level = state.level;
+  let practiceCount = state.practiceCount;
+  let reviewCount = state.reviewCount;
   while (xp >= XP_PER_LEVEL) {
     xp -= XP_PER_LEVEL;
     level++;
   }
-  return { ...state, xp, level };
-}
-function effectiveWeeklyReading(state: GameState) {
-  const monday = getMondayStr(new Date());
-  if (state.weeklyReadingMondayStr !== monday) return { count: 0, monday };
-  return { count: state.weeklyReadingCount, monday };
-}
-function effectiveWeeklyReadingForDate(state: GameState, dateStr: string) {
-  const monday = getMondayStr(new Date(dateStr + "T00:00:00Z"));
-  if (state.weeklyReadingMondayStr !== monday) return { count: 0, monday };
-  return { count: state.weeklyReadingCount, monday };
+  if (level > state.level) {
+    practiceCount = 0;
+    reviewCount = 0;
+  }
+  return { ...state, xp, level, practiceCount, reviewCount };
 }
 function addOutfit(state: GameState, id: string): GameState {
   if (state.unlockedOutfits.includes(id)) return state;
@@ -153,7 +166,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [gs, setGsRaw] = useState<GameState>(() => loadState());
   const gsRef = useRef<GameState>(gs);
   const [emote, setEmoteRaw] = useState<EmoteState>("idle");
-  // Modal queue — modals are shown in order, next appears when current closes
   const [modalQueue, setModalQueue] = useState<ModalType[]>([]);
   const activeModal: ModalType | null = modalQueue[0] ?? null;
   const emoteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -232,14 +244,31 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   }, [update, setEmote, showModal]);
 
-  const completeReadingTalk = useCallback(() => {
+  const completePracticeTalk = useCallback(() => {
     const prev = gsRef.current;
-    const today = toDateStr(new Date());
-    const { count, monday } = effectiveWeeklyReading(prev);
-    if (count >= 3 || prev.lastReadingDate === today) return;
+    if (prev.practiceCount >= MAX_PRACTICE) return;
 
     const next = applyXP(
-      { ...prev, weeklyReadingCount: count + 1, weeklyReadingMondayStr: monday, lastReadingDate: today },
+      { ...prev, practiceCount: prev.practiceCount + 1 },
+      10
+    );
+
+    if (next.level > prev.level) {
+      const withOutfit = addOutfit(next, "level");
+      update(withOutfit);
+      setEmote("celebration", false);
+      showModal("level-up");
+    } else {
+      update(next);
+    }
+  }, [update, setEmote, showModal]);
+
+  const completeReviewTalk = useCallback(() => {
+    const prev = gsRef.current;
+    if (prev.reviewCount >= MAX_REVIEW) return;
+
+    const next = applyXP(
+      { ...prev, reviewCount: prev.reviewCount + 1 },
       10
     );
 
@@ -318,15 +347,42 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const importSessionData = useCallback((data: SessionImportData): ImportResult => {
     const prev = gsRef.current;
     const importDate = data.date;
-    const result: ImportResult = { dailyNewlyCompleted: false, readingNewlyCompleted: false, leveledUp: false };
+    const result: ImportResult = {
+      dailyNewlyCompleted: false,
+      practiceNewlyCompleted: false,
+      reviewNewlyCompleted: false,
+      leveledUp: false,
+    };
 
     let state = { ...prev };
+    const tt = (data.task_type ?? "").trim();
 
-    // 1. Add xp_gained
+    // 1. Add xp_gained (may level-up, resetting practiceCount/reviewCount)
     state = applyXP(state, data.xp_gained);
 
-    // 2. daily_completed
-    if (data.daily_completed && state.lastDailyDate !== importDate) {
+    // 2. Rally count tracking for display (based on task_type)
+    if (data.rallies !== undefined) {
+      if (tt === "Daily Talk" || data.daily_completed) {
+        state = { ...state, lastDailyRallies: data.rallies };
+      } else if (
+        tt === "Practice Talk" || tt === "Reading Talk" ||
+        (data.practice_completed ?? data.reading_talk_completed)
+      ) {
+        state = { ...state, lastPracticeRallies: data.rallies };
+      } else if (
+        tt === "Review Talk" || tt === "Review Challenge" ||
+        (data.review_completed ?? data.special_completed)
+      ) {
+        state = { ...state, lastReviewRallies: data.rallies };
+      }
+    }
+
+    // 3. daily_completed
+    // Requires rallies >= 10 if provided; trusts flag if rallies absent (backwards compat)
+    const dailyCanComplete =
+      !!data.daily_completed &&
+      (data.rallies === undefined || data.rallies >= DAILY_RALLY_TARGET);
+    if (dailyCanComplete && state.lastDailyDate !== importDate) {
       const dayBefore = getDayBefore(importDate);
       const newStreak = state.lastDailyDate === dayBefore ? state.streakCount + 1 : 1;
       state = { ...state, lastDailyDate: importDate, streakCount: newStreak };
@@ -337,19 +393,30 @@ export function GameProvider({ children }: { children: ReactNode }) {
       result.dailyNewlyCompleted = true;
     }
 
-    // 3. reading_talk_completed
-    if (data.reading_talk_completed && state.lastReadingDate !== importDate) {
-      const { count, monday } = effectiveWeeklyReadingForDate(state, importDate);
-      if (count < 3) {
-        state = applyXP(
-          { ...state, weeklyReadingCount: count + 1, weeklyReadingMondayStr: monday, lastReadingDate: importDate },
-          10
-        );
-        result.readingNewlyCompleted = true;
-      }
+    // 4. practice_completed (accepts practice_completed or legacy reading_talk_completed)
+    // Requires rallies >= 3 if provided; trusts flag if rallies absent (backwards compat)
+    const practiceFlag = data.practice_completed ?? data.reading_talk_completed ?? false;
+    const practiceCanComplete =
+      practiceFlag &&
+      (data.rallies === undefined || data.rallies >= TASK_RALLY_TARGET) &&
+      state.practiceCount < MAX_PRACTICE;
+    if (practiceCanComplete) {
+      state = { ...state, practiceCount: state.practiceCount + 1 };
+      result.practiceNewlyCompleted = true;
     }
 
-    // 4. Level-up detection
+    // 5. review_completed (accepts review_completed or legacy special_completed)
+    const reviewFlag = data.review_completed ?? data.special_completed ?? false;
+    const reviewCanComplete =
+      reviewFlag &&
+      (data.rallies === undefined || data.rallies >= TASK_RALLY_TARGET) &&
+      state.reviewCount < MAX_REVIEW;
+    if (reviewCanComplete) {
+      state = { ...state, reviewCount: state.reviewCount + 1 };
+      result.reviewNewlyCompleted = true;
+    }
+
+    // 6. Level-up detection
     if (state.level > prev.level) {
       state = addOutfit(state, "level");
       result.leveledUp = true;
@@ -357,7 +424,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     update(state);
 
-    // 5. Queue modals in correct order + set emote
+    // 7. Queue modals + set emote
     if (result.leveledUp) {
       setEmote("celebration", false);
       if (result.dailyNewlyCompleted) showModal("daily-talk");
@@ -372,7 +439,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   // ─ Derived ──────────────────────────────────────────────────────────────────
   const today = toDateStr(new Date());
-  const { count: weeklyReadingCount } = effectiveWeeklyReading(gs);
   const dailyTalkDone = gs.lastDailyDate === today;
   const xpPercent = Math.min(100, (gs.xp / XP_PER_LEVEL) * 100);
   const isUnlocked = useCallback((id: string) => gs.unlockedOutfits.includes(id), [gs.unlockedOutfits]);
@@ -380,7 +446,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const value: GameContextValue = {
     gs,
     dailyTalkDone,
-    weeklyReadingCount,
     xpPercent,
     emote,
     activeModal,
@@ -389,7 +454,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
     actions: {
       addXP,
       completeDailyTalk,
-      completeReadingTalk,
+      completePracticeTalk,
+      completeReviewTalk,
       addHeart,
       removeHeart,
       resetData,

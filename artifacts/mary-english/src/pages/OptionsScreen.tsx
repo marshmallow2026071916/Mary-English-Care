@@ -40,7 +40,7 @@ export default function OptionsScreen() {
   const [devOpen, setDevOpen] = useState(false);
   const { toast } = useToast();
   const {
-    gs, weeklyReadingCount, xpPercent, emote, isUnlocked,
+    gs, xpPercent, emote, isUnlocked,
     actions,
   } = useGame();
   const { level, xp, hearts, streakCount, equippedOutfit } = gs;
@@ -51,8 +51,9 @@ export default function OptionsScreen() {
   const gameDevActions: DevButtonProps[] = [
     { label: "Add 1 XP",         testId: "dev-add-1xp",          onClick: () => { actions.addXP(1);               notify("+1 XP"); } },
     { label: "Add 10 XP",        testId: "dev-add-10xp",         onClick: () => { actions.addXP(10);              notify("+10 XP"); } },
-    { label: "Complete Daily Talk",   testId: "dev-complete-daily",   onClick: () => { actions.completeDailyTalk();    } },
-    { label: "Complete Reading Talk", testId: "dev-complete-reading", onClick: () => { actions.completeReadingTalk();  notify("Reading Talk completed!"); } },
+    { label: "Complete Daily Talk",    testId: "dev-complete-daily",   onClick: () => { actions.completeDailyTalk();     } },
+    { label: "Complete Practice Talk", testId: "dev-complete-practice", onClick: () => { actions.completePracticeTalk(); notify("Practice Talk completed!"); } },
+    { label: "Complete Review Talk",   testId: "dev-complete-review",  onClick: () => { actions.completeReviewTalk();  notify("Review Talk completed!"); } },
     { label: "Add Heart",         testId: "dev-add-heart",        onClick: () => { actions.addHeart();             } },
     { label: "Remove Heart",      testId: "dev-remove-heart",     onClick: () => { actions.removeHeart();          notify("Heart removed"); } },
     { label: "Reset Data",        testId: "dev-reset",            variant: "danger", onClick: () => { actions.resetData(); notify("Data reset"); } },
@@ -68,9 +69,9 @@ export default function OptionsScreen() {
   ];
 
   const reviewLogDevActions: DevButtonProps[] = [
-    { label: "Add Sample Daily Talk Log",       testId: "dev-log-daily",   onClick: () => { addSampleEntry("Daily Talk", level);       notify("Daily Talk log added"); } },
-    { label: "Add Sample Reading Talk Log",     testId: "dev-log-reading", onClick: () => { addSampleEntry("Reading Talk", level);     notify("Reading Talk log added"); } },
-    { label: "Add Sample Review Challenge Log", testId: "dev-log-review",  onClick: () => { addSampleEntry("Review Challenge", level); notify("Review Challenge log added"); } },
+    { label: "Add Sample Daily Talk Log",    testId: "dev-log-daily",    onClick: () => { addSampleEntry("Daily Talk",    level); notify("Daily Talk log added"); } },
+    { label: "Add Sample Practice Talk Log", testId: "dev-log-practice", onClick: () => { addSampleEntry("Practice Talk", level); notify("Practice Talk log added"); } },
+    { label: "Add Sample Review Talk Log",   testId: "dev-log-review",   onClick: () => { addSampleEntry("Review Talk",   level); notify("Review Talk log added"); } },
     { label: "Clear Review Log",                testId: "dev-log-clear",   variant: "danger", onClick: () => { clearLog(); notify("Review Log cleared"); } },
   ];
 
@@ -175,7 +176,8 @@ export default function OptionsScreen() {
                     <div>XP: <span className="text-foreground font-bold">{xp} / 200</span> ({xpPercent.toFixed(0)}%)</div>
                     <div>Hearts: <span className="text-foreground font-bold">{hearts} / 2</span></div>
                     <div>Streak: <span className="text-foreground font-bold">{streakCount} / 7 days</span></div>
-                    <div>Weekly Reading: <span className="text-foreground font-bold">{weeklyReadingCount} / 3</span></div>
+                    <div>Practice Tasks: <span className="text-foreground font-bold">{gs.practiceCount} / 3</span></div>
+                    <div>Review Tasks: <span className="text-foreground font-bold">{gs.reviewCount} / 3</span></div>
                     <div>Outfit: <span className="text-foreground font-bold">{equippedOutfit}</span></div>
                     <div>Unlocked: <span className="text-foreground font-bold">{gs.unlockedOutfits.join(", ")}</span></div>
                     <div>Emote: <span className="text-foreground font-bold">{emote}</span></div>
