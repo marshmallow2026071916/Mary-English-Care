@@ -21,7 +21,7 @@ const BASE = "/assets/mary";
 // these paths. Replace the SVG files with official artwork to update the whole app.
 export const OUTFIT_IMAGES: Record<OutfitId, string> = {
   default:  `${BASE}/outfits/default.svg`,
-  black:    `${BASE}/outfits/black.svg`,
+  black:    `${BASE}/outfits/black.png`,
   level:    `${BASE}/outfits/level.svg`,
   seasonal: `${BASE}/outfits/seasonal.svg`,
 };
