@@ -99,7 +99,7 @@ const DAILY_RALLY_TARGET = 10;
 const TASK_RALLY_TARGET = 3;
 
 const DEFAULT_STATE: GameState = {
-  level: 1,
+  level: 0,
   xp: 0,
   hearts: 1,
   streakCount: 0,

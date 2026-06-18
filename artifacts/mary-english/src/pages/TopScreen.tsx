@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { MaryAvatar } from "@/components/MaryAvatar";
@@ -6,9 +7,22 @@ import { useGame } from "@/context/GameContext";
 const MAX_HEARTS = 2;
 const XP_PER_LEVEL = 200;
 
+const WELCOME_MESSAGES = [
+  "Welcome back, Eikichi.",
+  "I'm happy to see you again, Eikichi.",
+  "Shall we enjoy some English together today, Eikichi?",
+  "Let's make today another fun day of English, Eikichi.",
+  "I've been looking forward to talking with you, Eikichi.",
+  "I'm glad you're here today, Eikichi.",
+  "Every little conversation helps us grow, Eikichi.",
+];
+
 export default function TopScreen() {
   const { gs, xpPercent, emote } = useGame();
   const { level, xp, hearts, equippedOutfit } = gs;
+  const [welcomeMsg] = useState(
+    () => WELCOME_MESSAGES[Math.floor(Math.random() * WELCOME_MESSAGES.length)]
+  );
 
   return (
     <div className="min-h-[100dvh] w-full bg-background flex flex-col items-center">
@@ -58,7 +72,7 @@ export default function TopScreen() {
             data-testid="bubble-mary-message"
           >
             <div className="bg-white px-4 py-2.5 rounded-2xl rounded-br-sm shadow-md border border-border/40 max-w-[190px]">
-              <p className="text-sm font-medium text-foreground leading-snug">Welcome back.</p>
+              <p className="text-sm font-medium text-foreground leading-snug">{welcomeMsg}</p>
             </div>
           </motion.div>
 
