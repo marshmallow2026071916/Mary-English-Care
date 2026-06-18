@@ -1,16 +1,17 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lock, Check, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
+import { Lock, Check, ChevronDown, ChevronUp } from "lucide-react";
 import { MaryAvatar } from "@/components/MaryAvatar";
 import { BottomNav } from "@/components/BottomNav";
 import { useGame } from "@/context/GameContext";
 import { useReviewLog } from "@/hooks/useReviewLog";
 import { useToast } from "@/hooks/use-toast";
+import { OUTFIT_IMAGES, type OutfitId } from "@/lib/maryAssets";
 
 const OUTFITS = [
-  { id: "black", name: "Black Outfit", swatchClass: "bg-gradient-to-br from-slate-700 to-slate-900" },
-  { id: "level", name: "Level Reward Outfit", swatchClass: "bg-gradient-to-br from-amber-300 to-orange-400" },
-  { id: "seasonal", name: "Seasonal Outfit", swatchClass: "bg-gradient-to-br from-teal-300 to-emerald-400" },
+  { id: "black",    name: "Black Outfit" },
+  { id: "level",    name: "Level Reward Outfit" },
+  { id: "seasonal", name: "Seasonal Outfit" },
 ];
 
 interface DevButtonProps {
@@ -113,14 +114,17 @@ export default function OptionsScreen() {
                   data-testid={`outfit-card-${outfit.id}`}
                 >
                   {/* Swatch */}
-                  <div className={`w-16 h-20 rounded-xl ${outfit.swatchClass} flex items-center justify-center shadow-inner relative overflow-hidden`}>
+                  <div className="w-16 h-20 rounded-xl overflow-hidden shadow-inner relative">
+                    <img
+                      src={OUTFIT_IMAGES[outfit.id as OutfitId]}
+                      alt={outfit.name}
+                      className="w-full h-full object-cover"
+                      draggable={false}
+                    />
                     {!unlocked && (
                       <div className="absolute inset-0 bg-background/40 backdrop-blur-[1px] flex items-center justify-center">
                         <Lock className="w-6 h-6 text-foreground/50" />
                       </div>
-                    )}
-                    {unlocked && outfit.id !== "black" && (
-                      <Sparkles className="w-5 h-5 text-white/70" />
                     )}
                   </div>
 

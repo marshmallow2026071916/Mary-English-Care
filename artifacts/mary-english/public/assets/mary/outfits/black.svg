@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 240" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#334155"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="shadow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="transparent"/>
+      <stop offset="100%" stop-color="rgba(0,0,0,0.28)"/>
+    </linearGradient>
+  </defs>
+  <rect width="192" height="240" fill="url(#bg)"/>
+  <rect width="192" height="240" fill="url(#shadow)"/>
+  <text x="96" y="120" font-family="Georgia,'Times New Roman',serif" font-style="italic" font-weight="600" font-size="22" fill="rgba(226,232,240,0.9)" text-anchor="middle" dominant-baseline="middle">Mary</text>
+  <rect x="64" y="142" width="64" height="1" rx="0.5" fill="rgba(226,232,240,0.18)"/>
+  <text x="96" y="158" font-family="system-ui,sans-serif" font-weight="700" font-size="8" fill="rgba(226,232,240,0.45)" text-anchor="middle" letter-spacing="2">BLACK OUTFIT</text>
+</svg>

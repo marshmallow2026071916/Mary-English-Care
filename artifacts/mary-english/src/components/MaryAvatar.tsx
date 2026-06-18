@@ -1,5 +1,6 @@
 import { motion, type TargetAndTransition } from "framer-motion";
 import { type EmoteState } from "@/context/GameContext";
+import { getMaryImage, resolveOutfitId, OUTFIT_META } from "@/lib/maryAssets";
 
 interface MaryAvatarProps {
   height?: number;
@@ -8,30 +9,6 @@ interface MaryAvatarProps {
   outfit?: string;
   emote?: EmoteState;
 }
-
-// ─── Outfit styles ─────────────────────────────────────────────────────────────
-const OUTFIT_STYLES: Record<string, { bg: string; text: string; badge: string }> = {
-  black: {
-    bg: "from-slate-700 to-slate-900",
-    text: "text-slate-200",
-    badge: "Black Outfit",
-  },
-  level: {
-    bg: "from-amber-300 to-orange-400",
-    text: "text-amber-900",
-    badge: "Level Reward Outfit",
-  },
-  seasonal: {
-    bg: "from-teal-300 to-emerald-400",
-    text: "text-teal-900",
-    badge: "Seasonal Outfit",
-  },
-};
-const DEFAULT_STYLE = {
-  bg: "from-secondary/80 to-accent/30",
-  text: "text-primary/80",
-  badge: "",
-};
 
 // ─── Emote config ──────────────────────────────────────────────────────────────
 const EMOTE_LABELS: Record<EmoteState, string> = {
@@ -81,36 +58,42 @@ export function MaryAvatar({
   outfit = "default",
   emote = "idle",
 }: MaryAvatarProps) {
-  const style = OUTFIT_STYLES[outfit] ?? DEFAULT_STYLE;
+  const outfitId = resolveOutfitId(outfit);
+  const meta = OUTFIT_META[outfitId];
+  const imageSrc = getMaryImage(outfit, emote);
   const animation = getAvatarAnimation(emote);
 
   return (
     <div className={`flex flex-col items-center gap-2 ${className}`}>
       <motion.div
-        className={`w-48 bg-gradient-to-br ${style.bg} rounded-3xl border-2 border-white/50 shadow-sm flex flex-col items-center justify-center overflow-hidden relative gap-1`}
+        className="w-48 rounded-3xl border-2 border-white/50 shadow-sm relative overflow-hidden"
         style={{ height }}
         animate={animation}
         data-testid="mary-avatar-box"
       >
-        {/* Overlay gradient */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+        {/* Official or placeholder Mary artwork */}
+        <img
+          src={imageSrc}
+          alt="Mary"
+          className="w-full h-full object-cover"
+          draggable={false}
+        />
 
-        {/* Label */}
-        <span className={`text-xl italic font-semibold z-10 relative ${style.text}`}>Mary</span>
-
-        {/* Outfit badge (small, only when not default) */}
-        {style.badge && (
-          <span className={`text-[10px] font-bold z-10 relative px-2 py-0.5 rounded-full bg-white/20 ${style.text} opacity-80`}>
-            {style.badge}
-          </span>
-        )}
-
-        {/* Shimmer */}
+        {/* Shimmer overlay */}
         <motion.div
-          className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/30 to-white/0"
+          className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/25 to-white/0 pointer-events-none"
           animate={{ x: ["-200%", "200%"] }}
           transition={{ duration: 6, repeat: Infinity, ease: "linear", delay: 1 }}
         />
+
+        {/* Outfit badge (only for named outfits) */}
+        {meta.badgeLabel && (
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-black/25 text-white/90 whitespace-nowrap">
+              {meta.badgeLabel}
+            </span>
+          </div>
+        )}
       </motion.div>
 
       {showEmote && (

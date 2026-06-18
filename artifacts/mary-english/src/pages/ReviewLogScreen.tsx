@@ -8,6 +8,7 @@ import {
   type TaskType,
 } from "@/hooks/useReviewLog";
 import { useGame } from "@/context/GameContext";
+import { getMaryImage } from "@/lib/maryAssets";
 
 // ─── Badge helpers ────────────────────────────────────────────────────────────
 const TASK_TYPE_COLORS: Record<TaskType, string> = {
@@ -34,17 +35,14 @@ function formatDate(iso: string): string {
 
 // ─── Small Mary avatar for messaging layout ───────────────────────────────────
 function MaryBadge({ outfit }: { outfit: string }) {
-  const grad =
-    outfit === "level"
-      ? "from-amber-400/80 to-amber-600/60"
-      : outfit === "seasonal"
-        ? "from-teal-400/80 to-emerald-600/60"
-        : "from-slate-600 to-slate-900";
   return (
-    <div
-      className={`w-9 h-12 shrink-0 rounded-xl bg-gradient-to-br ${grad} border border-white/20 shadow-sm flex items-center justify-center`}
-    >
-      <span className="text-[11px] italic font-semibold text-white/80">M</span>
+    <div className="w-9 h-12 shrink-0 rounded-xl overflow-hidden border border-white/20 shadow-sm">
+      <img
+        src={getMaryImage(outfit)}
+        alt="Mary"
+        className="w-full h-full object-cover"
+        draggable={false}
+      />
     </div>
   );
 }

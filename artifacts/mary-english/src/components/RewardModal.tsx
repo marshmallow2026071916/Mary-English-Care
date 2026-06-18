@@ -3,19 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { Heart, Star, Sparkles } from "lucide-react";
 import { useGame, type ModalType } from "@/context/GameContext";
-
-const OUTFIT_PREVIEWS: Record<string, { bg: string; label: string; desc: string }> = {
-  level: {
-    bg: "from-amber-300 to-orange-400",
-    label: "Level Reward Outfit",
-    desc: "A golden reward for levelling up!",
-  },
-  seasonal: {
-    bg: "from-teal-300 to-emerald-400",
-    label: "Seasonal Outfit",
-    desc: "A fresh seasonal look!",
-  },
-};
+import { OUTFIT_IMAGES } from "@/lib/maryAssets";
 
 function Backdrop({ onClick }: { onClick: () => void }) {
   return (
@@ -49,7 +37,6 @@ function ModalCard({ children, big }: { children: React.ReactNode; big?: boolean
 function LevelUpModal({ onClose }: { onClose: () => void }) {
   const [, navigate] = useLocation();
   const { gs } = useGame();
-  const outfit = OUTFIT_PREVIEWS["level"];
 
   const handleClose = () => {
     onClose();
@@ -87,11 +74,16 @@ function LevelUpModal({ onClose }: { onClose: () => void }) {
 
           {/* Outfit preview */}
           <div className="flex flex-col items-center gap-2">
-            <div className={`w-20 h-24 rounded-2xl bg-gradient-to-br ${outfit.bg} shadow-md flex items-center justify-center`}>
-              <Sparkles className="w-7 h-7 text-white/80" />
+            <div className="w-20 h-24 rounded-2xl overflow-hidden shadow-md">
+              <img
+                src={OUTFIT_IMAGES["level"]}
+                alt="Level Reward Outfit"
+                className="w-full h-full object-cover"
+                draggable={false}
+              />
             </div>
-            <span className="text-sm font-bold text-foreground">{outfit.label}</span>
-            <span className="text-xs text-muted-foreground">{outfit.desc}</span>
+            <span className="text-sm font-bold text-foreground">Level Reward Outfit</span>
+            <span className="text-xs text-muted-foreground">A golden reward for levelling up!</span>
           </div>
 
           <button
@@ -180,7 +172,6 @@ function HeartModal({ onClose }: { onClose: () => void }) {
 
 // ─── Seasonal Modal ────────────────────────────────────────────────────────────
 function SeasonalModal({ onClose }: { onClose: () => void }) {
-  const outfit = OUTFIT_PREVIEWS["seasonal"];
   return (
     <>
       <Backdrop onClick={onClose} />
@@ -196,11 +187,16 @@ function SeasonalModal({ onClose }: { onClose: () => void }) {
         </div>
         <div className="px-6 py-6 flex flex-col items-center gap-5">
           <div className="flex flex-col items-center gap-2">
-            <div className={`w-20 h-24 rounded-2xl bg-gradient-to-br ${outfit.bg} shadow-md flex items-center justify-center`}>
-              <Sparkles className="w-7 h-7 text-white/80" />
+            <div className="w-20 h-24 rounded-2xl overflow-hidden shadow-md">
+              <img
+                src={OUTFIT_IMAGES["seasonal"]}
+                alt="Seasonal Outfit"
+                className="w-full h-full object-cover"
+                draggable={false}
+              />
             </div>
-            <span className="text-sm font-bold text-foreground">{outfit.label}</span>
-            <span className="text-xs text-muted-foreground">{outfit.desc}</span>
+            <span className="text-sm font-bold text-foreground">Seasonal Outfit</span>
+            <span className="text-xs text-muted-foreground">A fresh seasonal look!</span>
           </div>
           <button
             onClick={onClose}

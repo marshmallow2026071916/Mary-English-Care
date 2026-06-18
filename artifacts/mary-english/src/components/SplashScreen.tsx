@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { motion } from "framer-motion";
+import { SPLASH_IMAGE } from "@/lib/maryAssets";
 
 const SPLASH_MS = 2500;
 
@@ -20,26 +21,36 @@ export function SplashScreen({ onDone }: SplashScreenProps) {
       exit={{ opacity: 0, transition: { duration: 0.55, ease: "easeInOut" } }}
       onClick={onDone}
     >
-      {/* Mary placeholder card */}
+      {/* Mary card */}
       <motion.div
-        className="relative w-52 h-72 bg-gradient-to-br from-slate-700 to-slate-900 rounded-3xl border-2 border-white/20 shadow-2xl flex flex-col items-center justify-center gap-2 overflow-hidden mb-8"
+        className="relative w-52 h-72 rounded-3xl border-2 border-white/20 shadow-2xl overflow-hidden mb-8"
         initial={{ opacity: 0, y: 40, scale: 0.88 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
       >
-        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+        {/* Official or placeholder Mary artwork */}
+        <img
+          src={SPLASH_IMAGE}
+          alt="Mary"
+          className="w-full h-full object-cover"
+          draggable={false}
+        />
 
+        {/* Bottom fade */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
+
+        {/* Animated "Mary" label */}
         <motion.span
-          className="text-2xl italic font-semibold text-slate-200 z-10 relative"
+          className="absolute bottom-6 left-1/2 -translate-x-1/2 text-2xl italic font-semibold text-slate-200 z-10 whitespace-nowrap"
           animate={{ opacity: [0.8, 1, 0.8] }}
           transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
         >
           Mary
         </motion.span>
 
-        {/* shimmer */}
+        {/* Shimmer */}
         <motion.div
-          className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/25 to-white/0"
+          className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/25 to-white/0 pointer-events-none"
           animate={{ x: ["-200%", "200%"] }}
           transition={{ duration: 5, repeat: Infinity, ease: "linear", delay: 0.8 }}
         />
