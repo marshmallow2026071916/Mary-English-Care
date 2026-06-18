@@ -2,17 +2,35 @@ import { useState, useCallback } from "react";
 
 const STORAGE_KEY = "mary-english-review-log";
 
-export type TaskType = "Daily Talk" | "Practice Talk" | "Review Talk" | "Reading Talk" | "Review Challenge";
+export type TaskType =
+  | "Daily Talk"
+  | "Practice Talk"
+  | "Review Talk"
+  | "Reading Talk"
+  | "Review Challenge";
+
+// ─── Rich conversation format ─────────────────────────────────────────────────
+export interface ConversationTurn {
+  eikichiText: string;
+  correction?: string | null;
+  maryText: string;
+}
 
 export interface ReviewLogEntry {
   id: string;
   date: string;
   level: number;
   taskType: TaskType;
-  userText: string;
-  maryText: string;
+  // Legacy fields (backward compat — entries saved before rich format):
+  userText?: string;
+  maryText?: string;
+  // Rich conversation fields:
+  openingText?: string;
+  turns?: ConversationTurn[];
+  dailyCompleted?: boolean;
 }
 
+// ─── Storage ──────────────────────────────────────────────────────────────────
 function loadEntries(): ReviewLogEntry[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -31,16 +49,20 @@ function makeId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
+// ─── Hook ─────────────────────────────────────────────────────────────────────
 export function useReviewLog() {
   const [entries, setEntriesRaw] = useState<ReviewLogEntry[]>(() => loadEntries());
 
-  const setEntries = useCallback((updater: (prev: ReviewLogEntry[]) => ReviewLogEntry[]) => {
-    setEntriesRaw((prev) => {
-      const next = updater(prev);
-      saveEntries(next);
-      return next;
-    });
-  }, []);
+  const setEntries = useCallback(
+    (updater: (prev: ReviewLogEntry[]) => ReviewLogEntry[]) => {
+      setEntriesRaw((prev) => {
+        const next = updater(prev);
+        saveEntries(next);
+        return next;
+      });
+    },
+    []
+  );
 
   const addEntry = useCallback(
     (entry: Omit<ReviewLogEntry, "id">) => {
@@ -55,35 +77,101 @@ export function useReviewLog() {
 
   const addSampleEntry = useCallback(
     (taskType: TaskType, level: number) => {
-      const samples: Record<TaskType, { userText: string; maryText: string }> = {
+      type SampleDef = {
+        openingText: string;
+        turns: ConversationTurn[];
+        dailyCompleted: boolean;
+      };
+      const samples: Record<TaskType, SampleDef> = {
         "Daily Talk": {
-          userText: "I went to Buzen City for work.",
-          maryText: "That sounds like a busy day. How long did it take you to get there?",
+          openingText: "Hello, Eikichi! What shall we talk about today?",
+          turns: [
+            {
+              eikichiText: "I went to Buzen City for work yesterday.",
+              correction: null,
+              maryText:
+                "That sounds like a busy day! How long did it take you to get there?",
+            },
+            {
+              eikichiText: "It taked about one hour by car.",
+              correction: "It took about one hour by car.",
+              maryText:
+                "Ah, one hour isn't bad at all. Did you enjoy the drive?",
+            },
+          ],
+          dailyCompleted: true,
         },
         "Practice Talk": {
-          userText: "Today I read Chapter 27 of Charlie and the Chocolate Factory.",
-          maryText: "Great. What was the most interesting part of the chapter?",
+          openingText:
+            "Ready to practice? Let's talk about what you've been reading.",
+          turns: [
+            {
+              eikichiText:
+                "Today I read Chapter 27 of Charlie and the Chocolate Factory.",
+              correction: null,
+              maryText: "Wonderful! What was the most interesting part?",
+            },
+            {
+              eikichiText: "Mike Teavee was shrunked by the TV.",
+              correction: "Mike Teavee was shrunk by the TV.",
+              maryText:
+                "Exactly right! He was sent by television and became tiny. Great reading!",
+            },
+          ],
+          dailyCompleted: false,
         },
         "Review Talk": {
-          userText: "Mike Teavee became very small.",
-          maryText: "Yes, that's right. He was sent by television and became tiny.",
+          openingText: "Let's review what we've learned together, Eikichi.",
+          turns: [
+            {
+              eikichiText: "The word 'transmit' means to send something.",
+              correction: null,
+              maryText: "Very good! Can you use it in a sentence?",
+            },
+            {
+              eikichiText:
+                "The TV can transmit a person through television signals.",
+              correction: null,
+              maryText:
+                "Excellent! That's a perfect example. You're doing really well.",
+            },
+          ],
+          dailyCompleted: false,
         },
         "Reading Talk": {
-          userText: "Today I read Chapter 27 of Charlie and the Chocolate Factory.",
-          maryText: "Great. What was the most interesting part of the chapter?",
+          openingText:
+            "Ready to practice? Let's talk about what you've been reading.",
+          turns: [
+            {
+              eikichiText:
+                "Today I read Chapter 27 of Charlie and the Chocolate Factory.",
+              correction: null,
+              maryText: "Wonderful! What was the most interesting part?",
+            },
+          ],
+          dailyCompleted: false,
         },
         "Review Challenge": {
-          userText: "Mike Teavee became very small.",
-          maryText: "Yes, that's right. He was sent by television and became tiny.",
+          openingText: "Let's review what we've learned together, Eikichi.",
+          turns: [
+            {
+              eikichiText: "The word 'transmit' means to send something.",
+              correction: null,
+              maryText: "Very good! Can you use it in a sentence?",
+            },
+          ],
+          dailyCompleted: false,
         },
       };
 
+      const s = samples[taskType];
       addEntry({
         date: new Date().toISOString(),
         level,
         taskType,
-        userText: samples[taskType].userText,
-        maryText: samples[taskType].maryText,
+        openingText: s.openingText,
+        turns: s.turns,
+        dailyCompleted: s.dailyCompleted,
       });
     },
     [addEntry]

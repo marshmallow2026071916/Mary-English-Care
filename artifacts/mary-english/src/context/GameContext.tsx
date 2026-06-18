@@ -51,6 +51,13 @@ export interface SessionImportData {
   review_completed?: boolean;
   rallies?: number;
   summary?: string;
+  // Rich conversation fields (new format):
+  opening?: string;
+  turns?: Array<{
+    eikichi: string;
+    correction?: string | null;
+    mary: string;
+  }>;
 }
 
 export interface ImportResult {
