@@ -4,11 +4,13 @@
 // This is the single source of truth for all Mary character asset paths and
 // metadata. Every component that displays Mary imports from here.
 //
-// To replace placeholder artwork with official assets:
-//   1. Drop replacement files into public/assets/mary/ with the same filenames.
-//   2. PNG or WebP recommended for production; current files are SVG placeholders.
-//   3. No code changes required for outfit image swaps.
-//   4. For per-emote artwork: uncomment paths in EMOTE_IMAGES below.
+// To add official portrait artwork (no other code changes needed):
+//   1. Drop a portrait PNG into public/assets/mary/outfits/ using the outfit ID as
+//      the filename: black.png, level.png, seasonal.png
+//   2. The <picture> elements in every component will automatically use the PNG
+//      and fall back to the SVG placeholder if the file is absent.
+//   3. PNG or WebP recommended. Transparent background supported — the container
+//      background (cardBg) shows through around the portrait.
 
 import type { EmoteState } from "@/context/GameContext";
 
@@ -16,9 +18,8 @@ export type OutfitId = "default" | "black" | "level" | "seasonal";
 
 const BASE = "/assets/mary";
 
-// ─── Outfit images ─────────────────────────────────────────────────────────────
-// Changing the equipped outfit automatically updates MaryAvatar everywhere via
-// these paths. Replace the SVG files with official artwork to update the whole app.
+// ─── Outfit images (SVG placeholders) ─────────────────────────────────────────
+// These are the fallback images used when official PNG portraits are absent.
 export const OUTFIT_IMAGES: Record<OutfitId, string> = {
   default:  `${BASE}/outfits/default.svg`,
   black:    `${BASE}/outfits/black.svg`,
@@ -40,14 +41,18 @@ export const EMOTE_IMAGES: Partial<Record<EmoteState, string>> = {
 };
 
 // ─── UI images ────────────────────────────────────────────────────────────────
-// Splash screen Mary (portrait, taller crop — 208×288 display area).
-export const SPLASH_IMAGE = `${BASE}/ui/splash.svg`;
+// Splash screen Mary (SVG placeholder, portrait orientation).
+export const SPLASH_IMAGE     = `${BASE}/ui/splash.svg`;
+// Drop public/assets/mary/ui/splash.png to replace the splash portrait automatically.
+export const SPLASH_IMAGE_PNG = `${BASE}/ui/splash.png`;
 
 // ─── Outfit metadata ──────────────────────────────────────────────────────────
 export interface OutfitMeta {
   label: string;
   badgeLabel: string;       // Shown on the avatar card; empty string = no badge
   headerGradient: string;   // Tailwind gradient classes for outfit-themed modal headers
+  cardBg: string;           // Tailwind gradient for avatar card container background
+                            // Visible in letterbox areas when using object-contain
 }
 
 export const OUTFIT_META: Record<OutfitId, OutfitMeta> = {
@@ -55,21 +60,25 @@ export const OUTFIT_META: Record<OutfitId, OutfitMeta> = {
     label: "Default",
     badgeLabel: "",
     headerGradient: "from-primary/20 to-accent/20",
+    cardBg:         "from-secondary/80 to-accent/30",
   },
   black: {
     label: "Black Outfit",
     badgeLabel: "Black Outfit",
     headerGradient: "from-slate-600 to-slate-900",
+    cardBg:         "from-slate-700 to-slate-900",
   },
   level: {
     label: "Level Reward Outfit",
     badgeLabel: "Level Reward Outfit",
     headerGradient: "from-amber-300 to-orange-400",
+    cardBg:         "from-amber-300 to-orange-400",
   },
   seasonal: {
     label: "Seasonal Outfit",
     badgeLabel: "Seasonal Outfit",
     headerGradient: "from-teal-300 to-emerald-400",
+    cardBg:         "from-teal-300 to-emerald-400",
   },
 };
 
@@ -82,8 +91,17 @@ export function resolveOutfitId(outfit: string): OutfitId {
     : "default";
 }
 
+// Return the PNG portrait path for a given outfit.
+// Used as the <source srcSet> in <picture> elements — the browser uses this
+// automatically when the file exists, with no code changes required.
+// Official portrait files: black.png, level.png, seasonal.png
+export function getMaryPortraitPng(outfit: string): string {
+  const id = resolveOutfitId(outfit);
+  return `${BASE}/outfits/${id}.png`;
+}
+
 // Return the correct Mary image for a given outfit + emote combination.
-// Currently returns the outfit image (emote differences are CSS animations).
+// Currently returns the outfit SVG (emote differences are CSS animations).
 // When emote-specific artwork is added to EMOTE_IMAGES, it is used automatically.
 export function getMaryImage(outfit: string, emote?: EmoteState): string {
   if (emote && EMOTE_IMAGES[emote]) {

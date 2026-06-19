@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { Heart, Star, Sparkles } from "lucide-react";
 import { useGame, type ModalType } from "@/context/GameContext";
-import { OUTFIT_IMAGES } from "@/lib/maryAssets";
+import { OUTFIT_IMAGES, getMaryPortraitPng, OUTFIT_META } from "@/lib/maryAssets";
 
 function Backdrop({ onClick }: { onClick: () => void }) {
   return (
@@ -74,13 +74,16 @@ function LevelUpModal({ onClose }: { onClose: () => void }) {
 
           {/* Outfit preview */}
           <div className="flex flex-col items-center gap-2">
-            <div className="w-20 h-24 rounded-2xl overflow-hidden shadow-md">
-              <img
-                src={OUTFIT_IMAGES["level"]}
-                alt="Level Reward Outfit"
-                className="w-full h-full object-cover"
-                draggable={false}
-              />
+            <div className={`w-20 h-24 rounded-2xl overflow-hidden shadow-md bg-gradient-to-br ${OUTFIT_META["level"].cardBg}`}>
+              <picture style={{ display: "contents" }}>
+                <source srcSet={getMaryPortraitPng("level")} type="image/png" />
+                <img
+                  src={OUTFIT_IMAGES["level"]}
+                  alt="Level Reward Outfit"
+                  className="w-full h-full object-contain"
+                  draggable={false}
+                />
+              </picture>
             </div>
             <span className="text-sm font-bold text-foreground">Level Reward Outfit</span>
             <span className="text-xs text-muted-foreground">A golden reward for levelling up!</span>
@@ -187,13 +190,16 @@ function SeasonalModal({ onClose }: { onClose: () => void }) {
         </div>
         <div className="px-6 py-6 flex flex-col items-center gap-5">
           <div className="flex flex-col items-center gap-2">
-            <div className="w-20 h-24 rounded-2xl overflow-hidden shadow-md">
-              <img
-                src={OUTFIT_IMAGES["seasonal"]}
-                alt="Seasonal Outfit"
-                className="w-full h-full object-cover"
-                draggable={false}
-              />
+            <div className={`w-20 h-24 rounded-2xl overflow-hidden shadow-md bg-gradient-to-br ${OUTFIT_META["seasonal"].cardBg}`}>
+              <picture style={{ display: "contents" }}>
+                <source srcSet={getMaryPortraitPng("seasonal")} type="image/png" />
+                <img
+                  src={OUTFIT_IMAGES["seasonal"]}
+                  alt="Seasonal Outfit"
+                  className="w-full h-full object-contain"
+                  draggable={false}
+                />
+              </picture>
             </div>
             <span className="text-sm font-bold text-foreground">Seasonal Outfit</span>
             <span className="text-xs text-muted-foreground">A fresh seasonal look!</span>

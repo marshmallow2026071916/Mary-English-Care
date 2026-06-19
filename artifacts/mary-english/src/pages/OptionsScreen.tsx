@@ -6,7 +6,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { useGame } from "@/context/GameContext";
 import { useReviewLog } from "@/hooks/useReviewLog";
 import { useToast } from "@/hooks/use-toast";
-import { OUTFIT_IMAGES, type OutfitId } from "@/lib/maryAssets";
+import { OUTFIT_IMAGES, OUTFIT_META, getMaryPortraitPng, type OutfitId } from "@/lib/maryAssets";
 
 const OUTFITS = [
   { id: "black",    name: "Black Outfit" },
@@ -114,13 +114,16 @@ export default function OptionsScreen() {
                   data-testid={`outfit-card-${outfit.id}`}
                 >
                   {/* Swatch */}
-                  <div className="w-16 h-20 rounded-xl overflow-hidden shadow-inner relative">
-                    <img
-                      src={OUTFIT_IMAGES[outfit.id as OutfitId]}
-                      alt={outfit.name}
-                      className="w-full h-full object-cover"
-                      draggable={false}
-                    />
+                  <div className={`w-16 h-20 rounded-xl overflow-hidden shadow-inner relative bg-gradient-to-br ${OUTFIT_META[outfit.id as OutfitId].cardBg}`}>
+                    <picture style={{ display: "contents" }}>
+                      <source srcSet={getMaryPortraitPng(outfit.id)} type="image/png" />
+                      <img
+                        src={OUTFIT_IMAGES[outfit.id as OutfitId]}
+                        alt={outfit.name}
+                        className="w-full h-full object-contain"
+                        draggable={false}
+                      />
+                    </picture>
                     {!unlocked && (
                       <div className="absolute inset-0 bg-background/40 backdrop-blur-[1px] flex items-center justify-center">
                         <Lock className="w-6 h-6 text-foreground/50" />

@@ -1,6 +1,6 @@
 import { motion, type TargetAndTransition } from "framer-motion";
 import { type EmoteState } from "@/context/GameContext";
-import { getMaryImage, resolveOutfitId, OUTFIT_META } from "@/lib/maryAssets";
+import { getMaryImage, getMaryPortraitPng, resolveOutfitId, OUTFIT_META } from "@/lib/maryAssets";
 
 interface MaryAvatarProps {
   height?: number;
@@ -60,24 +60,30 @@ export function MaryAvatar({
 }: MaryAvatarProps) {
   const outfitId = resolveOutfitId(outfit);
   const meta = OUTFIT_META[outfitId];
-  const imageSrc = getMaryImage(outfit, emote);
+  const svgSrc = getMaryImage(outfit, emote);
+  const pngSrc = getMaryPortraitPng(outfit);
   const animation = getAvatarAnimation(emote);
 
   return (
     <div className={`flex flex-col items-center gap-2 ${className}`}>
       <motion.div
-        className="w-48 rounded-3xl border-2 border-white/50 shadow-sm relative overflow-hidden"
+        className={`w-48 rounded-3xl border-2 border-white/50 shadow-sm relative overflow-hidden bg-gradient-to-br ${meta.cardBg}`}
         style={{ height }}
         animate={animation}
         data-testid="mary-avatar-box"
       >
-        {/* Official or placeholder Mary artwork */}
-        <img
-          src={imageSrc}
-          alt="Mary"
-          className="w-full h-full object-cover"
-          draggable={false}
-        />
+        {/* Portrait artwork — PNG first (official), SVG fallback (placeholder).
+            object-contain: never crops, never stretches, preserves transparency.
+            Drop black.png / level.png / seasonal.png to update with no code change. */}
+        <picture style={{ display: "contents" }}>
+          <source srcSet={pngSrc} type="image/png" />
+          <img
+            src={svgSrc}
+            alt="Mary"
+            className="w-full h-full object-contain"
+            draggable={false}
+          />
+        </picture>
 
         {/* Shimmer overlay */}
         <motion.div

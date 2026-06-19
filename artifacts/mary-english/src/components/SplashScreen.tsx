@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { motion } from "framer-motion";
-import { SPLASH_IMAGE } from "@/lib/maryAssets";
+import { SPLASH_IMAGE, SPLASH_IMAGE_PNG } from "@/lib/maryAssets";
 
 const SPLASH_MS = 2500;
 
@@ -21,20 +21,24 @@ export function SplashScreen({ onDone }: SplashScreenProps) {
       exit={{ opacity: 0, transition: { duration: 0.55, ease: "easeInOut" } }}
       onClick={onDone}
     >
-      {/* Mary card */}
+      {/* Mary card — bg-slate-900 shows through letterbox areas when using object-contain */}
       <motion.div
-        className="relative w-52 h-72 rounded-3xl border-2 border-white/20 shadow-2xl overflow-hidden mb-8"
+        className="relative w-52 h-72 rounded-3xl border-2 border-white/20 shadow-2xl overflow-hidden mb-8 bg-slate-900"
         initial={{ opacity: 0, y: 40, scale: 0.88 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
       >
-        {/* Official or placeholder Mary artwork */}
-        <img
-          src={SPLASH_IMAGE}
-          alt="Mary"
-          className="w-full h-full object-cover"
-          draggable={false}
-        />
+        {/* Portrait artwork — PNG first (official), SVG fallback (placeholder).
+            Drop public/assets/mary/ui/splash.png to update with no code change. */}
+        <picture style={{ display: "contents" }}>
+          <source srcSet={SPLASH_IMAGE_PNG} type="image/png" />
+          <img
+            src={SPLASH_IMAGE}
+            alt="Mary"
+            className="w-full h-full object-contain"
+            draggable={false}
+          />
+        </picture>
 
         {/* Bottom fade */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
