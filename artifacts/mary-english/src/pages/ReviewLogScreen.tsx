@@ -8,7 +8,7 @@ import {
   type TaskType,
 } from "@/hooks/useReviewLog";
 import { useGame } from "@/context/GameContext";
-import { getMaryImage, getMaryPortraitPng, resolveOutfitId, OUTFIT_META } from "@/lib/maryAssets";
+import { getMaryImage, getMaryBustPng, resolveOutfitId, OUTFIT_META } from "@/lib/maryAssets";
 
 // ─── Badge helpers ────────────────────────────────────────────────────────────
 const TASK_TYPE_COLORS: Record<TaskType, string> = {
@@ -40,7 +40,7 @@ function MaryBadge({ outfit }: { outfit: string }) {
   return (
     <div className={`w-9 h-12 shrink-0 rounded-xl overflow-hidden border border-white/20 shadow-sm bg-gradient-to-br ${meta.cardBg}`}>
       <picture style={{ display: "contents" }}>
-        <source srcSet={getMaryPortraitPng(outfit)} type="image/png" />
+        <source srcSet={getMaryBustPng(outfit)} type="image/png" />
         <img
           src={getMaryImage(outfit)}
           alt="Mary"

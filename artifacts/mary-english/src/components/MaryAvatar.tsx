@@ -1,6 +1,6 @@
 import { motion, type TargetAndTransition } from "framer-motion";
 import { type EmoteState } from "@/context/GameContext";
-import { getMaryImage, getMaryPortraitPng, resolveOutfitId, OUTFIT_META } from "@/lib/maryAssets";
+import { getMaryImage, getMaryFullPng, getMaryBustPng, resolveOutfitId, OUTFIT_META } from "@/lib/maryAssets";
 
 interface MaryAvatarProps {
   height?: number;
@@ -8,6 +8,8 @@ interface MaryAvatarProps {
   showEmote?: boolean;
   outfit?: string;
   emote?: EmoteState;
+  /** "full" = full-body portrait (default). "bust" = head/shoulders portrait. */
+  variant?: "full" | "bust";
 }
 
 // ─── Emote config ──────────────────────────────────────────────────────────────
@@ -57,11 +59,12 @@ export function MaryAvatar({
   showEmote = true,
   outfit = "default",
   emote = "idle",
+  variant = "full",
 }: MaryAvatarProps) {
   const outfitId = resolveOutfitId(outfit);
   const meta = OUTFIT_META[outfitId];
   const svgSrc = getMaryImage(outfit, emote);
-  const pngSrc = getMaryPortraitPng(outfit);
+  const pngSrc = variant === "bust" ? getMaryBustPng(outfit) : getMaryFullPng(outfit);
   const animation = getAvatarAnimation(emote);
 
   return (
@@ -72,9 +75,8 @@ export function MaryAvatar({
         animate={animation}
         data-testid="mary-avatar-box"
       >
-        {/* Portrait artwork — PNG first (official), SVG fallback (placeholder).
-            object-contain: never crops, never stretches, preserves transparency.
-            Drop black.png / level.png / seasonal.png to update with no code change. */}
+        {/* Portrait artwork — PNG first (official), SVG/PNG fallback.
+            object-contain: never crops, preserves full body / face visibility. */}
         <picture style={{ display: "contents" }}>
           <source srcSet={pngSrc} type="image/png" />
           <img

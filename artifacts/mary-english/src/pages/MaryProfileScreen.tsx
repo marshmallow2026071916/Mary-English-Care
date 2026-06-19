@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { MaryAvatar } from "@/components/MaryAvatar";
 import { BottomNav } from "@/components/BottomNav";
 import { useGame } from "@/context/GameContext";
-import { getMaryPortraitPng, OUTFIT_IMAGES, OUTFIT_META, resolveOutfitId } from "@/lib/maryAssets";
+import { getMaryBustPng, OUTFIT_IMAGES, OUTFIT_META, resolveOutfitId } from "@/lib/maryAssets";
 
 // ─── Static profile data ──────────────────────────────────────────────────────
 const PROFILE = {
@@ -70,7 +70,7 @@ export default function MaryProfileScreen() {
           {/* Portrait using outfit-aware picture element (same as wardrobe) */}
           <div className="w-28 h-36 flex-shrink-0">
             <picture style={{ display: "contents" }}>
-              <source srcSet={getMaryPortraitPng(equippedOutfit)} type="image/png" />
+              <source srcSet={getMaryBustPng(equippedOutfit)} type="image/png" />
               <img
                 src={OUTFIT_IMAGES[id]}
                 alt="Mary portrait"
@@ -154,6 +154,7 @@ export default function MaryProfileScreen() {
               emote={emote}
               height={40}
               showEmote={false}
+              variant="bust"
               className="scale-[1.2] origin-bottom"
             />
           </div>
