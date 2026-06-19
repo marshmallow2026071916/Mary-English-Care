@@ -261,6 +261,7 @@ export default function ReviewLogScreen() {
             showEmote={false}
             outfit={gs.equippedOutfit}
             emote={emote}
+            variant="bust"
             className="scale-90 origin-left"
           />
           <div className="bg-card px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm border border-border flex-1">

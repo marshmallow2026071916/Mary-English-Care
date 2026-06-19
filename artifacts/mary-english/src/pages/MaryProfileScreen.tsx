@@ -61,12 +61,12 @@ export default function MaryProfileScreen() {
 
         {/* ── Portrait card ───────────────────────────────────────────────── */}
         <motion.div
-          className={`rounded-3xl overflow-hidden bg-gradient-to-br ${meta.cardBg} flex flex-col items-center pt-5 pb-4 gap-2 shadow-sm border border-white/20`}
+          className="rounded-3xl overflow-hidden bg-secondary/40 border border-border flex flex-col items-center pt-5 pb-4 gap-2 shadow-sm"
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.4, delay: 0.05 }}
         >
-          {/* Official bust portrait — direct img, no picture fallback */}
+          {/* Official bust portrait — direct img on neutral bg so transparent areas are clean */}
           <div className="w-36 h-44 flex-shrink-0">
             <img
               src={getMaryBustPng(equippedOutfit)}
@@ -78,9 +78,9 @@ export default function MaryProfileScreen() {
 
           {/* Name and outfit label */}
           <div className="text-center px-4">
-            <p className="text-base font-bold text-white drop-shadow-sm">{PROFILE.name}</p>
+            <p className="text-base font-bold text-foreground">{PROFILE.name}</p>
             {meta.badgeLabel && (
-              <p className="text-xs font-medium text-white/70 mt-0.5">{meta.badgeLabel}</p>
+              <p className="text-xs font-medium text-muted-foreground mt-0.5">{meta.badgeLabel}</p>
             )}
           </div>
         </motion.div>

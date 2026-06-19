@@ -273,6 +273,7 @@ export default function TasksScreen() {
             showEmote={false}
             outfit={equippedOutfit}
             emote={emote}
+            variant="bust"
             className="scale-90 origin-left"
           />
           <motion.div
@@ -421,6 +422,7 @@ export default function TasksScreen() {
                       showEmote
                       outfit={equippedOutfit}
                       emote="smile"
+                      variant="bust"
                       className="shrink-0"
                     />
                     <motion.div

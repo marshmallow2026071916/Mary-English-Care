@@ -2,6 +2,18 @@ import { motion, type TargetAndTransition } from "framer-motion";
 import { type EmoteState } from "@/context/GameContext";
 import { getMaryImage, getMaryFullPng, getMaryBustPng, resolveOutfitId, OUTFIT_META } from "@/lib/maryAssets";
 
+// Helper: try the primary PNG src; fall back to SVG/fallback if the file 404s.
+// This replaces <picture>/<source> which can be bypassed when display:contents is set.
+function withFallback(primary: string, fallback: string) {
+  return {
+    src: primary,
+    onError: (e: React.SyntheticEvent<HTMLImageElement>) => {
+      const img = e.currentTarget;
+      if (img.src !== fallback) img.src = fallback;
+    },
+  };
+}
+
 interface MaryAvatarProps {
   height?: number;
   className?: string;
@@ -75,17 +87,14 @@ export function MaryAvatar({
         animate={animation}
         data-testid="mary-avatar-box"
       >
-        {/* Portrait artwork — PNG first (official), SVG/PNG fallback.
-            object-contain: never crops, preserves full body / face visibility. */}
-        <picture style={{ display: "contents" }}>
-          <source srcSet={pngSrc} type="image/png" />
-          <img
-            src={svgSrc}
-            alt="Mary"
-            className="w-full h-full object-contain"
-            draggable={false}
-          />
-        </picture>
+        {/* Direct img — avoids <picture display:contents> source-selection bypass bug.
+            Tries the official PNG first; falls back to SVG/PNG if the file 404s. */}
+        <img
+          {...withFallback(pngSrc, svgSrc)}
+          alt="Mary"
+          className="w-full h-full object-contain"
+          draggable={false}
+        />
 
         {/* Shimmer overlay */}
         <motion.div
