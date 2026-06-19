@@ -9,12 +9,35 @@ import {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type EmoteState = "idle" | "smile" | "cheer" | "celebration" | "shy";
+
 export type ModalType =
+  | "xp-gained"
+  | "small-reward"
   | "level-up"
-  | "daily-talk"
+  | "level-outfit"
+  | "emote-reward"
+  | "review-progress"
+  | "review-reward"
+  // Legacy — kept for actions called outside the import flow:
   | "heart"
   | "seasonal"
-  | "small-reward";
+  | "daily-talk";
+
+// Data bundle read by popup components for the current import sequence.
+// Populated by importSessionData; cleared on reset.
+export interface PopupCtx {
+  xpGained: number;
+  xpBefore: number;
+  xpAfterMod: number;          // xp mod XP_PER_LEVEL after import (0–199)
+  levelBefore: number;
+  levelAfter: number;
+  smallRewardLabel: "Daily Talk Complete" | "Practice Complete";
+  emoteReward: EmoteState;     // emote unlocked at this 5-level milestone
+  reviewCountAfter: number;
+  reviewMax: number;
+  heartRecovered: boolean;
+  seasonalUnlocked: boolean;
+}
 
 export interface GameState {
   level: number;
@@ -61,10 +84,21 @@ export interface SessionImportData {
 }
 
 export interface ImportResult {
+  // Task completion flags
   dailyNewlyCompleted: boolean;
   practiceNewlyCompleted: boolean;
   reviewNewlyCompleted: boolean;
   leveledUp: boolean;
+  // Enriched popup data
+  xpGained: number;
+  levelBefore: number;
+  levelAfter: number;
+  levelOutfitNewlyUnlocked: boolean; // level-up AND outfit wasn't already in wardrobe
+  emoteRewardUnlocked: boolean;      // level-up AND new level % 5 === 0
+  reviewCountAfter: number;
+  reviewJustCompleted: boolean;      // reviewCount just reached MAX_REVIEW
+  heartRecovered: boolean;           // review completed + hearts below max
+  seasonalOutfitUnlocked: boolean;   // review completed + hearts already full
 }
 
 interface GameContextValue {
@@ -73,6 +107,8 @@ interface GameContextValue {
   xpPercent: number;
   emote: EmoteState;
   activeModal: ModalType | null;
+  isLastModal: boolean;
+  popupCtx: PopupCtx;
   closeModal: () => void;
   isUnlocked: (id: string) => boolean;
   actions: {
@@ -123,6 +159,20 @@ const DEFAULT_STATE: GameState = {
   lastReadingDate: null,
 };
 
+const DEFAULT_POPUP_CTX: PopupCtx = {
+  xpGained: 0,
+  xpBefore: 0,
+  xpAfterMod: 0,
+  levelBefore: 0,
+  levelAfter: 0,
+  smallRewardLabel: "Daily Talk Complete",
+  emoteReward: "smile",
+  reviewCountAfter: 0,
+  reviewMax: MAX_REVIEW,
+  heartRecovered: false,
+  seasonalUnlocked: false,
+};
+
 // ─── Pure helpers ─────────────────────────────────────────────────────────────
 function toDateStr(date: Date) {
   return date.toISOString().slice(0, 10);
@@ -166,6 +216,15 @@ function addOutfit(state: GameState, id: string): GameState {
   return { ...state, unlockedOutfits: [...state.unlockedOutfits, id] };
 }
 
+// Maps a 5-level milestone to the emote reward shown at that level.
+// Cycles through non-idle emotes so every milestone feels fresh.
+const LEVEL_EMOTES: EmoteState[] = ["smile", "cheer", "celebration", "shy"];
+function getEmoteReward(level: number): EmoteState {
+  const raw = Math.floor(level / 5) - 1;
+  const idx = ((raw % LEVEL_EMOTES.length) + LEVEL_EMOTES.length) % LEVEL_EMOTES.length;
+  return LEVEL_EMOTES[idx];
+}
+
 // ─── Context ──────────────────────────────────────────────────────────────────
 const GameContext = createContext<GameContextValue | null>(null);
 
@@ -174,7 +233,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const gsRef = useRef<GameState>(gs);
   const [emote, setEmoteRaw] = useState<EmoteState>("idle");
   const [modalQueue, setModalQueue] = useState<ModalType[]>([]);
+  const [popupCtx, setPopupCtx] = useState<PopupCtx>(() => ({ ...DEFAULT_POPUP_CTX }));
+
   const activeModal: ModalType | null = modalQueue[0] ?? null;
+  const isLastModal = modalQueue.length <= 1;
   const emoteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   gsRef.current = gs;
@@ -306,6 +368,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     update({ ...DEFAULT_STATE });
     setEmoteRaw("idle");
     setModalQueue([]);
+    setPopupCtx({ ...DEFAULT_POPUP_CTX });
   }, [update]);
 
   const equipOutfit = useCallback((id: string) => {
@@ -351,14 +414,26 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, [update]);
 
   // ─ importSessionData ────────────────────────────────────────────────────────
+  // Applies all session state changes, then queues the Step 7 popup sequence.
+  // XP/level/count formulas are unchanged — only adds review reward logic.
   const importSessionData = useCallback((data: SessionImportData): ImportResult => {
     const prev = gsRef.current;
     const importDate = data.date;
+
     const result: ImportResult = {
       dailyNewlyCompleted: false,
       practiceNewlyCompleted: false,
       reviewNewlyCompleted: false,
       leveledUp: false,
+      xpGained: data.xp_gained,
+      levelBefore: prev.level,
+      levelAfter: prev.level,
+      levelOutfitNewlyUnlocked: false,
+      emoteRewardUnlocked: false,
+      reviewCountAfter: prev.reviewCount,
+      reviewJustCompleted: false,
+      heartRecovered: false,
+      seasonalOutfitUnlocked: false,
     };
 
     let state = { ...prev };
@@ -385,7 +460,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
 
     // 3. daily_completed
-    // Requires rallies >= 10 if provided; trusts flag if rallies absent (backwards compat)
     const dailyCanComplete =
       !!data.daily_completed &&
       (data.rallies === undefined || data.rallies >= DAILY_RALLY_TARGET);
@@ -401,7 +475,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
 
     // 4. practice_completed (accepts practice_completed or legacy reading_talk_completed)
-    // Requires rallies >= 3 if provided; trusts flag if rallies absent (backwards compat)
     const practiceFlag = data.practice_completed ?? data.reading_talk_completed ?? false;
     const practiceCanComplete =
       practiceFlag &&
@@ -427,22 +500,69 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (state.level > prev.level) {
       state = addOutfit(state, "level");
       result.leveledUp = true;
+      result.levelOutfitNewlyUnlocked = !prev.unlockedOutfits.includes("level");
+      result.emoteRewardUnlocked = state.level % 5 === 0;
     }
 
+    // 7. Review reward: when all 3 review tasks complete, recover a heart or
+    //    unlock the seasonal outfit (whichever applies first).
+    if (result.reviewNewlyCompleted && state.reviewCount === MAX_REVIEW) {
+      result.reviewJustCompleted = true;
+      if (state.hearts < MAX_HEARTS) {
+        state = { ...state, hearts: state.hearts + 1 };
+        result.heartRecovered = true;
+      } else if (!state.unlockedOutfits.includes("seasonal")) {
+        state = addOutfit(state, "seasonal");
+        result.seasonalOutfitUnlocked = true;
+      }
+    }
+
+    // 8. Populate remaining result fields from final state
+    result.levelAfter = state.level;
+    result.reviewCountAfter = state.reviewCount;
+
+    // 9. Apply final state to storage + React
     update(state);
 
-    // 7. Queue modals + set emote
+    // 10. Build ordered popup queue — skip types whose event did not occur
+    const queue: ModalType[] = [];
+    if (data.xp_gained > 0)                                            queue.push("xp-gained");
+    if (result.dailyNewlyCompleted || result.practiceNewlyCompleted)   queue.push("small-reward");
+    if (result.leveledUp)                                              queue.push("level-up");
+    if (result.levelOutfitNewlyUnlocked)                               queue.push("level-outfit");
+    if (result.emoteRewardUnlocked)                                    queue.push("emote-reward");
+    if (result.reviewNewlyCompleted)                                   queue.push("review-progress");
+    if (result.reviewJustCompleted)                                    queue.push("review-reward");
+
+    // 11. Set popup context so each modal component can read session-specific data
+    setPopupCtx({
+      xpGained: data.xp_gained,
+      xpBefore: prev.xp,
+      xpAfterMod: state.xp,
+      levelBefore: prev.level,
+      levelAfter: state.level,
+      smallRewardLabel: result.dailyNewlyCompleted ? "Daily Talk Complete" : "Practice Complete",
+      emoteReward: result.emoteRewardUnlocked ? getEmoteReward(state.level) : "smile",
+      reviewCountAfter: state.reviewCount,
+      reviewMax: MAX_REVIEW,
+      heartRecovered: result.heartRecovered,
+      seasonalUnlocked: result.seasonalOutfitUnlocked,
+    });
+
+    // 12. Set main avatar emote for the session
     if (result.leveledUp) {
       setEmote("celebration", false);
-      if (result.dailyNewlyCompleted) showModal("daily-talk");
-      showModal("level-up");
-    } else if (result.dailyNewlyCompleted) {
+    } else if (result.dailyNewlyCompleted || result.practiceNewlyCompleted) {
       setEmote("cheer");
-      showModal("daily-talk");
+    } else if (result.reviewNewlyCompleted) {
+      setEmote("smile");
     }
 
+    // 13. Activate the popup queue
+    setModalQueue(queue);
+
     return result;
-  }, [update, setEmote, showModal]);
+  }, [update, setEmote]);
 
   // ─ Derived ──────────────────────────────────────────────────────────────────
   const today = toDateStr(new Date());
@@ -456,6 +576,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
     xpPercent,
     emote,
     activeModal,
+    isLastModal,
+    popupCtx,
     closeModal,
     isUnlocked,
     actions: {
