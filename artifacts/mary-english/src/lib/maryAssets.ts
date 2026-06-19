@@ -5,15 +5,15 @@
 // metadata. Every component that displays Mary imports from here.
 //
 // To add a new outfit (e.g. "spring"):
-//   1. Add the OutfitId: "spring" to the OutfitId union below.
+//   1. Add "spring" to the OutfitId union below.
 //   2. Drop spring_full.png and spring_bust.png into public/assets/mary/outfits/.
-//   3. Add an OUTFIT_META entry for "spring".
-//   4. Add an OUTFIT_IMAGES fallback entry for "spring".
-//   That is all — getMaryFullPng / getMaryBustPng pick them up automatically.
+//   3. Add an OUTFIT_META entry and an OUTFIT_IMAGES fallback entry.
+//   getMaryFullPng / getMaryBustPng pick them up automatically using the
+//   default pattern {id}_full.png / {id}_bust.png inside /outfits/.
 //
-// For outfits whose files have a version suffix (e.g. black_full_v1.png),
-// set fullFilename / bustFilename in OUTFIT_META. Future outfits that follow
-// the default {id}_full.png / {id}_bust.png pattern need no overrides.
+// For outfits whose files live outside the /outfits/ folder or use a
+// non-standard filename, set fullFilename / bustFilename to an absolute URL
+// path starting with "/" in OUTFIT_META. The helpers use it verbatim.
 
 import type { EmoteState } from "@/context/GameContext";
 
@@ -21,17 +21,17 @@ export type OutfitId = "default" | "black" | "level" | "seasonal";
 
 const BASE = "/assets/mary";
 
-// ─── Outfit images — used as <img src> fallback when no PNG is available ──────
-// For outfits with official PNGs the <source srcSet> in <picture> takes priority.
+// ─── Outfit images — <img src> fallback when no PNG source is available ───────
 export const OUTFIT_IMAGES: Record<OutfitId, string> = {
   default:  `${BASE}/outfits/default.svg`,
-  black:    `${BASE}/outfits/black_full_v1.png`,   // official — SVG placeholder retired
+  black:    `${BASE}/black_full.png`,   // official transparent PNG — SVG retired
   level:    `${BASE}/outfits/level.svg`,
   seasonal: `${BASE}/outfits/seasonal.svg`,
 };
 
 // ─── Emote images ──────────────────────────────────────────────────────────────
-// Currently unused — emote differences are expressed through CSS animation only.
+// Emote differences are expressed through CSS animation only.
+// Add pose-specific artwork to public/assets/mary/emotes/ and uncomment below.
 export const EMOTE_IMAGES: Partial<Record<EmoteState, string>> = {
   // idle:        `${BASE}/emotes/idle.svg`,
   // smile:       `${BASE}/emotes/smile.svg`,
@@ -40,50 +40,50 @@ export const EMOTE_IMAGES: Partial<Record<EmoteState, string>> = {
   // shy:         `${BASE}/emotes/shy.svg`,
 };
 
-// ─── Splash UI image ──────────────────────────────────────────────────────────
-// Both constants point to the official full-body black outfit portrait so the
-// <picture> source and the <img> fallback show the same image.
-export const SPLASH_IMAGE     = `${BASE}/outfits/black_full_v1.png`;
-export const SPLASH_IMAGE_PNG = `${BASE}/outfits/black_full_v1.png`;
+// ─── Splash UI images ─────────────────────────────────────────────────────────
+// Both point to the official full-body portrait so <source> and <img> agree.
+export const SPLASH_IMAGE     = `${BASE}/black_full.png`;
+export const SPLASH_IMAGE_PNG = `${BASE}/black_full.png`;
 
 // ─── Outfit metadata ──────────────────────────────────────────────────────────
 export interface OutfitMeta {
   label: string;
   badgeLabel: string;         // Shown on the avatar card; empty string = no badge
-  headerGradient: string;     // Tailwind gradient classes for outfit-themed modal headers
+  headerGradient: string;     // Tailwind gradient for outfit-themed modal headers
   cardBg: string;             // Tailwind gradient for avatar card container background
-  // Optional explicit filenames inside public/assets/mary/outfits/.
-  // When omitted, getMaryFullPng / getMaryBustPng fall back to {id}_full.png / {id}_bust.png.
+  // Optional path overrides. Absolute paths (starting with "/") are used verbatim.
+  // Relative names are resolved inside /assets/mary/outfits/.
+  // Omit both to use the default {id}_full.png / {id}_bust.png pattern in /outfits/.
   fullFilename?: string;
   bustFilename?: string;
 }
 
 export const OUTFIT_META: Record<OutfitId, OutfitMeta> = {
   default: {
-    label:           "Default",
-    badgeLabel:      "",
-    headerGradient:  "from-primary/20 to-accent/20",
-    cardBg:          "from-secondary/80 to-accent/30",
+    label:          "Default",
+    badgeLabel:     "",
+    headerGradient: "from-primary/20 to-accent/20",
+    cardBg:         "from-secondary/80 to-accent/30",
   },
   black: {
-    label:           "Black Outfit",
-    badgeLabel:      "Black Outfit",
-    headerGradient:  "from-slate-600 to-slate-900",
-    cardBg:          "from-slate-700 to-slate-900",
-    fullFilename:    "black_full_v1.png",
-    bustFilename:    "black_bust_v1.png",
+    label:          "Black Outfit",
+    badgeLabel:     "Black Outfit",
+    headerGradient: "from-slate-600 to-slate-900",
+    cardBg:         "from-slate-700 to-slate-900",
+    fullFilename:   "/assets/mary/black_full.png",
+    bustFilename:   "/assets/mary/black_bust.png",
   },
   level: {
-    label:           "Level Reward Outfit",
-    badgeLabel:      "Level Reward Outfit",
-    headerGradient:  "from-amber-300 to-orange-400",
-    cardBg:          "from-amber-300 to-orange-400",
+    label:          "Level Reward Outfit",
+    badgeLabel:     "Level Reward Outfit",
+    headerGradient: "from-amber-300 to-orange-400",
+    cardBg:         "from-amber-300 to-orange-400",
   },
   seasonal: {
-    label:           "Seasonal Outfit",
-    badgeLabel:      "Seasonal Outfit",
-    headerGradient:  "from-teal-300 to-emerald-400",
-    cardBg:          "from-teal-300 to-emerald-400",
+    label:          "Seasonal Outfit",
+    badgeLabel:     "Seasonal Outfit",
+    headerGradient: "from-teal-300 to-emerald-400",
+    cardBg:         "from-teal-300 to-emerald-400",
   },
 };
 
@@ -96,35 +96,33 @@ export function resolveOutfitId(outfit: string): OutfitId {
     : "default";
 }
 
-// Full-body portrait PNG — for large displays (Top Screen, Splash, Options,
-// Intro, Reward popups, Outfit Preview).
-// Defaults to {id}_full.png; overridden per-outfit via fullFilename.
+// Full-body portrait PNG.
+// Used by: Splash, Intro, Top Screen, Options, Reward popups, Wardrobe preview.
 export function getMaryFullPng(outfit: string): string {
   const id = resolveOutfitId(outfit);
-  const filename = OUTFIT_META[id].fullFilename ?? `${id}_full.png`;
-  return `${BASE}/outfits/${filename}`;
+  const f = OUTFIT_META[id].fullFilename;
+  if (!f) return `${BASE}/outfits/${id}_full.png`;
+  return f.startsWith("/") ? f : `${BASE}/outfits/${f}`;
 }
 
-// Bust portrait PNG — for small/icon uses (Review Log badge, Mary Profile card,
-// small avatar components, dialogue avatars).
-// Defaults to {id}_bust.png; overridden per-outfit via bustFilename.
+// Bust portrait PNG.
+// Used by: Review Log badge, Mary Profile, small avatar components, dialogue.
 export function getMaryBustPng(outfit: string): string {
   const id = resolveOutfitId(outfit);
-  const filename = OUTFIT_META[id].bustFilename ?? `${id}_bust.png`;
-  return `${BASE}/outfits/${filename}`;
+  const f = OUTFIT_META[id].bustFilename;
+  if (!f) return `${BASE}/outfits/${id}_bust.png`;
+  return f.startsWith("/") ? f : `${BASE}/outfits/${f}`;
 }
 
-// Backward-compatible alias — returns the full-body portrait.
-// Use getMaryFullPng / getMaryBustPng directly in new code.
+// Backward-compatible alias → full-body portrait.
+// Prefer getMaryFullPng / getMaryBustPng in new code.
 export function getMaryPortraitPng(outfit: string): string {
   return getMaryFullPng(outfit);
 }
 
-// Return the correct Mary image for a given outfit + emote combination.
-// Returns the OUTFIT_IMAGES fallback (SVG or PNG); emote differences are CSS animations.
+// Returns the <img src> fallback for a given outfit + emote.
+// Emote differences are handled via CSS animation; artwork falls back to OUTFIT_IMAGES.
 export function getMaryImage(outfit: string, emote?: EmoteState): string {
-  if (emote && EMOTE_IMAGES[emote]) {
-    return EMOTE_IMAGES[emote]!;
-  }
+  if (emote && EMOTE_IMAGES[emote]) return EMOTE_IMAGES[emote]!;
   return OUTFIT_IMAGES[resolveOutfitId(outfit)];
 }
