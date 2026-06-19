@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { GameProvider } from "@/context/GameContext";
 import { RewardModal } from "@/components/RewardModal";
 import { SplashScreen } from "@/components/SplashScreen";
+import { IntroScreen } from "@/components/IntroScreen";
 import NotFound from "@/pages/not-found";
 import TopScreen from "@/pages/TopScreen";
 import TasksScreen from "@/pages/TasksScreen";
@@ -31,6 +32,13 @@ function Router() {
 
 function App() {
   const [splashDone, setSplashDone] = useState(false);
+  const [introDone, setIntroDone] = useState(
+    () => localStorage.getItem("hasSeenIntroduction") === "true"
+  );
+
+  const handleIntroDone = () => {
+    setIntroDone(true);
+  };
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -43,7 +51,14 @@ function App() {
           </GameProvider>
         </WouterRouter>
 
-        {/* Splash renders on top, fades out when done */}
+        {/* Intro shown after splash, only on first launch */}
+        <AnimatePresence>
+          {splashDone && !introDone && (
+            <IntroScreen key="intro" onDone={handleIntroDone} />
+          )}
+        </AnimatePresence>
+
+        {/* Splash renders on top of everything, fades out when done */}
         <AnimatePresence>
           {!splashDone && (
             <SplashScreen key="splash" onDone={() => setSplashDone(true)} />
