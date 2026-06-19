@@ -1,8 +1,7 @@
 import { motion } from "framer-motion";
-import { MaryAvatar } from "@/components/MaryAvatar";
 import { BottomNav } from "@/components/BottomNav";
 import { useGame } from "@/context/GameContext";
-import { getMaryBustPng, OUTFIT_IMAGES, OUTFIT_META, resolveOutfitId } from "@/lib/maryAssets";
+import { getMaryBustPng, OUTFIT_META, resolveOutfitId } from "@/lib/maryAssets";
 
 // ─── Static profile data ──────────────────────────────────────────────────────
 const PROFILE = {
@@ -67,17 +66,14 @@ export default function MaryProfileScreen() {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.4, delay: 0.05 }}
         >
-          {/* Portrait using outfit-aware picture element (same as wardrobe) */}
-          <div className="w-28 h-36 flex-shrink-0">
-            <picture style={{ display: "contents" }}>
-              <source srcSet={getMaryBustPng(equippedOutfit)} type="image/png" />
-              <img
-                src={OUTFIT_IMAGES[id]}
-                alt="Mary portrait"
-                className="w-full h-full object-contain"
-                draggable={false}
-              />
-            </picture>
+          {/* Official bust portrait — direct img, no picture fallback */}
+          <div className="w-36 h-44 flex-shrink-0">
+            <img
+              src={getMaryBustPng(equippedOutfit)}
+              alt="Mary portrait"
+              className="w-full h-full object-contain object-top"
+              draggable={false}
+            />
           </div>
 
           {/* Name and outfit label */}
@@ -149,13 +145,11 @@ export default function MaryProfileScreen() {
         >
           {/* Small avatar bust */}
           <div className="shrink-0 w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-            <MaryAvatar
-              outfit={equippedOutfit}
-              emote={emote}
-              height={40}
-              showEmote={false}
-              variant="bust"
-              className="scale-[1.2] origin-bottom"
+            <img
+              src={getMaryBustPng(equippedOutfit)}
+              alt="Mary"
+              className="w-full h-full object-contain object-top"
+              draggable={false}
             />
           </div>
           <div className="flex-1 min-w-0">
