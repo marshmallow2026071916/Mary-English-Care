@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lock, Check, ChevronDown, ChevronUp } from "lucide-react";
+import { Lock, Check, ChevronDown, ChevronUp, ChevronRight, User } from "lucide-react";
+import { Link } from "wouter";
 import { MaryAvatar } from "@/components/MaryAvatar";
 import { BottomNav } from "@/components/BottomNav";
 import { useGame } from "@/context/GameContext";
@@ -154,6 +155,27 @@ export default function OptionsScreen() {
               );
             })}
           </div>
+        </div>
+
+        {/* Mary Profile link */}
+        <div className="mb-8">
+          <Link href="/profile">
+            <motion.div
+              className="flex items-center justify-between px-4 py-4 bg-card border border-border rounded-2xl shadow-sm cursor-pointer hover:border-primary/40 transition-colors"
+              whileTap={{ scale: 0.97 }}
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <User className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-foreground">Mary Profile</p>
+                  <p className="text-xs text-muted-foreground">Get to know Mary</p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            </motion.div>
+          </Link>
         </div>
 
         {/* Developer Testing Panel */}

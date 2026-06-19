@@ -12,6 +12,7 @@ import TopScreen from "@/pages/TopScreen";
 import TasksScreen from "@/pages/TasksScreen";
 import OptionsScreen from "@/pages/OptionsScreen";
 import ReviewLogScreen from "@/pages/ReviewLogScreen";
+import MaryProfileScreen from "@/pages/MaryProfileScreen";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,7 @@ function Router() {
       <Route path="/tasks" component={TasksScreen} />
       <Route path="/options" component={OptionsScreen} />
       <Route path="/review-log" component={ReviewLogScreen} />
+      <Route path="/profile" component={MaryProfileScreen} />
       <Route component={NotFound} />
     </Switch>
   );
