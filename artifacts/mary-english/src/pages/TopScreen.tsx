@@ -89,7 +89,7 @@ export default function TopScreen() {
               outfit={equippedOutfit}
               emote={emote}
               showEmote={false}
-              height={340}
+              height={430}
             />
           </motion.div>
 
