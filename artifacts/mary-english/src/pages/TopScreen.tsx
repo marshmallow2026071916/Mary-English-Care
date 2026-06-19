@@ -9,12 +9,15 @@ const XP_PER_LEVEL = 200;
 
 const WELCOME_MESSAGES = [
   "Welcome back, Eikichi.",
-  "I'm happy to see you again, Eikichi.",
-  "Shall we enjoy some English together today, Eikichi?",
-  "Let's make today another fun day of English, Eikichi.",
-  "I've been looking forward to talking with you, Eikichi.",
   "I'm glad you're here today, Eikichi.",
-  "Every little conversation helps us grow, Eikichi.",
+  "Shall we enjoy some English together, Eikichi?",
+  "Let's take one small step today, Eikichi.",
+  "I was waiting for our next conversation, Eikichi.",
+  "Every little conversation matters, Eikichi.",
+  "I'm happy to see you again, Eikichi.",
+  "Let's make today another gentle step, Eikichi.",
+  "Your English journey continues today, Eikichi.",
+  "I'm ready whenever you are, Eikichi.",
 ];
 
 export default function TopScreen() {
@@ -71,7 +74,7 @@ export default function TopScreen() {
             transition={{ delay: 0.2, type: "spring", bounce: 0.4 }}
             data-testid="bubble-mary-message"
           >
-            <div className="bg-white px-4 py-2.5 rounded-2xl rounded-br-sm shadow-md border border-border/40 max-w-[190px]">
+            <div className="bg-white px-4 py-3 rounded-2xl rounded-br-sm shadow-md border border-border/40 max-w-[230px]">
               <p className="text-sm font-medium text-foreground leading-snug">{welcomeMsg}</p>
             </div>
           </motion.div>
