@@ -86,6 +86,18 @@ export function useReviewLog() {
     [setEntries]
   );
 
+  // Replace any existing entry whose date starts with dateKey (YYYY-MM-DD).
+  // Used when reimporting the same date to update the conversation without appending a duplicate.
+  const upsertByDate = useCallback(
+    (dateKey: string, entry: Omit<ReviewLogEntry, "id">) => {
+      setEntries((prev) => {
+        const filtered = prev.filter((e) => !e.date.startsWith(dateKey));
+        return [...filtered, { ...entry, id: makeId() }];
+      });
+    },
+    [setEntries]
+  );
+
   const clearLog = useCallback(() => {
     setEntries(() => []);
   }, [setEntries]);
@@ -192,5 +204,5 @@ export function useReviewLog() {
     [addEntry]
   );
 
-  return { entries, addEntry, addSampleEntry, clearLog };
+  return { entries, addEntry, upsertByDate, addSampleEntry, clearLog };
 }

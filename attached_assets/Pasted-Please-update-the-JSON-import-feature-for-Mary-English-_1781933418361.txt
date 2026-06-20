@@ -1,0 +1,89 @@
+Please update the JSON import feature for Mary English.
+
+Do not modify unrelated screens, layouts, styles, images, emotes, wardrobe, or animations.
+
+The imported JSON format has changed.
+
+Mary English should now use versioned daily JSON.
+
+The new JSON format is:
+
+{
+  "version": 2,
+  "date": "2026-06-19",
+  "progress": {
+    "dailyTalkCompleted": true,
+    "practiceTalkCompleted": true,
+    "reviewChallengeCompleted": false,
+    "dailyXp": 10,
+    "practiceXp": 10,
+    "reviewXp": 0,
+    "bonusXp": 0,
+    "totalXp": 20,
+    "weeklyStreak": 3,
+    "heart": 2,
+    "level": 1,
+    "notes": [
+      "Daily Talk completed.",
+      "Practice Talk completed."
+    ]
+  },
+  "reviewLog": {
+    "level": 1,
+    "talkType": "Practice Talk",
+    "maryAvatarVariant": "bust",
+    "levelOutfit": "black",
+    "conversation": [
+      {
+        "speaker": "Eikichi",
+        "type": "user",
+        "text": "Today, I read aloud Chapter 28 of Charlie and the Chocolate Factory."
+      },
+      {
+        "speaker": "Mary",
+        "type": "correction",
+        "text": "Today, I read aloud Chapter 28 of Charlie and the Chocolate Factory."
+      },
+      {
+        "speaker": "Mary",
+        "type": "reply",
+        "text": "That sounds great! What part did you enjoy the most?"
+      }
+    ],
+    "rewards": [
+      {
+        "type": "daily",
+        "emote": "smile",
+        "text": "Daily Talk completed."
+      }
+    ]
+  }
+}
+
+Import behavior:
+
+- Parse the JSON.
+- Validate version.
+- For now, support version: 2.
+- Validate that the JSON contains date, progress, and reviewLog.
+- Save progress data to localStorage.
+- Save reviewLog data to localStorage.
+- If the same date already exists, replace the existing data.
+- Update the Top screen using progress.
+- Update the Tasks screen using progress.
+- Update the Review Log screen using reviewLog.
+
+Startup behavior:
+
+- When Mary English starts, automatically load the latest saved JSON from localStorage.
+- Restore progress from progress.
+- Restore Review Log from saved reviewLog data.
+- The user should not need to import the same JSON twice.
+
+Important:
+
+- The user imports only one JSON per day.
+- Do not require separate imports for progress and reviewLog.
+- Treat the latest valid version 2 JSON as the source of truth.
+- Keep old progress-only JSON support only if it already exists, but the official format is now version 2.
+- Do not change unrelated functionality.

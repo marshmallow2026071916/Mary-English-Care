@@ -7,6 +7,8 @@ import {
   type ReviewLogReward,
 } from "@/hooks/useReviewLog";
 
+const SUPPORTED_VERSION = 2;
+
 // ─── Types for the new daily JSON format ──────────────────────────────────────
 type ProgressData = Omit<SessionImportData, "date">;
 
@@ -81,6 +83,9 @@ function validate(
     return { ok: false, error: "JSON must be an object." };
   const d = data as Record<string, unknown>;
 
+  if (d.version !== SUPPORTED_VERSION)
+    return { ok: false, error: `Unsupported version. Expected "version": ${SUPPORTED_VERSION}.` };
+
   if (typeof d.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(d.date))
     return { ok: false, error: 'Missing or invalid "date" field (expected YYYY-MM-DD).' };
 
@@ -116,6 +121,7 @@ export const SAMPLE_JSON = {
   dailyTalk: () =>
     JSON.stringify(
       {
+        version: 2,
         date: todayStr(),
         progress: {
           dailyTalkCompleted: true,
@@ -153,6 +159,7 @@ export const SAMPLE_JSON = {
   practiceTalk: () =>
     JSON.stringify(
       {
+        version: 2,
         date: todayStr(),
         progress: {
           dailyTalkCompleted: false,
@@ -188,6 +195,7 @@ export const SAMPLE_JSON = {
   reviewTask: () =>
     JSON.stringify(
       {
+        version: 2,
         date: todayStr(),
         progress: {
           dailyTalkCompleted: false,
@@ -231,7 +239,7 @@ export function useSessionImport() {
   const [statusMsg, setStatusMsg] = useState("");
 
   const { gs, actions } = useGame();
-  const { addEntry } = useReviewLog();
+  const { upsertByDate } = useReviewLog();
 
   const clearText = useCallback(() => {
     setJsonText("");
@@ -259,26 +267,23 @@ export function useSessionImport() {
     }
     const data = validation.data;
 
-    // 3. Duplicate check by date
+    // 3. Check whether this date has already been imported
     const imported = loadImported();
-    if (imported.has(data.date)) {
-      setStatus("duplicate");
-      setStatusMsg("This session has already been imported.");
-      return;
-    }
+    const alreadyImported = imported.has(data.date);
 
-    // 4. Capture level BEFORE import (review log entry uses this level)
+    // 4. Capture level BEFORE any state changes (review log stores starting level)
     const levelAtImport = gs.level;
 
-    // 5. Apply progress to game state
-    //    Merge date into progress since importSessionData needs it for streak logic
-    actions.importSessionData({ ...data.progress, date: data.date });
+    // 5. Apply progress only on first import for this date (avoid double-XP on re-import)
+    if (!alreadyImported) {
+      actions.importSessionData({ ...data.progress, date: data.date });
+    }
 
-    // 6. Save review log entry from reviewLog block
+    // 6. Always upsert review log — replaces any existing entry for the same date
     const rl = data.reviewLog;
     if (rl) {
       const taskType = normalizeTaskType(rl.talkType ?? "");
-      addEntry({
+      upsertByDate(data.date, {
         date: new Date(data.date + "T00:00:00Z").toISOString(),
         level: rl.level ?? levelAtImport,
         taskType,
@@ -288,15 +293,19 @@ export function useSessionImport() {
       });
     }
 
-    // 7. Mark date as imported
+    // 7. Mark date as imported (no-op if already there)
     imported.add(data.date);
     saveImported(imported);
 
-    // 8. Done
+    // 8. Done — differentiate first import from update
     setJsonText("");
     setStatus("success");
-    setStatusMsg("Session imported successfully.");
-  }, [jsonText, gs.level, actions, addEntry]);
+    setStatusMsg(
+      alreadyImported
+        ? "Session updated successfully."
+        : "Session imported successfully."
+    );
+  }, [jsonText, gs.level, actions, upsertByDate]);
 
   const resetImportHistory = useCallback(() => {
     clearImported();
