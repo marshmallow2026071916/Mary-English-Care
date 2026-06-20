@@ -230,12 +230,30 @@ function getEmoteReward(level: number): EmoteState {
 // ─── Context ──────────────────────────────────────────────────────────────────
 const GameContext = createContext<GameContextValue | null>(null);
 
+// ─── Dedicated daily-completed persistence (separate from GameState) ──────────
+// Written by importSession regardless of alreadyImported, read here directly.
+// Using a separate key avoids any React batch-update ordering issues.
+const DAILY_STATUS_KEY = "mary-english-daily-status";
+function loadDailyStatus(): boolean {
+  return localStorage.getItem(DAILY_STATUS_KEY) === "true";
+}
+function saveDailyStatus(val: boolean) {
+  localStorage.setItem(DAILY_STATUS_KEY, val ? "true" : "false");
+}
+function clearDailyStatus() {
+  localStorage.removeItem(DAILY_STATUS_KEY);
+}
+
 export function GameProvider({ children }: { children: ReactNode }) {
   const [gs, setGsRaw] = useState<GameState>(() => loadState());
   const gsRef = useRef<GameState>(gs);
   const [emote, setEmoteRaw] = useState<EmoteState>("idle");
   const [modalQueue, setModalQueue] = useState<ModalType[]>([]);
   const [popupCtx, setPopupCtx] = useState<PopupCtx>(() => ({ ...DEFAULT_POPUP_CTX }));
+  // Separate state for imported daily completion — avoids gsRef/update ordering issues.
+  const [importedDailyCompleted, setImportedDailyCompletedState] = useState<boolean>(
+    () => loadDailyStatus()
+  );
 
   const activeModal: ModalType | null = modalQueue[0] ?? null;
   const isLastModal = modalQueue.length <= 1;
@@ -368,6 +386,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const resetData = useCallback(() => {
     update({ ...DEFAULT_STATE });
+    clearDailyStatus();
+    setImportedDailyCompletedState(false);
     setEmoteRaw("idle");
     setModalQueue([]);
     setPopupCtx({ ...DEFAULT_POPUP_CTX });
@@ -415,9 +435,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
     update(addOutfit(gsRef.current, "level"));
   }, [update]);
 
+  // Write directly to its own localStorage key AND update the separate useState.
+  // This bypasses gsRef/update entirely, eliminating any React batch-ordering risk.
   const setImportedDailyCompleted = useCallback((val: boolean) => {
-    update({ ...gsRef.current, importedDailyCompleted: val });
-  }, [update]);
+    saveDailyStatus(val);
+    setImportedDailyCompletedState(val);
+  }, []);
 
   // ─ importSessionData ────────────────────────────────────────────────────────
   // Applies all session state changes, then queues the Step 7 popup sequence.
@@ -497,8 +520,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
     result.reviewCountAfter = state.reviewCount;
 
     // 8. Apply final state to storage + React
-    //    importedDailyCompleted is set directly from the JSON field — no date math.
-    state = { ...state, lastImportDate: importDate, importedDailyCompleted: data.dailyTalkCompleted };
+    //    Note: importedDailyCompleted is managed by the separate DAILY_STATUS_KEY
+    //    mechanism (set by setImportedDailyCompleted in useSessionImport) rather
+    //    than here, to avoid React batch-update ordering issues.
+    state = { ...state, lastImportDate: importDate };
     update(state);
 
     // 9. Build ordered popup queue — skip types whose event did not occur
@@ -543,10 +568,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   // ─ Derived ──────────────────────────────────────────────────────────────────
   const today = toDateStr(new Date());
-  // dailyTalkDone: read directly from the imported progress.dailyTalkCompleted flag
-  // (gs.importedDailyCompleted) so it always reflects the last JSON import.
+  // dailyTalkDone: reads from the dedicated importedDailyCompleted useState which
+  // is backed by its own localStorage key (written unconditionally on every import).
   // The today fallback preserves the dev-panel "Complete Daily Talk" button.
-  const dailyTalkDone = gs.importedDailyCompleted || gs.lastDailyDate === today;
+  const dailyTalkDone = importedDailyCompleted || gs.lastDailyDate === today;
   const xpPercent = Math.min(100, (gs.xp / XP_PER_LEVEL) * 100);
   const isUnlocked = useCallback((id: string) => gs.unlockedOutfits.includes(id), [gs.unlockedOutfits]);
 

@@ -306,13 +306,18 @@ export function useSessionImport() {
     // 4. Capture level BEFORE any state changes (review log stores starting level)
     const levelAtImport = gs.level;
 
-    // 5. Apply progress only on first import for this date (avoid double-XP on re-import)
+    // 5. Apply progress only on first import for this date (avoid double-XP on re-import).
+    //    Capture levelAfter so the review log entry goes under the correct level tab.
+    let levelForLog = levelAtImport;
     if (!alreadyImported) {
-      actions.importSessionData({ ...data.progress, date: data.date });
+      const importResult = actions.importSessionData({ ...data.progress, date: data.date });
+      // Use the level AFTER XP is applied so the entry appears under the Current Level tab.
+      levelForLog = importResult.levelAfter;
     }
 
-    // 5b. Always sync dailyTalkCompleted directly from progress — even on re-import.
-    //     This is the canonical source of truth for the Daily Talk card (1/1 vs 0/1).
+    // 5b. Always write importedDailyCompleted — even on re-import.
+    //     Uses a dedicated localStorage key + separate useState to avoid any
+    //     React batch-update ordering issues with the main GameState.
     actions.setImportedDailyCompleted(data.progress.dailyTalkCompleted);
 
     // 6. Always upsert review log — replaces any existing entry for the same date
@@ -321,9 +326,9 @@ export function useSessionImport() {
       const taskType = normalizeTaskType(rl.talkType ?? "");
       upsertByDate(data.date, {
         date: new Date(data.date + "T00:00:00Z").toISOString(),
-        // Always use levelAtImport (gs.level before XP was applied) so the entry
-        // appears under the correct level tab. rl.level is ChatGPT metadata only.
-        level: levelAtImport,
+        // levelForLog = importResult.levelAfter (first import) or gs.level (re-import).
+        // Matches what the "Current Level" tab shows after import.
+        level: levelForLog,
         taskType,
         // v3.0 messages take priority; then v2.1 rallies; then v2 flat conversation
         messages: rl.messages,
