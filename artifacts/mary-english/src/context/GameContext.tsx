@@ -56,6 +56,8 @@ export interface GameState {
   // Wardrobe
   unlockedOutfits: string[];
   equippedOutfit: string;
+  // Tracks the date of the last JSON import so dailyTalkDone reflects import state
+  lastImportDate: string | null;
   // Legacy fields kept for localStorage backwards-compat; no longer drive logic
   weeklyReadingCount: number;
   weeklyReadingMondayStr: string | null;
@@ -149,6 +151,7 @@ const DEFAULT_STATE: GameState = {
   lastReviewRallies: 0,
   unlockedOutfits: ["black"],
   equippedOutfit: "black",
+  lastImportDate: null,
   weeklyReadingCount: 0,
   weeklyReadingMondayStr: null,
   lastReadingDate: null,
@@ -485,7 +488,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
     result.levelAfter = state.level;
     result.reviewCountAfter = state.reviewCount;
 
-    // 8. Apply final state to storage + React
+    // 8. Apply final state to storage + React (record import date for dailyTalkDone)
+    state = { ...state, lastImportDate: importDate };
     update(state);
 
     // 9. Build ordered popup queue — skip types whose event did not occur
@@ -530,7 +534,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   // ─ Derived ──────────────────────────────────────────────────────────────────
   const today = toDateStr(new Date());
-  const dailyTalkDone = gs.lastDailyDate === today;
+  // dailyTalkDone reflects the imported session's state rather than just today.
+  // If an import exists, compare lastDailyDate to the import date so that importing
+  // a session from a past day (e.g. yesterday) still shows Daily Talk as complete.
+  const dailyTalkDone =
+    gs.lastDailyDate !== null &&
+    (gs.lastDailyDate === today || gs.lastDailyDate === gs.lastImportDate);
   const xpPercent = Math.min(100, (gs.xp / XP_PER_LEVEL) * 100);
   const isUnlocked = useCallback((id: string) => gs.unlockedOutfits.includes(id), [gs.unlockedOutfits]);
 

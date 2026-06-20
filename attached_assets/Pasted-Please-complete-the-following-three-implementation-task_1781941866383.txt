@@ -1,0 +1,167 @@
+Please complete the following three implementation tasks.
+
+Do not modify unrelated functionality beyond the scope described below.
+
+---
+
+# Task 1 — Fix Daily Talk restoration
+
+The Version 3.0 JSON import is working.
+
+XP, Weekly Streak, and Practice Tasks are restored correctly.
+
+Level 0 is correct as the initial level, so do not change the level behavior.
+
+Please fix only this issue:
+
+The imported JSON contains:
+
+```json
+"dailyTalkCompleted": true
+```
+
+but the Tasks screen still displays:
+
+```
+Daily Talk
+0 / 1
+```
+
+It should display:
+
+```
+Daily Talk
+1 / 1
+```
+
+Please restore the Daily Talk completion state from:
+
+```
+progress.dailyTalkCompleted
+```
+
+Do not change the JSON format.
+
+Do not modify unrelated functionality.
+
+Do not change the level behavior.
+
+---
+
+# Task 2 — Replace the PWA App Icon
+
+Replace the current PWA app icon with the uploaded file:
+
+```
+app-icon.png
+```
+
+Use this image as the official Mary English app icon.
+
+Requirements:
+
+* Use app-icon.png for the PWA app icon.
+* Generate all required icon sizes.
+* Update manifest.json accordingly.
+* Update favicon if applicable.
+* Keep the icon centered.
+* Do not crop Mary's face.
+* Preserve the dark purple background.
+* Preserve the rounded-square appearance.
+
+Do not modify any other images or screens.
+
+---
+
+# Task 3 — Replace the Wardrobe layout
+
+Update only the Wardrobe section in the Options screen.
+
+Do not modify JSON import, Review Log, Splash screen, App icon, game logic, animations, or unrelated screens.
+
+The current Wardrobe layout is still the old placeholder layout.
+
+Replace it with the official Wardrobe design.
+
+The Wardrobe screen should contain three tabs:
+
+1. Outfits
+2. Emotes
+3. Review Rewards
+
+Only one tab should be visible at a time.
+
+## Outfits
+
+Display outfits whose source is:
+
+* initial
+* levelUp
+
+## Emotes
+
+Display:
+
+```
+unlocked.emotes
+```
+
+## Review Rewards
+
+Display outfits whose source is:
+
+```
+reviewTask
+```
+
+### Display Rules
+
+* Two-column grid.
+* Show unlocked items first.
+* Sort unlocked items in descending order.
+* Outfits and Emotes:
+  sort by unlockedAtLevel (descending).
+* Review Rewards:
+  sort by unlockedAtDate (descending).
+* Locked items may remain as placeholders, but only inside their own category.
+* Do not mix categories in the same grid.
+
+Each item card should display:
+
+* image (or placeholder)
+* item name
+* unlock information
+
+Examples:
+
+```
+Black Outfit
+Unlocked at Level 1
+```
+
+```
+Cheer
+Unlocked at Level 3
+```
+
+```
+Rainy Season Outfit
+Unlocked on 2026-06-20
+```
+
+Use the existing data structure:
+
+```
+unlocked.outfits
+unlocked.emotes
+equipped.outfit
+equipped.emote
+```
+
+---
+
+After all three tasks are completed, verify that:
+
+* Daily Talk restores correctly after importing JSON.
+* The new app icon is used by the PWA.
+* The Wardrobe screen uses the new three-tab layout (Outfits / Emotes / Review Rewards).
