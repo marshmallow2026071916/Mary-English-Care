@@ -63,24 +63,19 @@ export interface GameState {
 }
 
 export interface SessionImportData {
-  session_id?: string;
   date: string;
-  task_type: string;
-  xp_gained: number;
-  daily_completed?: boolean;
-  reading_talk_completed?: boolean; // legacy alias for practice_completed
-  practice_completed?: boolean;
-  special_completed?: boolean;      // legacy alias for review_completed
-  review_completed?: boolean;
-  rallies?: number;
-  summary?: string;
-  // Rich conversation fields (new format):
-  opening?: string;
-  turns?: Array<{
-    eikichi: string;
-    correction?: string | null;
-    mary: string;
-  }>;
+  dailyTalkCompleted: boolean;
+  practiceTalkCompleted: boolean;
+  reviewChallengeCompleted: boolean;
+  dailyXp: number;
+  practiceXp: number;
+  reviewXp: number;
+  bonusXp: number;
+  totalXp: number;
+  weeklyStreak?: number;
+  heart?: number;
+  level?: number;
+  notes?: string[];
 }
 
 export interface ImportResult {
@@ -425,7 +420,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       practiceNewlyCompleted: false,
       reviewNewlyCompleted: false,
       leveledUp: false,
-      xpGained: data.xp_gained,
+      xpGained: data.totalXp,
       levelBefore: prev.level,
       levelAfter: prev.level,
       levelOutfitNewlyUnlocked: false,
@@ -437,33 +432,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
     };
 
     let state = { ...prev };
-    const tt = (data.task_type ?? "").trim();
 
-    // 1. Add xp_gained (may level-up, resetting practiceCount/reviewCount)
-    state = applyXP(state, data.xp_gained);
+    // 1. Add totalXp (may level-up, resetting practiceCount/reviewCount)
+    state = applyXP(state, data.totalXp);
 
-    // 2. Rally count tracking for display (based on task_type)
-    if (data.rallies !== undefined) {
-      if (tt === "Daily Talk" || data.daily_completed) {
-        state = { ...state, lastDailyRallies: data.rallies };
-      } else if (
-        tt === "Practice Talk" || tt === "Reading Talk" ||
-        (data.practice_completed ?? data.reading_talk_completed)
-      ) {
-        state = { ...state, lastPracticeRallies: data.rallies };
-      } else if (
-        tt === "Review Talk" || tt === "Review Challenge" ||
-        (data.review_completed ?? data.special_completed)
-      ) {
-        state = { ...state, lastReviewRallies: data.rallies };
-      }
-    }
-
-    // 3. daily_completed
-    const dailyCanComplete =
-      !!data.daily_completed &&
-      (data.rallies === undefined || data.rallies >= DAILY_RALLY_TARGET);
-    if (dailyCanComplete && state.lastDailyDate !== importDate) {
+    // 2. dailyTalkCompleted
+    if (data.dailyTalkCompleted && state.lastDailyDate !== importDate) {
       const dayBefore = getDayBefore(importDate);
       const newStreak = state.lastDailyDate === dayBefore ? state.streakCount + 1 : 1;
       state = { ...state, lastDailyDate: importDate, streakCount: newStreak };
@@ -474,29 +448,19 @@ export function GameProvider({ children }: { children: ReactNode }) {
       result.dailyNewlyCompleted = true;
     }
 
-    // 4. practice_completed (accepts practice_completed or legacy reading_talk_completed)
-    const practiceFlag = data.practice_completed ?? data.reading_talk_completed ?? false;
-    const practiceCanComplete =
-      practiceFlag &&
-      (data.rallies === undefined || data.rallies >= TASK_RALLY_TARGET) &&
-      state.practiceCount < MAX_PRACTICE;
-    if (practiceCanComplete) {
+    // 3. practiceTalkCompleted
+    if (data.practiceTalkCompleted && state.practiceCount < MAX_PRACTICE) {
       state = { ...state, practiceCount: state.practiceCount + 1 };
       result.practiceNewlyCompleted = true;
     }
 
-    // 5. review_completed (accepts review_completed or legacy special_completed)
-    const reviewFlag = data.review_completed ?? data.special_completed ?? false;
-    const reviewCanComplete =
-      reviewFlag &&
-      (data.rallies === undefined || data.rallies >= TASK_RALLY_TARGET) &&
-      state.reviewCount < MAX_REVIEW;
-    if (reviewCanComplete) {
+    // 4. reviewChallengeCompleted
+    if (data.reviewChallengeCompleted && state.reviewCount < MAX_REVIEW) {
       state = { ...state, reviewCount: state.reviewCount + 1 };
       result.reviewNewlyCompleted = true;
     }
 
-    // 6. Level-up detection
+    // 5. Level-up detection
     if (state.level > prev.level) {
       state = addOutfit(state, "level");
       result.leveledUp = true;
@@ -504,7 +468,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       result.emoteRewardUnlocked = state.level % 5 === 0;
     }
 
-    // 7. Review reward: when all 3 review tasks complete, recover a heart or
+    // 6. Review reward: when all 3 review tasks complete, recover a heart or
     //    unlock the seasonal outfit (whichever applies first).
     if (result.reviewNewlyCompleted && state.reviewCount === MAX_REVIEW) {
       result.reviewJustCompleted = true;
@@ -517,16 +481,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    // 8. Populate remaining result fields from final state
+    // 7. Populate remaining result fields from final state
     result.levelAfter = state.level;
     result.reviewCountAfter = state.reviewCount;
 
-    // 9. Apply final state to storage + React
+    // 8. Apply final state to storage + React
     update(state);
 
-    // 10. Build ordered popup queue — skip types whose event did not occur
+    // 9. Build ordered popup queue — skip types whose event did not occur
     const queue: ModalType[] = [];
-    if (data.xp_gained > 0)                                            queue.push("xp-gained");
+    if (data.totalXp > 0)                                              queue.push("xp-gained");
     if (result.dailyNewlyCompleted || result.practiceNewlyCompleted)   queue.push("small-reward");
     if (result.leveledUp)                                              queue.push("level-up");
     if (result.levelOutfitNewlyUnlocked)                               queue.push("level-outfit");
@@ -534,9 +498,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (result.reviewNewlyCompleted)                                   queue.push("review-progress");
     if (result.reviewJustCompleted)                                    queue.push("review-reward");
 
-    // 11. Set popup context so each modal component can read session-specific data
+    // 10. Set popup context so each modal component can read session-specific data
     setPopupCtx({
-      xpGained: data.xp_gained,
+      xpGained: data.totalXp,
       xpBefore: prev.xp,
       xpAfterMod: state.xp,
       levelBefore: prev.level,
@@ -549,7 +513,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       seasonalUnlocked: result.seasonalOutfitUnlocked,
     });
 
-    // 12. Set main avatar emote for the session
+    // 11. Set main avatar emote for the session
     if (result.leveledUp) {
       setEmote("celebration", false);
     } else if (result.dailyNewlyCompleted || result.practiceNewlyCompleted) {
@@ -558,7 +522,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setEmote("smile");
     }
 
-    // 13. Activate the popup queue
+    // 12. Activate the popup queue
     setModalQueue(queue);
 
     return result;

@@ -20,9 +20,13 @@ function saveImported(set: Set<string>): void {
 }
 
 function makeSessionKey(data: SessionImportData): string {
-  if (data.session_id) return data.session_id;
-  const snippet = (data.summary ?? "").trim().slice(0, 60);
-  return `${data.date}|${data.task_type}|${snippet}`;
+  return [
+    data.date,
+    data.dailyTalkCompleted ? "D" : "d",
+    data.practiceTalkCompleted ? "P" : "p",
+    data.reviewChallengeCompleted ? "R" : "r",
+    data.totalXp,
+  ].join("|");
 }
 
 function clearImported(): void {
@@ -30,42 +34,51 @@ function clearImported(): void {
 }
 
 // ─── Validation ───────────────────────────────────────────────────────────────
-function normalizeTaskType(raw: string): TaskType {
-  if (raw === "Practice Talk" || raw === "Reading Talk") return "Practice Talk";
-  if (raw === "Review Talk" || raw === "Review Challenge") return "Review Talk";
-  return "Daily Talk";
-}
-
 function validate(
   data: unknown
 ): { ok: true; data: SessionImportData } | { ok: false; error: string } {
   if (!data || typeof data !== "object")
     return { ok: false, error: "JSON must be an object." };
-  const d = data as unknown as Record<string, unknown>;
+  const d = data as Record<string, unknown>;
 
-  if (
-    typeof d.date !== "string" ||
-    !/^\d{4}-\d{2}-\d{2}$/.test(d.date)
-  ) {
-    return {
-      ok: false,
-      error: 'Missing or invalid "date" field (expected YYYY-MM-DD).',
-    };
-  }
-  if (typeof d.xp_gained !== "number") {
-    return {
-      ok: false,
-      error: 'Missing or invalid "xp_gained" field (expected number).',
-    };
-  }
-  if (d.task_type !== undefined && typeof d.task_type !== "string") {
-    return { ok: false, error: '"task_type" must be a string.' };
-  }
+  if (typeof d.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(d.date))
+    return { ok: false, error: 'Missing or invalid "date" field (expected YYYY-MM-DD).' };
+
+  if (typeof d.dailyTalkCompleted !== "boolean")
+    return { ok: false, error: '"dailyTalkCompleted" must be a boolean.' };
+
+  if (typeof d.practiceTalkCompleted !== "boolean")
+    return { ok: false, error: '"practiceTalkCompleted" must be a boolean.' };
+
+  if (typeof d.reviewChallengeCompleted !== "boolean")
+    return { ok: false, error: '"reviewChallengeCompleted" must be a boolean.' };
+
+  if (typeof d.totalXp !== "number")
+    return { ok: false, error: '"totalXp" must be a number.' };
+
+  if (typeof d.dailyXp !== "number")
+    return { ok: false, error: '"dailyXp" must be a number.' };
+
+  if (typeof d.practiceXp !== "number")
+    return { ok: false, error: '"practiceXp" must be a number.' };
+
+  if (typeof d.reviewXp !== "number")
+    return { ok: false, error: '"reviewXp" must be a number.' };
+
+  if (typeof d.bonusXp !== "number")
+    return { ok: false, error: '"bonusXp" must be a number.' };
 
   return { ok: true, data: d as unknown as SessionImportData };
 }
 
-// ─── Sample JSON generators ───────────────────────────────────────────────────
+// ─── Task type derived from completion flags ───────────────────────────────────
+function deriveTaskType(data: SessionImportData): TaskType {
+  if (data.dailyTalkCompleted) return "Daily Talk";
+  if (data.practiceTalkCompleted) return "Practice Talk";
+  return "Review Talk";
+}
+
+// ─── Official sample JSON ─────────────────────────────────────────────────────
 function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -75,27 +88,18 @@ export const SAMPLE_JSON = {
     JSON.stringify(
       {
         date: todayStr(),
-        task_type: "Daily Talk",
-        xp_gained: 10,
-        daily_completed: true,
-        practice_completed: false,
-        review_completed: false,
-        rallies: 12,
-        opening: "Hello, Eikichi! What shall we talk about today?",
-        turns: [
-          {
-            eikichi: "I went to Buzen City for work yesterday.",
-            correction: null,
-            mary: "That sounds like a busy day! How long did it take to get there?",
-          },
-          {
-            eikichi: "It taked about one hour by car.",
-            correction: "It took about one hour by car.",
-            mary: "Ah, one hour isn't bad at all. Did you enjoy the drive?",
-          },
-        ],
-        summary:
-          "Eikichi talked about his work trip to Buzen City and discussed travel time.",
+        dailyTalkCompleted: true,
+        practiceTalkCompleted: false,
+        reviewChallengeCompleted: false,
+        dailyXp: 10,
+        practiceXp: 0,
+        reviewXp: 0,
+        bonusXp: 0,
+        totalXp: 10,
+        weeklyStreak: 1,
+        heart: 2,
+        level: 1,
+        notes: ["Daily Talk completed."],
       },
       null,
       2
@@ -105,29 +109,18 @@ export const SAMPLE_JSON = {
     JSON.stringify(
       {
         date: todayStr(),
-        task_type: "Practice Talk",
-        xp_gained: 0,
-        daily_completed: false,
-        practice_completed: true,
-        review_completed: false,
-        rallies: 5,
-        opening:
-          "Ready to practice? Let's talk about what you've been reading.",
-        turns: [
-          {
-            eikichi:
-              "Today I read Chapter 27 of Charlie and the Chocolate Factory.",
-            correction: null,
-            mary: "Wonderful! What was the most interesting part?",
-          },
-          {
-            eikichi: "Mike Teavee was shrunked by the TV.",
-            correction: "Mike Teavee was shrunk by the TV.",
-            mary: "Exactly right! He was sent by television and became tiny. Great reading!",
-          },
-        ],
-        summary:
-          "Eikichi read Chapter 27 of Charlie and the Chocolate Factory. Practiced vocabulary: shrink, restore, transmit.",
+        dailyTalkCompleted: false,
+        practiceTalkCompleted: true,
+        reviewChallengeCompleted: false,
+        dailyXp: 0,
+        practiceXp: 10,
+        reviewXp: 0,
+        bonusXp: 0,
+        totalXp: 10,
+        weeklyStreak: 1,
+        heart: 2,
+        level: 1,
+        notes: ["Practice Talk completed."],
       },
       null,
       2
@@ -137,27 +130,18 @@ export const SAMPLE_JSON = {
     JSON.stringify(
       {
         date: todayStr(),
-        task_type: "Review Talk",
-        xp_gained: 0,
-        daily_completed: false,
-        practice_completed: false,
-        review_completed: true,
-        rallies: 4,
-        opening: "Let's review what we've learned together, Eikichi.",
-        turns: [
-          {
-            eikichi: "The word 'transmit' means to send something.",
-            correction: null,
-            mary: "Very good! Can you use it in a sentence?",
-          },
-          {
-            eikichi: "The TV can transmit a person through television signals.",
-            correction: null,
-            mary: "Excellent! That's a perfect example. You're doing really well.",
-          },
-        ],
-        summary:
-          "Reviewed vocabulary from last week. Practiced using words in sentences.",
+        dailyTalkCompleted: false,
+        practiceTalkCompleted: false,
+        reviewChallengeCompleted: true,
+        dailyXp: 0,
+        practiceXp: 0,
+        reviewXp: 10,
+        bonusXp: 0,
+        totalXp: 10,
+        weeklyStreak: 1,
+        heart: 2,
+        level: 1,
+        notes: ["Review Challenge completed."],
       },
       null,
       2
@@ -216,37 +200,25 @@ export function useSessionImport() {
     // 5. Process in game context
     actions.importSessionData(data);
 
-    // 6. Add Review Log entry
-    const taskType = normalizeTaskType(data.task_type ?? "Daily Talk");
-    const hasTurns = Array.isArray(data.turns) && data.turns.length > 0;
+    // 6. Add Review Log entry using notes as summary
+    const taskType = deriveTaskType(data);
+    const notesText = (data.notes ?? []).filter(Boolean).join(" ");
 
-    if (hasTurns) {
-      // Rich format: full conversation turns
+    if (notesText) {
       addEntry({
         date: new Date(data.date + "T00:00:00Z").toISOString(),
         level: levelAtImport,
         taskType,
-        openingText: data.opening?.trim() || undefined,
-        turns: (data.turns ?? []).map((t) => ({
-          eikichiText: t.eikichi,
-          correction: t.correction ?? null,
-          maryText: t.mary,
-        })),
-        dailyCompleted: !!data.daily_completed,
+        userText: "Imported session",
+        maryText: notesText,
+        dailyCompleted: data.dailyTalkCompleted,
       });
-    } else if (data.summary && data.summary.trim()) {
-      // Legacy format: just a summary
-      const ralliesNote =
-        data.rallies != null && data.rallies > 0
-          ? ` (${data.rallies} rallies)`
-          : "";
+    } else {
       addEntry({
         date: new Date(data.date + "T00:00:00Z").toISOString(),
         level: levelAtImport,
         taskType,
-        userText: `Imported session${ralliesNote}`,
-        maryText: data.summary.trim(),
-        dailyCompleted: !!data.daily_completed,
+        dailyCompleted: data.dailyTalkCompleted,
       });
     }
 

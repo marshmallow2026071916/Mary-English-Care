@@ -4,7 +4,7 @@ import {
   Copy, CheckCircle2, Upload, X,
   ChevronDown, ChevronUp, AlertCircle, CheckCircle, Gift,
 } from "lucide-react";
-import { MaryAvatar } from "@/components/MaryAvatar";
+import { getMaryBustPng } from "@/lib/maryAssets";
 import { BottomNav } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { useGame } from "@/context/GameContext";
@@ -268,14 +268,14 @@ export default function TasksScreen() {
 
         {/* Mary header */}
         <div className="flex items-center gap-4 mb-8">
-          <MaryAvatar
-            height={120}
-            showEmote={false}
-            outfit={equippedOutfit}
-            emote={emote}
-            variant="bust"
-            className="scale-90 origin-left"
-          />
+          <div className="w-36 h-44 flex-shrink-0">
+            <img
+              src={getMaryBustPng(equippedOutfit)}
+              alt="Mary portrait"
+              className="w-full h-full object-contain object-top"
+              draggable={false}
+            />
+          </div>
           <motion.div
             className="bg-card px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm border border-border flex-1"
             initial={{ opacity: 0, x: -10 }}
@@ -417,14 +417,14 @@ export default function TasksScreen() {
 
                   {/* Mary bust-up + speech bubble */}
                   <div className="flex items-start gap-3">
-                    <MaryAvatar
-                      height={100}
-                      showEmote
-                      outfit={equippedOutfit}
-                      emote="smile"
-                      variant="bust"
-                      className="shrink-0"
-                    />
+                    <div className="w-36 h-44 flex-shrink-0">
+                      <img
+                        src={getMaryBustPng(equippedOutfit)}
+                        alt="Mary portrait"
+                        className="w-full h-full object-contain object-top"
+                        draggable={false}
+                      />
+                    </div>
                     <motion.div
                       className="bg-card px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm border border-border flex-1 mt-2"
                       initial={{ opacity: 0, x: -8 }}
