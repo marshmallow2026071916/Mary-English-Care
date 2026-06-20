@@ -13,7 +13,7 @@ import { useSessionImport, SAMPLE_JSON } from "@/hooks/useSessionImport";
 const COMMANDS = [
   { id: "daily",    label: "Daily Talk",    text: "Let's have our daily English conversation." },
   { id: "practice", label: "Practice Talk", text: "Let's do a practice talk session." },
-  { id: "review",   label: "Review Talk",   text: "Give me a review talk based on our conversations." },
+  { id: "review",   label: "Review Challenge", text: "Give me a review talk based on our conversations." },
   { id: "end",      label: "End Talk",      text: "Let's end today's session. Please give me a summary." },
 ];
 
@@ -252,7 +252,7 @@ export default function TasksScreen() {
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast({ description: "Copied!", duration: 2000 });
+    toast({ description: "✓ Copied!", duration: 2000 });
   };
 
   return (
@@ -382,7 +382,7 @@ export default function TasksScreen() {
                     {cmd.text}
                   </div>
                   <button
-                    onClick={() => handleCopy(cmd.text)}
+                    onClick={() => handleCopy(cmd.label)}
                     className="p-3 bg-secondary hover:bg-secondary/80 rounded-xl text-secondary-foreground transition-colors active:scale-95 shrink-0"
                     data-testid={`btn-copy-${cmd.id}`}
                   >
