@@ -3,13 +3,15 @@ import { useGame, type SessionImportData } from "@/context/GameContext";
 import {
   useReviewLog,
   type TaskType,
+  type Rally,
   type ConversationItem,
   type ReviewLogReward,
 } from "@/hooks/useReviewLog";
 
-const SUPPORTED_VERSION = 2;
+// "2.1" is the current official version; 2 (number) is accepted for legacy data.
+const SUPPORTED_VERSIONS: Array<string | number> = ["2.1", 2];
 
-// ─── Types for the new daily JSON format ──────────────────────────────────────
+// ─── Types for the daily JSON format ─────────────────────────────────────────
 type ProgressData = Omit<SessionImportData, "date">;
 
 interface ReviewLogData {
@@ -17,7 +19,10 @@ interface ReviewLogData {
   talkType?: string;
   maryAvatarVariant?: string;
   levelOutfit?: string;
-  conversation?: ConversationItem[];
+  // v2.1
+  rallies?: Rally[];
+  // v2 legacy
+  conversation?: Array<{ speaker: string; type: string; text: string }>;
   rewards?: ReviewLogReward[];
 }
 
@@ -83,8 +88,8 @@ function validate(
     return { ok: false, error: "JSON must be an object." };
   const d = data as Record<string, unknown>;
 
-  if (d.version !== SUPPORTED_VERSION)
-    return { ok: false, error: `Unsupported version. Expected "version": ${SUPPORTED_VERSION}.` };
+  if (!SUPPORTED_VERSIONS.includes(d.version as string | number))
+    return { ok: false, error: `Unsupported version. Expected "version": "2.1".` };
 
   if (typeof d.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(d.date))
     return { ok: false, error: 'Missing or invalid "date" field (expected YYYY-MM-DD).' };
@@ -94,6 +99,11 @@ function validate(
 
   const progressResult = validateProgress(d.progress);
   if (!progressResult.ok) return progressResult;
+
+  // v2.1: rallies must be an array when present
+  const rl = d.reviewLog as Record<string, unknown> | undefined;
+  if (rl && rl.rallies !== undefined && !Array.isArray(rl.rallies))
+    return { ok: false, error: '"reviewLog.rallies" must be an array.' };
 
   return {
     ok: true,
@@ -121,7 +131,7 @@ export const SAMPLE_JSON = {
   dailyTalk: () =>
     JSON.stringify(
       {
-        version: 2,
+        version: "2.1",
         date: todayStr(),
         progress: {
           dailyTalkCompleted: true,
@@ -142,14 +152,20 @@ export const SAMPLE_JSON = {
           talkType: "Daily Talk",
           maryAvatarVariant: "bust",
           levelOutfit: "black",
-          conversation: [
-            { speaker: "Eikichi", type: "user", text: "I went to Buzen City for work yesterday." },
-            { speaker: "Mary", type: "reply", text: "That sounds like a busy day! How long did it take to get there?" },
-            { speaker: "Eikichi", type: "user", text: "It taked about one hour by car." },
-            { speaker: "Mary", type: "correction", text: "It took about one hour by car." },
-            { speaker: "Mary", type: "reply", text: "Ah, one hour isn't bad at all. Did you enjoy the drive?" },
+          rallies: [
+            {
+              rally: 1,
+              user: { speaker: "Eikichi", text: "I went to Buzen City for work yesterday." },
+              reply: { speaker: "Mary", text: "That sounds like a busy day! How long did it take to get there?" },
+            },
+            {
+              rally: 2,
+              user: { speaker: "Eikichi", text: "It taked about one hour by car." },
+              correction: { speaker: "Mary", text: "It took about one hour by car." },
+              reply: { speaker: "Mary", text: "Ah, one hour isn't bad at all. Did you enjoy the drive?" },
+            },
           ],
-          rewards: [{ type: "daily", emote: "cheer", text: "Daily Talk completed." }],
+          rewards: [{ afterRally: 2, type: "daily", emote: "cheer", text: "Daily Talk completed." }],
         },
       },
       null,
@@ -159,7 +175,7 @@ export const SAMPLE_JSON = {
   practiceTalk: () =>
     JSON.stringify(
       {
-        version: 2,
+        version: "2.1",
         date: todayStr(),
         progress: {
           dailyTalkCompleted: false,
@@ -180,12 +196,15 @@ export const SAMPLE_JSON = {
           talkType: "Practice Talk",
           maryAvatarVariant: "bust",
           levelOutfit: "black",
-          conversation: [
-            { speaker: "Eikichi", type: "user", text: "Today, I read aloud Chapter 28 of Charlie and the Chocolate Factory." },
-            { speaker: "Mary", type: "correction", text: "Today, I read aloud Chapter 28 of Charlie and the Chocolate Factory." },
-            { speaker: "Mary", type: "reply", text: "That sounds great! What part did you enjoy the most?" },
+          rallies: [
+            {
+              rally: 1,
+              user: { speaker: "Eikichi", text: "Today, I read aloud Chapter 28 of Charlie and the Chocolate Factory." },
+              correction: { speaker: "Mary", text: "Today, I read aloud Chapter 28 of Charlie and the Chocolate Factory." },
+              reply: { speaker: "Mary", text: "That sounds great! What part did you enjoy the most?" },
+            },
           ],
-          rewards: [{ type: "practice", emote: "smile", text: "Practice Talk completed." }],
+          rewards: [{ afterRally: 1, type: "practice", emote: "smile", text: "Practice Talk completed." }],
         },
       },
       null,
@@ -195,7 +214,7 @@ export const SAMPLE_JSON = {
   reviewTask: () =>
     JSON.stringify(
       {
-        version: 2,
+        version: "2.1",
         date: todayStr(),
         progress: {
           dailyTalkCompleted: false,
@@ -216,13 +235,19 @@ export const SAMPLE_JSON = {
           talkType: "Review Talk",
           maryAvatarVariant: "bust",
           levelOutfit: "black",
-          conversation: [
-            { speaker: "Eikichi", type: "user", text: "The word 'transmit' means to send something." },
-            { speaker: "Mary", type: "reply", text: "Very good! Can you use it in a sentence?" },
-            { speaker: "Eikichi", type: "user", text: "The TV can transmit a person through television signals." },
-            { speaker: "Mary", type: "reply", text: "Excellent! That's a perfect example. You're doing really well." },
+          rallies: [
+            {
+              rally: 1,
+              user: { speaker: "Eikichi", text: "The word 'transmit' means to send something." },
+              reply: { speaker: "Mary", text: "Very good! Can you use it in a sentence?" },
+            },
+            {
+              rally: 2,
+              user: { speaker: "Eikichi", text: "The TV can transmit a person through television signals." },
+              reply: { speaker: "Mary", text: "Excellent! That's a perfect example. You're doing really well." },
+            },
           ],
-          rewards: [{ type: "review", emote: "smile", text: "Review Challenge completed." }],
+          rewards: [{ afterRally: 2, type: "review", emote: "smile", text: "Review Challenge completed." }],
         },
       },
       null,
@@ -287,7 +312,9 @@ export function useSessionImport() {
         date: new Date(data.date + "T00:00:00Z").toISOString(),
         level: rl.level ?? levelAtImport,
         taskType,
-        conversation: rl.conversation,
+        // v2.1 rally format takes priority; fall back to v2 flat conversation
+        rallies: rl.rallies,
+        conversation: rl.rallies ? undefined : (rl.conversation as ConversationItem[] | undefined),
         rewards: rl.rewards,
         dailyCompleted: data.progress.dailyTalkCompleted,
       });

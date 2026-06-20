@@ -5,6 +5,7 @@ import {
   useReviewLog,
   type ReviewLogEntry,
   type TaskType,
+  type ReviewLogReward,
 } from "@/hooks/useReviewLog";
 import { useGame } from "@/context/GameContext";
 import { getMaryBustPng, resolveOutfitId, OUTFIT_META } from "@/lib/maryAssets";
@@ -52,13 +53,39 @@ function MaryBadge({ outfit }: { outfit: string }) {
 type RenderElem =
   | { kind: "mary"; text: string; showAvatar: boolean }
   | { kind: "eikichi"; text: string }
-  | { kind: "correction"; text: string };
+  | { kind: "correction"; text: string }
+  | { kind: "reward"; reward: ReviewLogReward };
 
 function buildElements(entry: ReviewLogEntry): RenderElem[] {
   const elems: RenderElem[] = [];
   let maryCount = 0;
 
-  // New format — ConversationItem[]
+  // v2.1 format — Rally[]
+  if (entry.rallies && entry.rallies.length > 0) {
+    for (const rally of entry.rallies) {
+      if (rally.user?.text) {
+        elems.push({ kind: "eikichi", text: rally.user.text });
+      }
+      if (rally.correction?.text) {
+        elems.push({ kind: "correction", text: rally.correction.text });
+      }
+      if (rally.reply?.text) {
+        elems.push({ kind: "mary", text: rally.reply.text, showAvatar: maryCount === 0 });
+        maryCount++;
+      }
+      // Inline rewards that belong after this rally
+      if (entry.rewards) {
+        for (const r of entry.rewards) {
+          if (r.afterRally === rally.rally) {
+            elems.push({ kind: "reward", reward: r });
+          }
+        }
+      }
+    }
+    return elems;
+  }
+
+  // v2 flat format — ConversationItem[]
   if (entry.conversation && entry.conversation.length > 0) {
     for (const item of entry.conversation) {
       if (item.type === "user") {
@@ -196,6 +223,16 @@ function SessionCard({
             );
           }
 
+          if (elem.kind === "reward") {
+            return (
+              <div key={i} className="flex justify-center">
+                <span className="text-[11px] text-muted-foreground/50 italic tracking-wide px-3 py-0.5 rounded-full bg-muted/40">
+                  ✓ {elem.reward.text}
+                </span>
+              </div>
+            );
+          }
+
           return null;
         })}
 
@@ -206,8 +243,8 @@ function SessionCard({
         )}
       </div>
 
-      {/* Rewards footer — new format uses entry.rewards, legacy uses dailyCompleted */}
-      {entry.rewards && entry.rewards.length > 0 ? (
+      {/* Rewards footer — v2.1 rallies show rewards inline, so footer only for legacy entries */}
+      {!entry.rallies && entry.rewards && entry.rewards.length > 0 ? (
         <div className="mx-4 pb-3 pt-1 border-t border-border/40 flex flex-wrap gap-2 justify-center">
           {entry.rewards.map((r, i) => (
             <span key={i} className="text-[11px] text-muted-foreground/55 italic tracking-wide">
@@ -215,7 +252,7 @@ function SessionCard({
             </span>
           ))}
         </div>
-      ) : entry.dailyCompleted ? (
+      ) : !entry.rallies && entry.dailyCompleted ? (
         <div className="mx-4 pb-3 pt-1 border-t border-border/40 flex justify-center">
           <span className="text-[11px] text-muted-foreground/55 italic tracking-wide">
             ✓ Daily Talk Complete

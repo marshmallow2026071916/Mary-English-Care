@@ -1,0 +1,125 @@
+Please update the JSON import system and Review Log screen.
+
+Do not modify unrelated screens, layouts, styles, images, emotes, wardrobe, or animations.
+
+We are adopting a revised JSON format: version 2.1.
+
+The main change is that reviewLog.conversation should be stored by rally.
+
+One rally should contain:
+- Eikichi's message
+- Mary's correction
+- Mary's reply
+
+Official JSON format:
+
+{
+  "version": "2.1",
+  "date": "2026-06-19",
+  "progress": {
+    "dailyTalkCompleted": true,
+    "practiceTalkCompleted": true,
+    "reviewChallengeCompleted": false,
+    "dailyXp": 10,
+    "practiceXp": 10,
+    "reviewXp": 0,
+    "bonusXp": 0,
+    "totalXp": 20,
+    "weeklyStreak": 3,
+    "heart": 2,
+    "level": 1,
+    "notes": [
+      "Daily Talk completed.",
+      "Practice Talk completed."
+    ]
+  },
+  "reviewLog": {
+    "level": 1,
+    "talkType": "Practice Talk",
+    "maryAvatarVariant": "bust",
+    "levelOutfit": "black",
+    "rallies": [
+      {
+        "rally": 1,
+        "user": {
+          "speaker": "Eikichi",
+          "text": "I usually drink light roast coffee."
+        },
+        "correction": {
+          "speaker": "Mary",
+          "text": "I usually drink light roast coffee."
+        },
+        "reply": {
+          "speaker": "Mary",
+          "text": "I didn't know that! Light roast coffee has a bright and refreshing flavor."
+        }
+      }
+    ],
+    "rewards": [
+      {
+        "afterRally": 1,
+        "type": "daily",
+        "emote": "smile",
+        "text": "Daily Talk completed."
+      }
+    ]
+  }
+}
+
+Import behavior:
+
+- Parse the JSON.
+- Validate version.
+- Support version: "2.1".
+- Validate that the JSON contains date, progress, and reviewLog.
+- Validate that reviewLog.rallies is an array.
+- Save progress data to localStorage.
+- Save reviewLog data to localStorage.
+- If the same date already exists, replace the existing data.
+- Update the Top screen using progress.
+- Update the Tasks screen using progress.
+- Update the Review Log screen using reviewLog.
+
+Review Log display:
+
+- Display imported review logs grouped by level.
+- Inside each level, show logs by date.
+- Each log should display rallies in order.
+- Each rally should show:
+  1. Eikichi's message
+  2. Mary's correction
+  3. Mary's reply
+
+Do not omit Mary's correction.
+
+Use a simple LINE-like conversation layout.
+
+Mary icon behavior:
+
+- Show Mary's icon only at the start of each conversation block.
+- Do not show Mary's icon beside every Mary message.
+- For now, Level 1 should use the black bust image.
+- Use the outfit assigned to the level tab.
+
+Rewards:
+
+- If rewards contain afterRally, show the small reward after that rally.
+- Keep the reward display minimal.
+- Do not add extra memory events.
+- Do not add decorative story events.
+- Do not add unnecessary animations.
+
+Startup behavior:
+
+- When Mary English starts, load saved version 2.1 JSON data from localStorage.
+- Restore progress.
+- Restore Review Log.
+- The user should not need to import the same JSON twice.
+
+Important:
+
+- The user imports only one JSON per day.
+- Do not require separate imports for progress and reviewLog.
+- Treat version 2.1 as the official format.
+- Keep old version 2 support only if it already exists, but version 2.1 is the official format going forward.
+- Do not change unrelated functionality.

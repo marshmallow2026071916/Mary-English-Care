@@ -9,17 +9,33 @@ export type TaskType =
   | "Reading Talk"
   | "Review Challenge";
 
-// ─── New conversation format ───────────────────────────────────────────────────
+// ─── Conversation formats ──────────────────────────────────────────────────────
+
+// v2 flat format (legacy)
 export interface ConversationItem {
   speaker: string;
   type: "user" | "correction" | "reply";
   text: string;
 }
 
+// v2.1 rally format
+export interface RallyMessage {
+  speaker: string;
+  text: string;
+}
+
+export interface Rally {
+  rally: number;
+  user: RallyMessage;
+  correction?: RallyMessage;
+  reply: RallyMessage;
+}
+
 export interface ReviewLogReward {
   type: string;
   emote: string;
   text: string;
+  afterRally?: number; // v2.1: show inline after this rally; absent = footer only
 }
 
 // ─── Legacy rich conversation format (backward compat) ────────────────────────
@@ -34,7 +50,9 @@ export interface ReviewLogEntry {
   date: string;
   level: number;
   taskType: TaskType;
-  // New conversation format:
+  // v2.1 rally format:
+  rallies?: Rally[];
+  // v2 flat format (legacy):
   conversation?: ConversationItem[];
   rewards?: ReviewLogReward[];
   // Legacy fields (backward compat):
