@@ -9,7 +9,20 @@ export type TaskType =
   | "Reading Talk"
   | "Review Challenge";
 
-// ─── Rich conversation format ─────────────────────────────────────────────────
+// ─── New conversation format ───────────────────────────────────────────────────
+export interface ConversationItem {
+  speaker: string;
+  type: "user" | "correction" | "reply";
+  text: string;
+}
+
+export interface ReviewLogReward {
+  type: string;
+  emote: string;
+  text: string;
+}
+
+// ─── Legacy rich conversation format (backward compat) ────────────────────────
 export interface ConversationTurn {
   eikichiText: string;
   correction?: string | null;
@@ -21,10 +34,12 @@ export interface ReviewLogEntry {
   date: string;
   level: number;
   taskType: TaskType;
-  // Legacy fields (backward compat — entries saved before rich format):
+  // New conversation format:
+  conversation?: ConversationItem[];
+  rewards?: ReviewLogReward[];
+  // Legacy fields (backward compat):
   userText?: string;
   maryText?: string;
-  // Rich conversation fields:
   openingText?: string;
   turns?: ConversationTurn[];
   dailyCompleted?: boolean;

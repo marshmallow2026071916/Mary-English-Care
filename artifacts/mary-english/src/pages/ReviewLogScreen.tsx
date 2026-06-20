@@ -58,7 +58,22 @@ function buildElements(entry: ReviewLogEntry): RenderElem[] {
   const elems: RenderElem[] = [];
   let maryCount = 0;
 
-  // Rich format — conversation turns
+  // New format — ConversationItem[]
+  if (entry.conversation && entry.conversation.length > 0) {
+    for (const item of entry.conversation) {
+      if (item.type === "user") {
+        elems.push({ kind: "eikichi", text: item.text });
+      } else if (item.type === "correction") {
+        elems.push({ kind: "correction", text: item.text });
+      } else if (item.type === "reply") {
+        elems.push({ kind: "mary", text: item.text, showAvatar: maryCount === 0 });
+        maryCount++;
+      }
+    }
+    return elems;
+  }
+
+  // Legacy rich format — ConversationTurn[]
   if (entry.turns && entry.turns.length > 0) {
     if (entry.openingText) {
       elems.push({ kind: "mary", text: entry.openingText, showAvatar: true });
@@ -81,7 +96,7 @@ function buildElements(entry: ReviewLogEntry): RenderElem[] {
     return elems;
   }
 
-  // Legacy format — just a summary in maryText
+  // Legacy plain format — just a summary in maryText
   if (entry.maryText) {
     elems.push({ kind: "mary", text: entry.maryText, showAvatar: true });
   }
@@ -191,14 +206,22 @@ function SessionCard({
         )}
       </div>
 
-      {/* Daily Talk reward marker */}
-      {entry.dailyCompleted && (
+      {/* Rewards footer — new format uses entry.rewards, legacy uses dailyCompleted */}
+      {entry.rewards && entry.rewards.length > 0 ? (
+        <div className="mx-4 pb-3 pt-1 border-t border-border/40 flex flex-wrap gap-2 justify-center">
+          {entry.rewards.map((r, i) => (
+            <span key={i} className="text-[11px] text-muted-foreground/55 italic tracking-wide">
+              ✓ {r.text}
+            </span>
+          ))}
+        </div>
+      ) : entry.dailyCompleted ? (
         <div className="mx-4 pb-3 pt-1 border-t border-border/40 flex justify-center">
           <span className="text-[11px] text-muted-foreground/55 italic tracking-wide">
-            ✓ Cheer Emote
+            ✓ Daily Talk Complete
           </span>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

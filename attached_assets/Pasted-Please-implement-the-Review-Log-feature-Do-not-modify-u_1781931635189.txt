@@ -1,0 +1,154 @@
+Please implement the Review Log feature.
+
+Do not modify unrelated screens, layouts, styles, images, emotes, wardrobe, or animations.
+
+The purpose of the Review Log screen is learning, review, and read-aloud practice.
+
+==================================================
+1. JSON structure
+==================================================
+
+Mary English should use one daily JSON import file.
+
+The JSON contains both:
+
+- progress data
+- review log data
+
+Do not require two separate imports.
+
+Example format:
+
+{
+  "date": "2026-06-19",
+  "progress": {
+    "dailyTalkCompleted": true,
+    "practiceTalkCompleted": true,
+    "reviewChallengeCompleted": false,
+    "dailyXp": 10,
+    "practiceXp": 10,
+    "reviewXp": 0,
+    "bonusXp": 0,
+    "totalXp": 20,
+    "weeklyStreak": 3,
+    "heart": 2,
+    "level": 1,
+    "notes": [
+      "Daily Talk completed.",
+      "Practice Talk completed."
+    ]
+  },
+  "reviewLog": {
+    "level": 1,
+    "talkType": "Practice Talk",
+    "maryAvatarVariant": "bust",
+    "levelOutfit": "black",
+    "conversation": [
+      {
+        "speaker": "Eikichi",
+        "type": "user",
+        "text": "Today, I read aloud Chapter 28 of Charlie and the Chocolate Factory."
+      },
+      {
+        "speaker": "Mary",
+        "type": "correction",
+        "text": "Today, I read aloud Chapter 28 of Charlie and the Chocolate Factory."
+      },
+      {
+        "speaker": "Mary",
+        "type": "reply",
+        "text": "That sounds great! What part did you enjoy the most?"
+      }
+    ],
+    "rewards": [
+      {
+        "type": "daily",
+        "emote": "smile",
+        "text": "Daily Talk completed."
+      }
+    ]
+  }
+}
+
+==================================================
+2. Import behavior
+==================================================
+
+When the user imports this JSON:
+
+- Parse the JSON.
+- Validate that it contains date, progress, and reviewLog.
+- Save the progress data to localStorage.
+- Save the reviewLog data to localStorage.
+- If the same date already exists, replace the existing data.
+- Update the Top screen and Tasks screen using progress.
+- Update the Review Log screen using reviewLog.
+
+The user should import only one JSON per day.
+
+==================================================
+3. Review Log screen display
+==================================================
+
+The Review Log screen should display imported review logs.
+
+Display logs grouped by level.
+
+Each level should be shown as a tab or section, for example:
+
+- Level 1
+- Level 2
+- Level 3
+
+Inside each level, show the logs by date.
+
+Each log should use a simple LINE-like conversation layout.
+
+For each conversation rally, display:
+
+1. Eikichi's message
+2. Mary's correction
+3. Mary's reply
+
+The order is important.
+
+Do not omit corrections.
+
+==================================================
+4. Mary icon behavior
+==================================================
+
+Show Mary's icon only at the start of each conversation block.
+
+Do not show Mary's icon beside every Mary message.
+
+Mary's icon should use the outfit assigned to the level tab of that log.
+
+For now, Level 1 should use the black bust image.
+
+Do not use the exact outfit from the historical date.
+Use the outfit assigned to the level tab.
+
+==================================================
+5. Rewards inside Review Log
+==================================================
+
+If the reviewLog contains rewards, show a small Mary image or emote at the point where the reward occurred.
+
+Keep this minimal.
+
+Do not add extra memory events, decorative story events, or unnecessary animations.
+
+==================================================
+6. Design rule
+==================================================
+
+The Review Log screen is a learning and read-aloud screen.
+
+Keep the design simple.
+
+Do not add heavy decoration.
+
+Do not add extra story elements.
+
+Do not modify unrelated functionality.
