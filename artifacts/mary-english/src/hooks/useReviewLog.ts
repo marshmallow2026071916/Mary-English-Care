@@ -31,11 +31,20 @@ export interface Rally {
   reply: RallyMessage;
 }
 
+// v3.0 message format
+export interface Message {
+  id: number;
+  speaker: string;
+  type: "intro" | "question" | "answer" | "correction" | "reply" | string;
+  text: string;
+}
+
 export interface ReviewLogReward {
   type: string;
   emote: string;
   text: string;
-  afterRally?: number; // v2.1: show inline after this rally; absent = footer only
+  afterRally?: number;     // v2.1: show inline after this rally number
+  afterMessageId?: number; // v3.0: show inline after message with this id
 }
 
 // ─── Legacy rich conversation format (backward compat) ────────────────────────
@@ -50,6 +59,8 @@ export interface ReviewLogEntry {
   date: string;
   level: number;
   taskType: TaskType;
+  // v3.0 message format:
+  messages?: Message[];
   // v2.1 rally format:
   rallies?: Rally[];
   // v2 flat format (legacy):

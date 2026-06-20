@@ -6,6 +6,7 @@ import {
   type ReviewLogEntry,
   type TaskType,
   type ReviewLogReward,
+  type Message,
 } from "@/hooks/useReviewLog";
 import { useGame } from "@/context/GameContext";
 import { getMaryBustPng, resolveOutfitId, OUTFIT_META } from "@/lib/maryAssets";
@@ -59,6 +60,31 @@ type RenderElem =
 function buildElements(entry: ReviewLogEntry): RenderElem[] {
   const elems: RenderElem[] = [];
   let maryCount = 0;
+
+  // v3.0 format — Message[]
+  if (entry.messages && entry.messages.length > 0) {
+    let maryBlockStarted = false;
+    for (const msg of entry.messages) {
+      const isEikichi = msg.speaker !== "Mary";
+      if (isEikichi) {
+        elems.push({ kind: "eikichi", text: msg.text });
+      } else if (msg.type === "correction") {
+        elems.push({ kind: "correction", text: msg.text });
+      } else {
+        elems.push({ kind: "mary", text: msg.text, showAvatar: !maryBlockStarted });
+        maryBlockStarted = true;
+      }
+      // Inline reward after this message
+      if (entry.rewards) {
+        for (const r of entry.rewards) {
+          if (r.afterMessageId === msg.id) {
+            elems.push({ kind: "reward", reward: r });
+          }
+        }
+      }
+    }
+    return elems;
+  }
 
   // v2.1 format — Rally[]
   if (entry.rallies && entry.rallies.length > 0) {
@@ -243,8 +269,8 @@ function SessionCard({
         )}
       </div>
 
-      {/* Rewards footer — v2.1 rallies show rewards inline, so footer only for legacy entries */}
-      {!entry.rallies && entry.rewards && entry.rewards.length > 0 ? (
+      {/* Rewards footer — v3.0 and v2.1 show rewards inline; footer only for legacy entries */}
+      {!entry.messages && !entry.rallies && entry.rewards && entry.rewards.length > 0 ? (
         <div className="mx-4 pb-3 pt-1 border-t border-border/40 flex flex-wrap gap-2 justify-center">
           {entry.rewards.map((r, i) => (
             <span key={i} className="text-[11px] text-muted-foreground/55 italic tracking-wide">
@@ -252,7 +278,7 @@ function SessionCard({
             </span>
           ))}
         </div>
-      ) : !entry.rallies && entry.dailyCompleted ? (
+      ) : !entry.messages && !entry.rallies && entry.dailyCompleted ? (
         <div className="mx-4 pb-3 pt-1 border-t border-border/40 flex justify-center">
           <span className="text-[11px] text-muted-foreground/55 italic tracking-wide">
             ✓ Daily Talk Complete

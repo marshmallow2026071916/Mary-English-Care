@@ -1,0 +1,133 @@
+Please update the JSON import system and Review Log screen to use the official Version 3.0 format.
+
+Do not modify unrelated screens, layouts, styles, images, emotes, wardrobe, or animations.
+
+Version 3.0 is now the official JSON format.
+
+Main change:
+reviewLog should store conversation data as chronological messages, not rallies.
+
+Official Version 3.0 JSON example:
+
+{
+  "version": "3.0",
+  "date": "2026-06-20",
+  "progress": {
+    "dailyTalkCompleted": true,
+    "practiceTalkCompleted": false,
+    "reviewChallengeCompleted": true,
+    "dailyXp": 10,
+    "practiceXp": 0,
+    "reviewXp": 0,
+    "bonusXp": 0,
+    "totalXp": 10,
+    "weeklyStreak": 4,
+    "heart": 2,
+    "level": 1,
+    "notes": [
+      "Daily Talk completed.",
+      "Review Talk completed."
+    ]
+  },
+  "reviewLog": {
+    "level": 1,
+    "talkType": "Review Talk",
+    "maryAvatarVariant": "bust",
+    "levelOutfit": "black",
+    "messages": [
+      {
+        "id": 1,
+        "speaker": "Mary",
+        "type": "intro",
+        "text": "Hi, Eikichi! Let's do a Review Talk today."
+      },
+      {
+        "id": 2,
+        "speaker": "Mary",
+        "type": "question",
+        "text": "What food did you and your sons eat for lunch at the park?"
+      },
+      {
+        "id": 3,
+        "speaker": "Eikichi",
+        "type": "answer",
+        "text": "We ate bento from Hatamoto."
+      },
+      {
+        "id": 4,
+        "speaker": "Mary",
+        "type": "correction",
+        "text": "We ate bento from Hottomotto. Or more naturally, We ate bento from Hottomotto at the park."
+      },
+      {
+        "id": 5,
+        "speaker": "Mary",
+        "type": "reply",
+        "text": "That's right! It sounded like a wonderful family day."
+      }
+    ],
+    "rewards": [
+      {
+        "afterMessageId": 5,
+        "type": "review",
+        "emote": "smile",
+        "text": "Review Talk completed."
+      }
+    ]
+  }
+}
+
+Import behavior:
+
+- Parse the JSON.
+- Validate version.
+- Support version: "3.0".
+- Validate that the JSON contains date, progress, and reviewLog.
+- Validate that reviewLog.messages is an array.
+- Save progress data to localStorage.
+- Save reviewLog data to localStorage.
+- If the same date already exists, replace the existing data.
+- Update the Top screen using progress.
+- Update the Tasks screen using progress.
+- Update the Review Log screen using reviewLog.
+
+Review Log display:
+
+- Display imported review logs grouped by level.
+- Inside each level, show logs by date.
+- Each log should display messages in id order.
+- Use a simple LINE-like conversation layout.
+- Show Eikichi messages as user messages.
+- Show Mary messages as Mary messages.
+- Clearly display Mary correction messages.
+- Do not omit corrections.
+
+Mary icon behavior:
+
+- Show Mary's icon only at the start of each conversation block.
+- Do not show Mary's icon beside every Mary message.
+- For now, Level 1 should use the black bust image.
+- Use the outfit assigned to the level tab.
+
+Rewards:
+
+- If rewards contain afterMessageId, show the small reward after that message.
+- Keep the reward display minimal.
+- Do not add extra memory events.
+- Do not add decorative story events.
+- Do not add unnecessary animations.
+
+Startup behavior:
+
+- When Mary English starts, load saved version 3.0 JSON data from localStorage.
+- Restore progress.
+- Restore Review Log.
+- The user should not need to import the same JSON twice.
+
+Important:
+
+- The user imports only one JSON per day.
+- Do not require separate imports for progress and reviewLog.
+- Treat version 3.0 as the official format going forward.
+- Keep old version 2 and 2.1 support only if it already exists.
+- Do not change unrelated functionality.

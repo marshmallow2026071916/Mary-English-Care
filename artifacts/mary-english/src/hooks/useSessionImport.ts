@@ -3,13 +3,14 @@ import { useGame, type SessionImportData } from "@/context/GameContext";
 import {
   useReviewLog,
   type TaskType,
+  type Message,
   type Rally,
   type ConversationItem,
   type ReviewLogReward,
 } from "@/hooks/useReviewLog";
 
-// "2.1" is the current official version; 2 (number) is accepted for legacy data.
-const SUPPORTED_VERSIONS: Array<string | number> = ["2.1", 2];
+// "3.0" is the current official version; older versions accepted for backward compat.
+const SUPPORTED_VERSIONS: Array<string | number> = ["3.0", "2.1", 2];
 
 // ─── Types for the daily JSON format ─────────────────────────────────────────
 type ProgressData = Omit<SessionImportData, "date">;
@@ -19,7 +20,9 @@ interface ReviewLogData {
   talkType?: string;
   maryAvatarVariant?: string;
   levelOutfit?: string;
-  // v2.1
+  // v3.0
+  messages?: Message[];
+  // v2.1 legacy
   rallies?: Rally[];
   // v2 legacy
   conversation?: Array<{ speaker: string; type: string; text: string }>;
@@ -89,7 +92,7 @@ function validate(
   const d = data as Record<string, unknown>;
 
   if (!SUPPORTED_VERSIONS.includes(d.version as string | number))
-    return { ok: false, error: `Unsupported version. Expected "version": "2.1".` };
+    return { ok: false, error: `Unsupported version. Expected "version": "3.0".` };
 
   if (typeof d.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(d.date))
     return { ok: false, error: 'Missing or invalid "date" field (expected YYYY-MM-DD).' };
@@ -100,8 +103,9 @@ function validate(
   const progressResult = validateProgress(d.progress);
   if (!progressResult.ok) return progressResult;
 
-  // v2.1: rallies must be an array when present
   const rl = d.reviewLog as Record<string, unknown> | undefined;
+  if (rl && rl.messages !== undefined && !Array.isArray(rl.messages))
+    return { ok: false, error: '"reviewLog.messages" must be an array.' };
   if (rl && rl.rallies !== undefined && !Array.isArray(rl.rallies))
     return { ok: false, error: '"reviewLog.rallies" must be an array.' };
 
@@ -131,7 +135,7 @@ export const SAMPLE_JSON = {
   dailyTalk: () =>
     JSON.stringify(
       {
-        version: "2.1",
+        version: "3.0",
         date: todayStr(),
         progress: {
           dailyTalkCompleted: true,
@@ -152,20 +156,16 @@ export const SAMPLE_JSON = {
           talkType: "Daily Talk",
           maryAvatarVariant: "bust",
           levelOutfit: "black",
-          rallies: [
-            {
-              rally: 1,
-              user: { speaker: "Eikichi", text: "I went to Buzen City for work yesterday." },
-              reply: { speaker: "Mary", text: "That sounds like a busy day! How long did it take to get there?" },
-            },
-            {
-              rally: 2,
-              user: { speaker: "Eikichi", text: "It taked about one hour by car." },
-              correction: { speaker: "Mary", text: "It took about one hour by car." },
-              reply: { speaker: "Mary", text: "Ah, one hour isn't bad at all. Did you enjoy the drive?" },
-            },
+          messages: [
+            { id: 1, speaker: "Mary", type: "intro", text: "Hi, Eikichi! Let's do a Daily Talk today." },
+            { id: 2, speaker: "Mary", type: "question", text: "What did you do yesterday?" },
+            { id: 3, speaker: "Eikichi", type: "answer", text: "I went to Buzen City for work yesterday." },
+            { id: 4, speaker: "Mary", type: "reply", text: "That sounds like a busy day! How long did it take to get there?" },
+            { id: 5, speaker: "Eikichi", type: "answer", text: "It taked about one hour by car." },
+            { id: 6, speaker: "Mary", type: "correction", text: "It took about one hour by car." },
+            { id: 7, speaker: "Mary", type: "reply", text: "Ah, one hour isn't bad at all. Did you enjoy the drive?" },
           ],
-          rewards: [{ afterRally: 2, type: "daily", emote: "cheer", text: "Daily Talk completed." }],
+          rewards: [{ afterMessageId: 7, type: "daily", emote: "cheer", text: "Daily Talk completed." }],
         },
       },
       null,
@@ -175,7 +175,7 @@ export const SAMPLE_JSON = {
   practiceTalk: () =>
     JSON.stringify(
       {
-        version: "2.1",
+        version: "3.0",
         date: todayStr(),
         progress: {
           dailyTalkCompleted: false,
@@ -196,15 +196,14 @@ export const SAMPLE_JSON = {
           talkType: "Practice Talk",
           maryAvatarVariant: "bust",
           levelOutfit: "black",
-          rallies: [
-            {
-              rally: 1,
-              user: { speaker: "Eikichi", text: "Today, I read aloud Chapter 28 of Charlie and the Chocolate Factory." },
-              correction: { speaker: "Mary", text: "Today, I read aloud Chapter 28 of Charlie and the Chocolate Factory." },
-              reply: { speaker: "Mary", text: "That sounds great! What part did you enjoy the most?" },
-            },
+          messages: [
+            { id: 1, speaker: "Mary", type: "intro", text: "Hi, Eikichi! Let's do a Practice Talk today." },
+            { id: 2, speaker: "Mary", type: "question", text: "What did you read aloud today?" },
+            { id: 3, speaker: "Eikichi", type: "answer", text: "Today, I read aloud Chapter 28 of Charlie and the Chocolate Factory." },
+            { id: 4, speaker: "Mary", type: "correction", text: "Today, I read aloud Chapter 28 of Charlie and the Chocolate Factory." },
+            { id: 5, speaker: "Mary", type: "reply", text: "That sounds great! What part did you enjoy the most?" },
           ],
-          rewards: [{ afterRally: 1, type: "practice", emote: "smile", text: "Practice Talk completed." }],
+          rewards: [{ afterMessageId: 5, type: "practice", emote: "smile", text: "Practice Talk completed." }],
         },
       },
       null,
@@ -214,7 +213,7 @@ export const SAMPLE_JSON = {
   reviewTask: () =>
     JSON.stringify(
       {
-        version: "2.1",
+        version: "3.0",
         date: todayStr(),
         progress: {
           dailyTalkCompleted: false,
@@ -235,19 +234,13 @@ export const SAMPLE_JSON = {
           talkType: "Review Talk",
           maryAvatarVariant: "bust",
           levelOutfit: "black",
-          rallies: [
-            {
-              rally: 1,
-              user: { speaker: "Eikichi", text: "The word 'transmit' means to send something." },
-              reply: { speaker: "Mary", text: "Very good! Can you use it in a sentence?" },
-            },
-            {
-              rally: 2,
-              user: { speaker: "Eikichi", text: "The TV can transmit a person through television signals." },
-              reply: { speaker: "Mary", text: "Excellent! That's a perfect example. You're doing really well." },
-            },
+          messages: [
+            { id: 1, speaker: "Mary", type: "intro", text: "Hi, Eikichi! Let's do a Review Talk today." },
+            { id: 2, speaker: "Mary", type: "question", text: "Can you use the word 'transmit' in a sentence?" },
+            { id: 3, speaker: "Eikichi", type: "answer", text: "The TV can transmit a person through television signals." },
+            { id: 4, speaker: "Mary", type: "reply", text: "Excellent! That's a perfect example. You're doing really well." },
           ],
-          rewards: [{ afterRally: 2, type: "review", emote: "smile", text: "Review Challenge completed." }],
+          rewards: [{ afterMessageId: 4, type: "review", emote: "smile", text: "Review Challenge completed." }],
         },
       },
       null,
@@ -312,9 +305,10 @@ export function useSessionImport() {
         date: new Date(data.date + "T00:00:00Z").toISOString(),
         level: rl.level ?? levelAtImport,
         taskType,
-        // v2.1 rally format takes priority; fall back to v2 flat conversation
-        rallies: rl.rallies,
-        conversation: rl.rallies ? undefined : (rl.conversation as ConversationItem[] | undefined),
+        // v3.0 messages take priority; then v2.1 rallies; then v2 flat conversation
+        messages: rl.messages,
+        rallies: rl.messages ? undefined : rl.rallies,
+        conversation: rl.messages || rl.rallies ? undefined : (rl.conversation as ConversationItem[] | undefined),
         rewards: rl.rewards,
         dailyCompleted: data.progress.dailyTalkCompleted,
       });
