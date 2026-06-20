@@ -311,13 +311,19 @@ export function useSessionImport() {
       actions.importSessionData({ ...data.progress, date: data.date });
     }
 
+    // 5b. Always sync dailyTalkCompleted directly from progress — even on re-import.
+    //     This is the canonical source of truth for the Daily Talk card (1/1 vs 0/1).
+    actions.setImportedDailyCompleted(data.progress.dailyTalkCompleted);
+
     // 6. Always upsert review log — replaces any existing entry for the same date
     const rl = data.reviewLog;
     if (rl) {
       const taskType = normalizeTaskType(rl.talkType ?? "");
       upsertByDate(data.date, {
         date: new Date(data.date + "T00:00:00Z").toISOString(),
-        level: rl.level ?? levelAtImport,
+        // Always use levelAtImport (gs.level before XP was applied) so the entry
+        // appears under the correct level tab. rl.level is ChatGPT metadata only.
+        level: levelAtImport,
         taskType,
         // v3.0 messages take priority; then v2.1 rallies; then v2 flat conversation
         messages: rl.messages,

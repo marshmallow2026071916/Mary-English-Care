@@ -56,7 +56,9 @@ export interface GameState {
   // Wardrobe
   unlockedOutfits: string[];
   equippedOutfit: string;
-  // Tracks the date of the last JSON import so dailyTalkDone reflects import state
+  // Set directly from progress.dailyTalkCompleted on every import
+  importedDailyCompleted: boolean;
+  // Kept for backward-compat with older stored states; no longer drives dailyTalkDone
   lastImportDate: string | null;
   // Legacy fields kept for localStorage backwards-compat; no longer drive logic
   weeklyReadingCount: number;
@@ -124,6 +126,7 @@ interface GameContextValue {
     triggerLevelUpReward: () => void;
     triggerHeartReward: () => void;
     unlockLevelRewardOutfit: () => void;
+    setImportedDailyCompleted: (val: boolean) => void;
     importSessionData: (data: SessionImportData) => ImportResult;
   };
 }
@@ -151,6 +154,7 @@ const DEFAULT_STATE: GameState = {
   lastReviewRallies: 0,
   unlockedOutfits: ["black"],
   equippedOutfit: "black",
+  importedDailyCompleted: false,
   lastImportDate: null,
   weeklyReadingCount: 0,
   weeklyReadingMondayStr: null,
@@ -411,6 +415,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
     update(addOutfit(gsRef.current, "level"));
   }, [update]);
 
+  const setImportedDailyCompleted = useCallback((val: boolean) => {
+    update({ ...gsRef.current, importedDailyCompleted: val });
+  }, [update]);
+
   // ─ importSessionData ────────────────────────────────────────────────────────
   // Applies all session state changes, then queues the Step 7 popup sequence.
   // XP/level/count formulas are unchanged — only adds review reward logic.
@@ -488,8 +496,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
     result.levelAfter = state.level;
     result.reviewCountAfter = state.reviewCount;
 
-    // 8. Apply final state to storage + React (record import date for dailyTalkDone)
-    state = { ...state, lastImportDate: importDate };
+    // 8. Apply final state to storage + React
+    //    importedDailyCompleted is set directly from the JSON field — no date math.
+    state = { ...state, lastImportDate: importDate, importedDailyCompleted: data.dailyTalkCompleted };
     update(state);
 
     // 9. Build ordered popup queue — skip types whose event did not occur
@@ -534,12 +543,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   // ─ Derived ──────────────────────────────────────────────────────────────────
   const today = toDateStr(new Date());
-  // dailyTalkDone reflects the imported session's state rather than just today.
-  // If an import exists, compare lastDailyDate to the import date so that importing
-  // a session from a past day (e.g. yesterday) still shows Daily Talk as complete.
-  const dailyTalkDone =
-    gs.lastDailyDate !== null &&
-    (gs.lastDailyDate === today || gs.lastDailyDate === gs.lastImportDate);
+  // dailyTalkDone: read directly from the imported progress.dailyTalkCompleted flag
+  // (gs.importedDailyCompleted) so it always reflects the last JSON import.
+  // The today fallback preserves the dev-panel "Complete Daily Talk" button.
+  const dailyTalkDone = gs.importedDailyCompleted || gs.lastDailyDate === today;
   const xpPercent = Math.min(100, (gs.xp / XP_PER_LEVEL) * 100);
   const isUnlocked = useCallback((id: string) => gs.unlockedOutfits.includes(id), [gs.unlockedOutfits]);
 
@@ -569,6 +576,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       triggerLevelUpReward,
       triggerHeartReward,
       unlockLevelRewardOutfit,
+      setImportedDailyCompleted,
       importSessionData,
     },
   };
