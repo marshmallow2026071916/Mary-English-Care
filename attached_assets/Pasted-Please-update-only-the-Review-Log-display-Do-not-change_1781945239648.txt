@@ -1,0 +1,87 @@
+Please update only the Review Log display.
+
+Do not change the JSON format.
+Do not change JSON import.
+Do not change Tasks, Top, Wardrobe, Splash, App Icon, or unrelated functionality.
+
+The Review Log is now displayed, but the layout is not good for learning and read-aloud practice.
+
+Please improve the Review Log rendering using the existing Version 3.0 messages array.
+
+Important:
+- Display every message in reviewLog.messages.
+- Do not skip any message.
+- Do not collapse messages into one line.
+- Preserve line breaks in message.text.
+- Sort messages by id ascending.
+
+Display rules by message type:
+
+1. Mary normal messages
+For these types:
+- intro
+- question
+- reply
+- system
+
+Display as Mary messages on the left side.
+
+2. Eikichi messages
+For these types:
+- answer
+
+Display as Eikichi messages on the right side.
+
+3. Correction messages
+For type:
+- correction
+
+Do not display correction as a normal chat bubble.
+
+Display it as a dedicated correction card.
+
+The correction card should have a clear title such as:
+
+Mary's Correction
+
+It should preserve line breaks and be easy to read.
+
+This is important because the user enjoys Mary's corrections and wants them to feel like teacher feedback.
+
+4. Reward messages
+For type:
+- reward
+
+Display it as a small reward card or reward pill.
+
+Keep it minimal.
+
+5. Summary messages
+For type:
+- summary
+
+Display it as a dedicated summary card.
+
+Use a clear title such as:
+
+Today's Summary
+
+Preserve line breaks.
+
+Do not show summary as a collapsed one-line message.
+
+Design rules:
+
+- Keep the Review Log simple.
+- Prioritize readability.
+- This screen is for learning, review, and read-aloud practice.
+- Do not add heavy decoration.
+- Do not add extra story events.
+- Do not add unnecessary animations.
+
+Mary icon behavior:
+
+- Show Mary's icon only at the start of each conversation block.
+- Do not show Mary's icon beside every Mary message.
+
+This task is only for Review Log display rendering.

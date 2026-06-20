@@ -34,12 +34,12 @@ function formatDate(iso: string): string {
   });
 }
 
-// ─── Small Mary avatar for messaging layout ───────────────────────────────────
+// ─── Small Mary avatar ────────────────────────────────────────────────────────
 function MaryBadge({ outfit }: { outfit: string }) {
   const id = resolveOutfitId(outfit);
   const meta = OUTFIT_META[id];
   return (
-    <div className={`w-14 h-16 shrink-0 rounded-xl overflow-hidden border border-white/20 shadow-sm bg-gradient-to-br ${meta.cardBg}`}>
+    <div className={`w-11 h-13 shrink-0 rounded-xl overflow-hidden border border-white/20 shadow-sm bg-gradient-to-br ${meta.cardBg}`}>
       <img
         src={getMaryBustPng(outfit)}
         alt="Mary"
@@ -59,34 +59,53 @@ type RenderElem =
   | { kind: "reward_msg"; text: string }
   | { kind: "summary"; text: string };
 
+// Categorise a v3.0 message by its type field.
+// Returns the RenderElem kind (or null if unrecognised — caller decides fallback).
+function msgKind(msg: Message): RenderElem["kind"] | null {
+  switch (msg.type) {
+    case "intro":
+    case "question":
+    case "reply":
+    case "system":
+      return "mary";
+    case "answer":
+      return "eikichi";
+    case "correction":
+      return "correction";
+    case "reward":
+      return "reward_msg";
+    case "summary":
+      return "summary";
+    default:
+      return null;
+  }
+}
+
 function buildElements(entry: ReviewLogEntry): RenderElem[] {
   const elems: RenderElem[] = [];
   let maryCount = 0;
 
   // v3.0 format — Message[]
   if (entry.messages && entry.messages.length > 0) {
-    let maryBlockStarted = false;
     const sorted = [...entry.messages].sort((a, b) => a.id - b.id);
+
     for (const msg of sorted) {
-      const isEikichi = msg.speaker !== "Mary";
-      if (isEikichi) {
+      const kind = msgKind(msg) ?? (msg.speaker === "Mary" ? "mary" : "eikichi");
+
+      if (kind === "mary") {
+        // Show avatar only at the start of each consecutive Mary block.
+        const prev = elems[elems.length - 1];
+        const showAvatar = !prev || prev.kind !== "mary";
+        elems.push({ kind: "mary", text: msg.text, showAvatar });
+      } else if (kind === "eikichi") {
         elems.push({ kind: "eikichi", text: msg.text });
-      } else if (msg.type === "correction") {
+      } else if (kind === "correction") {
         elems.push({ kind: "correction", text: msg.text });
-      } else if (msg.type === "reward") {
+      } else if (kind === "reward_msg") {
         elems.push({ kind: "reward_msg", text: msg.text });
-      } else if (msg.type === "summary" || msg.type === "system") {
+      } else if (kind === "summary") {
         elems.push({ kind: "summary", text: msg.text });
-      } else {
-        // intro, question, reply, and any future Mary types
-        elems.push({ kind: "mary", text: msg.text, showAvatar: !maryBlockStarted });
-        maryBlockStarted = true;
       }
-    }
-    // Also render any legacy afterMessageId rewards
-    if (entry.rewards) {
-      // rewards are already injected inline for old format — handled in older branch
-      // for v3.0 messages they are in-stream, so nothing extra needed here
     }
     return elems;
   }
@@ -104,7 +123,6 @@ function buildElements(entry: ReviewLogEntry): RenderElem[] {
         elems.push({ kind: "mary", text: rally.reply.text, showAvatar: maryCount === 0 });
         maryCount++;
       }
-      // Inline rewards that belong after this rally
       if (entry.rewards) {
         for (const r of entry.rewards) {
           if (r.afterRally === rally.rally) {
@@ -154,11 +172,107 @@ function buildElements(entry: ReviewLogEntry): RenderElem[] {
     return elems;
   }
 
-  // Legacy plain format — just a summary in maryText
+  // Legacy plain format
   if (entry.maryText) {
     elems.push({ kind: "mary", text: entry.maryText, showAvatar: true });
   }
   return elems;
+}
+
+// ─── Individual element renderers ─────────────────────────────────────────────
+
+function MaryBubble({
+  elem,
+  outfit,
+  testId,
+}: {
+  elem: Extract<RenderElem, { kind: "mary" }>;
+  outfit: string;
+  testId?: string;
+}) {
+  return (
+    <div className={`flex items-start gap-2.5 ${!elem.showAvatar ? "pl-[3.375rem]" : ""}`}>
+      {elem.showAvatar && <MaryBadge outfit={outfit} />}
+      <div className="max-w-[82%] bg-white border border-border/60 rounded-2xl rounded-tl-sm px-4 py-2.5 shadow-sm">
+        <p
+          className="text-sm text-foreground leading-relaxed whitespace-pre-wrap"
+          data-testid={testId}
+        >
+          {elem.text}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function EikichiBubble({
+  elem,
+  testId,
+}: {
+  elem: Extract<RenderElem, { kind: "eikichi" }>;
+  testId?: string;
+}) {
+  return (
+    <div className="flex justify-end">
+      <div className="max-w-[75%] bg-primary/10 border border-primary/15 rounded-2xl rounded-tr-sm px-4 py-2.5">
+        <p
+          className="text-sm text-foreground leading-relaxed whitespace-pre-wrap"
+          data-testid={testId}
+        >
+          {elem.text}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function CorrectionCard({ text }: { text: string }) {
+  return (
+    <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <span className="text-amber-600 text-sm">✏</span>
+        <span className="text-xs font-bold text-amber-700 tracking-wide">
+          Mary's Correction
+        </span>
+      </div>
+      <p className="text-sm text-amber-900 leading-relaxed whitespace-pre-wrap">
+        {text}
+      </p>
+    </div>
+  );
+}
+
+function SummaryCard({ text }: { text: string }) {
+  return (
+    <div className="rounded-2xl border border-border bg-secondary/50 px-4 py-3">
+      <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2">
+        Today's Summary
+      </p>
+      <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+        {text}
+      </p>
+    </div>
+  );
+}
+
+function RewardPill({ text }: { text: string }) {
+  return (
+    <div className="flex justify-center">
+      <span className="text-[11px] text-primary/70 font-semibold tracking-wide px-3 py-1 rounded-full bg-primary/8 border border-primary/15">
+        ✓ {text}
+      </span>
+    </div>
+  );
+}
+
+function LegacyRewardPill({ reward }: { reward: ReviewLogReward }) {
+  return (
+    <div className="flex justify-center">
+      <span className="text-[11px] text-muted-foreground/60 italic tracking-wide px-3 py-1 rounded-full bg-muted/40">
+        ✓ {reward.text}
+      </span>
+    </div>
+  );
 }
 
 // ─── Session card ─────────────────────────────────────────────────────────────
@@ -172,7 +286,6 @@ function SessionCard({
   outfit: string;
 }) {
   const allElems = buildElements(entry);
-  // In Read Aloud mode show only Mary's messages
   const displayElems = readAloud
     ? allElems.filter((e) => e.kind === "mary")
     : allElems;
@@ -205,83 +318,39 @@ function SessionCard({
         {displayElems.map((elem, i) => {
           if (elem.kind === "mary") {
             return (
-              <div
+              <MaryBubble
                 key={i}
-                className={`flex items-start gap-2 ${!elem.showAvatar ? "ml-11" : ""}`}
-              >
-                {elem.showAvatar && <MaryBadge outfit={outfit} />}
-                <div className="max-w-[82%] bg-white border border-border/60 rounded-2xl rounded-tl-sm px-4 py-2.5">
-                  <p
-                    className="text-sm text-foreground leading-relaxed"
-                    data-testid={
-                      i === 0 ? `entry-mary-${entry.id}` : undefined
-                    }
-                  >
-                    {elem.text}
-                  </p>
-                </div>
-              </div>
+                elem={elem}
+                outfit={outfit}
+                testId={i === 0 ? `entry-mary-${entry.id}` : undefined}
+              />
             );
           }
 
           if (elem.kind === "eikichi") {
             return (
-              <div key={i} className="flex justify-end">
-                <div className="max-w-[75%] bg-primary/10 border border-primary/15 rounded-2xl rounded-tr-sm px-4 py-2.5">
-                  <p
-                    className="text-sm text-foreground leading-relaxed"
-                    data-testid={
-                      i === 0 ? `entry-user-${entry.id}` : undefined
-                    }
-                  >
-                    {elem.text}
-                  </p>
-                </div>
-              </div>
+              <EikichiBubble
+                key={i}
+                elem={elem}
+                testId={i === 0 ? `entry-user-${entry.id}` : undefined}
+              />
             );
           }
 
           if (elem.kind === "correction") {
-            return (
-              <div key={i} className="flex items-start gap-1.5 ml-4 mr-4">
-                <span className="text-[10px] text-muted-foreground/55 mt-0.5 shrink-0 leading-5">
-                  ✏
-                </span>
-                <p className="text-xs italic text-muted-foreground/70 leading-relaxed">
-                  {elem.text}
-                </p>
-              </div>
-            );
+            return <CorrectionCard key={i} text={elem.text} />;
           }
 
           if (elem.kind === "reward") {
-            return (
-              <div key={i} className="flex justify-center">
-                <span className="text-[11px] text-muted-foreground/50 italic tracking-wide px-3 py-0.5 rounded-full bg-muted/40">
-                  ✓ {elem.reward.text}
-                </span>
-              </div>
-            );
+            return <LegacyRewardPill key={i} reward={elem.reward} />;
           }
 
           if (elem.kind === "reward_msg") {
-            return (
-              <div key={i} className="flex justify-center">
-                <span className="text-[11px] text-muted-foreground/60 font-semibold tracking-wide px-3 py-0.5 rounded-full bg-primary/8 border border-primary/15">
-                  ✓ {elem.text}
-                </span>
-              </div>
-            );
+            return <RewardPill key={i} text={elem.text} />;
           }
 
           if (elem.kind === "summary") {
-            return (
-              <div key={i} className="mx-1 px-3 py-2 rounded-xl bg-muted/50 border border-border/40">
-                <p className="text-[11px] text-muted-foreground/70 leading-relaxed text-center">
-                  {elem.text}
-                </p>
-              </div>
-            );
+            return <SummaryCard key={i} text={elem.text} />;
           }
 
           return null;
@@ -294,7 +363,7 @@ function SessionCard({
         )}
       </div>
 
-      {/* Rewards footer — v3.0 and v2.1 show rewards inline; footer only for legacy entries */}
+      {/* Rewards footer — only for legacy entries without inline rewards */}
       {!entry.messages && !entry.rallies && entry.rewards && entry.rewards.length > 0 ? (
         <div className="mx-4 pb-3 pt-1 border-t border-border/40 flex flex-wrap gap-2 justify-center">
           {entry.rewards.map((r, i) => (
@@ -317,7 +386,7 @@ function SessionCard({
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export default function ReviewLogScreen() {
   const { entries } = useReviewLog();
-  const { gs, emote } = useGame();
+  const { gs } = useGame();
   const [activeTab, setActiveTab] = useState<number | "current">("current");
   const [readAloud, setReadAloud] = useState(false);
 
@@ -325,11 +394,8 @@ export default function ReviewLogScreen() {
   const resolvedLevel =
     activeTab === "current" ? currentLevel : (activeTab as number);
 
-  // Current Level tab: use current equipped outfit.
-  // Past level tabs: use "black" (the always-available stable outfit).
   const tabOutfit = activeTab === "current" ? gs.equippedOutfit : "black";
 
-  // Past tabs: currentLevel−1 down to 0 (newest first = descending)
   const pastLevels = Array.from(
     { length: currentLevel },
     (_, i) => currentLevel - 1 - i
@@ -383,7 +449,7 @@ export default function ReviewLogScreen() {
           </div>
         </div>
 
-        {/* Level Tabs — horizontally scrollable, newest first */}
+        {/* Level Tabs */}
         <div
           className="flex gap-2 mb-5 overflow-x-auto pb-1"
           data-testid="level-tabs"
