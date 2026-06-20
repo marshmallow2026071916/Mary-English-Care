@@ -1,0 +1,145 @@
+Please update the JSON import system and Review Log screen to use the finalized official Version 3.0 JSON format.
+
+Do not modify unrelated screens, layouts, styles, images, emotes, wardrobe, or animations.
+
+Version 3.0 is now finalized.
+
+The official Review Log structure is:
+
+- Use one daily JSON import file.
+- Do not require separate imports.
+- The JSON contains both progress and reviewLog.
+- reviewLog stores chronological messages.
+- Do not use rallies.
+- The Review Log screen should render messages in order.
+
+Official message types:
+
+- intro
+- question
+- answer
+- correction
+- reply
+- reward
+- summary
+- system
+
+Official Version 3.0 JSON example:
+
+{
+  "version": "3.0",
+  "date": "2026-06-19",
+  "progress": {
+    "dailyTalkCompleted": true,
+    "practiceTalkCompleted": true,
+    "reviewChallengeCompleted": false,
+    "dailyXp": 10,
+    "practiceXp": 10,
+    "reviewXp": 0,
+    "bonusXp": 0,
+    "totalXp": 20,
+    "weeklyStreak": 3,
+    "heart": 2,
+    "level": 1,
+    "notes": [
+      "Daily Talk completed.",
+      "Practice Talk completed."
+    ]
+  },
+  "reviewLog": {
+    "level": 1,
+    "talkType": "Daily Talk",
+    "maryAvatarVariant": "bust",
+    "levelOutfit": "black",
+    "messages": [
+      {
+        "id": 1,
+        "speaker": "Eikichi",
+        "type": "answer",
+        "text": "We usually draw Pokémon, Dragon Ball, and so on."
+      },
+      {
+        "id": 2,
+        "speaker": "Mary",
+        "type": "correction",
+        "text": "We usually draw Pokémon characters, Dragon Ball characters, and other anime characters."
+      },
+      {
+        "id": 3,
+        "speaker": "Mary",
+        "type": "reply",
+        "text": "That sounds like a lot of fun! Drawing together is a wonderful way to spend time as a family."
+      },
+      {
+        "id": 4,
+        "speaker": "Mary",
+        "type": "reward",
+        "text": "Daily Talk Complete!"
+      },
+      {
+        "id": 5,
+        "speaker": "Mary",
+        "type": "summary",
+        "text": "Daily Talk: Complete. Practice Tasks: Complete. Review Tasks: Not attempted."
+      }
+    ]
+  }
+}
+
+Import behavior:
+
+- Parse the JSON.
+- Validate version.
+- Support version: "3.0".
+- Validate that the JSON contains date, progress, and reviewLog.
+- Validate that reviewLog.messages is an array.
+- Validate that each message has id, speaker, type, and text.
+- Save progress data to localStorage.
+- Save reviewLog data to localStorage.
+- If the same date already exists, replace the existing data.
+- Update the Top screen using progress.
+- Update the Tasks screen using progress.
+- Update the Review Log screen using reviewLog.
+
+Startup behavior:
+
+- When Mary English starts, load saved Version 3.0 data from localStorage.
+- Restore progress.
+- Restore Review Log.
+- The user should not need to import the same JSON twice.
+
+Review Log display:
+
+- Display imported review logs grouped by level.
+- Inside each level, show logs by date.
+- Each log should display messages in id order.
+- Use a simple LINE-like conversation layout.
+- Show Eikichi messages as user messages.
+- Show Mary messages as Mary messages.
+- Clearly display messages with type correction.
+- Clearly display messages with type reward.
+- Clearly display messages with type summary.
+- Do not omit correction messages.
+
+Mary icon behavior:
+
+- Show Mary's icon only at the start of each conversation block.
+- Do not show Mary's icon beside every Mary message.
+- For now, Level 1 should use the black bust image.
+- Use the outfit assigned to the level tab.
+
+Design rules:
+
+- Review Log is for learning, review, and read-aloud practice.
+- Keep the design simple.
+- Do not add heavy decoration.
+- Do not add extra story events.
+- Do not add unnecessary animations.
+
+Important:
+
+- Version 3.0 is the official format going forward.
+- The user imports only one JSON per day.
+- Do not require separate imports for progress and reviewLog.
+- Keep old version support only if it already exists.
+- Do not change unrelated functionality.

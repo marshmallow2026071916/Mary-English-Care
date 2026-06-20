@@ -35,7 +35,16 @@ export interface Rally {
 export interface Message {
   id: number;
   speaker: string;
-  type: "intro" | "question" | "answer" | "correction" | "reply" | string;
+  type:
+    | "intro"
+    | "question"
+    | "answer"
+    | "correction"
+    | "reply"
+    | "reward"
+    | "summary"
+    | "system"
+    | string;
   text: string;
 }
 

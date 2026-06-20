@@ -55,7 +55,9 @@ type RenderElem =
   | { kind: "mary"; text: string; showAvatar: boolean }
   | { kind: "eikichi"; text: string }
   | { kind: "correction"; text: string }
-  | { kind: "reward"; reward: ReviewLogReward };
+  | { kind: "reward"; reward: ReviewLogReward }
+  | { kind: "reward_msg"; text: string }
+  | { kind: "summary"; text: string };
 
 function buildElements(entry: ReviewLogEntry): RenderElem[] {
   const elems: RenderElem[] = [];
@@ -64,24 +66,27 @@ function buildElements(entry: ReviewLogEntry): RenderElem[] {
   // v3.0 format — Message[]
   if (entry.messages && entry.messages.length > 0) {
     let maryBlockStarted = false;
-    for (const msg of entry.messages) {
+    const sorted = [...entry.messages].sort((a, b) => a.id - b.id);
+    for (const msg of sorted) {
       const isEikichi = msg.speaker !== "Mary";
       if (isEikichi) {
         elems.push({ kind: "eikichi", text: msg.text });
       } else if (msg.type === "correction") {
         elems.push({ kind: "correction", text: msg.text });
+      } else if (msg.type === "reward") {
+        elems.push({ kind: "reward_msg", text: msg.text });
+      } else if (msg.type === "summary" || msg.type === "system") {
+        elems.push({ kind: "summary", text: msg.text });
       } else {
+        // intro, question, reply, and any future Mary types
         elems.push({ kind: "mary", text: msg.text, showAvatar: !maryBlockStarted });
         maryBlockStarted = true;
       }
-      // Inline reward after this message
-      if (entry.rewards) {
-        for (const r of entry.rewards) {
-          if (r.afterMessageId === msg.id) {
-            elems.push({ kind: "reward", reward: r });
-          }
-        }
-      }
+    }
+    // Also render any legacy afterMessageId rewards
+    if (entry.rewards) {
+      // rewards are already injected inline for old format — handled in older branch
+      // for v3.0 messages they are in-stream, so nothing extra needed here
     }
     return elems;
   }
@@ -255,6 +260,26 @@ function SessionCard({
                 <span className="text-[11px] text-muted-foreground/50 italic tracking-wide px-3 py-0.5 rounded-full bg-muted/40">
                   ✓ {elem.reward.text}
                 </span>
+              </div>
+            );
+          }
+
+          if (elem.kind === "reward_msg") {
+            return (
+              <div key={i} className="flex justify-center">
+                <span className="text-[11px] text-muted-foreground/60 font-semibold tracking-wide px-3 py-0.5 rounded-full bg-primary/8 border border-primary/15">
+                  ✓ {elem.text}
+                </span>
+              </div>
+            );
+          }
+
+          if (elem.kind === "summary") {
+            return (
+              <div key={i} className="mx-1 px-3 py-2 rounded-xl bg-muted/50 border border-border/40">
+                <p className="text-[11px] text-muted-foreground/70 leading-relaxed text-center">
+                  {elem.text}
+                </p>
               </div>
             );
           }
