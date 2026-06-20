@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { BookOpen } from "lucide-react";
-import { MaryAvatar } from "@/components/MaryAvatar";
 import { BottomNav } from "@/components/BottomNav";
 import {
   useReviewLog,
@@ -256,14 +255,14 @@ export default function ReviewLogScreen() {
 
         {/* Mary header */}
         <div className="flex items-center gap-4 mb-7">
-          <MaryAvatar
-            height={120}
-            showEmote={false}
-            outfit={gs.equippedOutfit}
-            emote={emote}
-            variant="bust"
-            className="scale-90 origin-left"
-          />
+          <div className="w-36 h-44 flex-shrink-0">
+            <img
+              src={getMaryBustPng(gs.equippedOutfit)}
+              alt="Mary portrait"
+              className="w-full h-full object-contain object-top"
+              draggable={false}
+            />
+          </div>
           <div className="bg-card px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm border border-border flex-1">
             <p className="text-sm font-medium text-foreground">
               {readAloud
