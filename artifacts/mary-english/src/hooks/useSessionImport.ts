@@ -9,8 +9,8 @@ import {
   type ReviewLogReward,
 } from "@/hooks/useReviewLog";
 
-// "3.0" is the current official version; older versions accepted for backward compat.
-const SUPPORTED_VERSIONS: Array<string | number> = ["3.0", "2.1", 2];
+// "3.0" is the only accepted import version. Old stored data still renders via Review Log.
+const SUPPORTED_VERSION = "3.0";
 
 // ─── Types for the daily JSON format ─────────────────────────────────────────
 type ProgressData = Omit<SessionImportData, "date">;
@@ -91,7 +91,7 @@ function validate(
     return { ok: false, error: "JSON must be an object." };
   const d = data as Record<string, unknown>;
 
-  if (!SUPPORTED_VERSIONS.includes(d.version as string | number))
+  if (d.version !== SUPPORTED_VERSION)
     return { ok: false, error: `Unsupported version. Expected "version": "3.0".` };
 
   if (typeof d.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(d.date))
