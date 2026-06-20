@@ -1,0 +1,155 @@
+Please implement the following four updates for Mary English.
+
+Do not modify unrelated functionality.
+
+==================================================
+1. Version 3.0 JSON import and Review Log
+==================================================
+
+Use Version 3.0 as the official JSON format.
+
+Rules:
+- One JSON import per day.
+- The JSON contains both progress and reviewLog.
+- reviewLog uses chronological messages.
+- Do not use rallies.
+- Message types are:
+  intro, question, answer, correction, reply, reward, summary, system
+
+Import behavior:
+- Parse the JSON.
+- Validate version: "3.0".
+- Validate date, progress, reviewLog, and reviewLog.messages.
+- Save progress to localStorage.
+- Save reviewLog to localStorage.
+- If the same date already exists, replace it.
+- Update Top using progress.
+- Update Tasks using progress.
+- Update Review Log using reviewLog.
+- Restore saved data on startup.
+
+Review Log display:
+- Group logs by level.
+- Show logs by date.
+- Display messages in id order.
+- Use a simple LINE-like layout.
+- Show Eikichi messages as user messages.
+- Show Mary messages as Mary messages.
+- Clearly display correction, reward, and summary messages.
+- Do not omit corrections.
+- Mary icon appears only at the start of each conversation block.
+- Level 1 uses the black bust image.
+
+==================================================
+2. Options screen / Wardrobe
+==================================================
+
+Update the Wardrobe section in the Options screen.
+
+Create three tabs:
+
+1. Level Up Outfits
+2. Emotes
+3. Review Task Outfits
+
+Display rules:
+- Show items in a two-column grid.
+- Sort unlocked items in descending order.
+- Most recently unlocked items appear first.
+- Level Up Outfits sort by unlockedAtLevel descending.
+- Emotes sort by unlockedAtLevel descending.
+- Review Task Outfits sort by unlockedAtDate descending.
+
+Each item should show:
+- image or placeholder
+- item name
+- unlock information
+
+Examples:
+- Spring Outfit — Unlocked at Level 2
+- Cheer Emote — Unlocked at Level 3
+- Rainy Season Outfit — Unlocked on 2026-06-20
+
+Do not mix all reward types in one grid.
+
+Use this progress data structure:
+
+"unlocked": {
+  "outfits": [
+    {
+      "id": "black",
+      "name": "Black Outfit",
+      "source": "initial",
+      "unlockedAtLevel": 1
+    }
+  ],
+  "emotes": [
+    {
+      "id": "idle",
+      "name": "Idle",
+      "source": "initial",
+      "unlockedAtLevel": 1
+    }
+  ]
+},
+"equipped": {
+  "outfit": "black",
+  "emote": "idle"
+}
+
+Source rules:
+- source: "levelUp" = Level Up Outfits
+- source: "reviewTask" = Review Task Outfits
+- unlocked.emotes = Emotes
+
+==================================================
+3. Startup splash screen
+==================================================
+
+Simplify the startup flow.
+
+Rules:
+- When the app starts, show only the current splash screen.
+- This applies to both first launch and normal launch.
+- Remove all other transition screens before the Top screen.
+- After the splash screen, go directly to the Top screen.
+
+Add this text to the splash screen:
+
+Mary English Story 1
+
+Final text order:
+
+Mary English
+Mary English Story 1
+English Conversation Practice
+
+Do not add onboarding screens, chapter screens, intro screens, or extra story screens.
+
+==================================================
+4. App icon
+==================================================
+
+Update the PWA app icon.
+
+Use the new Mary English icon design:
+- Illustration style, not realistic photo
+- Mary with a book
+- Dark purple, gray, and white color palette
+- Calm and natural for a 46-year-old man's smartphone home screen
+- No text inside the icon
+- Suitable for Android home screen and PWA install icon
+
+Please update:
+- manifest icons
+- favicon if applicable
+- PWA install icon assets
+
+Do not change the in-app Mary avatar images.
+
+==================================================
+
+Important:
+- Keep unrelated screens and logic unchanged.
+- Do not change Mary Profile, Tasks, Start Talk, Top layout, or existing avatar rendering unless required for these tasks.
+- Do not add unnecessary decoration or animations.

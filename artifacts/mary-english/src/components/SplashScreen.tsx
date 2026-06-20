@@ -71,7 +71,16 @@ export function SplashScreen({ onDone }: SplashScreenProps) {
       </motion.h1>
 
       <motion.p
-        className="text-sm text-muted-foreground mt-2 font-medium"
+        className="text-sm text-muted-foreground mt-1 font-semibold"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5, duration: 0.5 }}
+      >
+        Mary English Story 1
+      </motion.p>
+
+      <motion.p
+        className="text-xs text-muted-foreground/70 mt-1 font-medium"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.65, duration: 0.5 }}
