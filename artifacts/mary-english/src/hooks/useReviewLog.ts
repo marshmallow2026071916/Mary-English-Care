@@ -68,8 +68,10 @@ export interface ReviewLogEntry {
   date: string;
   level: number;
   taskType: TaskType;
-  // v3.0 message format:
+  // v3.1 / v3.0 message format:
   messages?: Message[];
+  levelOutfit?: string;      // outfit worn during this session (v3.1)
+  maryAvatarVariant?: string; // avatar variant hint (v3.1)
   // v2.1 rally format:
   rallies?: Rally[];
   // v2 flat format (legacy):

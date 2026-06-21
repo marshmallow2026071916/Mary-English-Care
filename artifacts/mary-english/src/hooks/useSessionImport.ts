@@ -9,8 +9,8 @@ import {
   type ReviewLogReward,
 } from "@/hooks/useReviewLog";
 
-// "3.0" is the only accepted import version. Old stored data still renders via Review Log.
-const SUPPORTED_VERSION = "3.0";
+// Accepted import versions. Old stored data continues to render via Review Log.
+const SUPPORTED_VERSIONS = new Set(["3.0", "3.1"]);
 
 // ─── Types for the daily JSON format ─────────────────────────────────────────
 type ProgressData = Omit<SessionImportData, "date">;
@@ -91,8 +91,8 @@ function validate(
     return { ok: false, error: "JSON must be an object." };
   const d = data as Record<string, unknown>;
 
-  if (d.version !== SUPPORTED_VERSION)
-    return { ok: false, error: `Unsupported version. Expected "version": "3.0".` };
+  if (!SUPPORTED_VERSIONS.has(String(d.version)))
+    return { ok: false, error: `Unsupported version. Expected "version": "3.0" or "3.1".` };
 
   if (typeof d.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(d.date))
     return { ok: false, error: 'Missing or invalid "date" field (expected YYYY-MM-DD).' };
@@ -149,7 +149,7 @@ export const SAMPLE_JSON = {
   dailyTalk: () =>
     JSON.stringify(
       {
-        version: "3.0",
+        version: "3.1",
         date: todayStr(),
         progress: {
           dailyTalkCompleted: true,
@@ -189,7 +189,7 @@ export const SAMPLE_JSON = {
   practiceTalk: () =>
     JSON.stringify(
       {
-        version: "3.0",
+        version: "3.1",
         date: todayStr(),
         progress: {
           dailyTalkCompleted: false,
@@ -227,7 +227,7 @@ export const SAMPLE_JSON = {
   reviewTask: () =>
     JSON.stringify(
       {
-        version: "3.0",
+        version: "3.1",
         date: todayStr(),
         progress: {
           dailyTalkCompleted: false,
@@ -330,8 +330,10 @@ export function useSessionImport() {
         // Matches what the "Current Level" tab shows after import.
         level: levelForLog,
         taskType,
-        // v3.0 messages take priority; then v2.1 rallies; then v2 flat conversation
+        // v3.1/v3.0 messages take priority; then v2.1 rallies; then v2 flat conversation
         messages: rl.messages,
+        levelOutfit: rl.levelOutfit,
+        maryAvatarVariant: rl.maryAvatarVariant,
         rallies: rl.messages ? undefined : rl.rallies,
         conversation: rl.messages || rl.rallies ? undefined : (rl.conversation as ConversationItem[] | undefined),
         rewards: rl.rewards,

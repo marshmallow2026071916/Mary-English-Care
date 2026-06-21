@@ -93,10 +93,8 @@ function buildElements(entry: ReviewLogEntry): RenderElem[] {
       const kind = msgKind(msg) ?? (msg.speaker === "Mary" ? "mary" : "eikichi");
 
       if (kind === "mary") {
-        // Show avatar only at the start of each consecutive Mary block.
-        const prev = elems[elems.length - 1];
-        const showAvatar = !prev || prev.kind !== "mary";
-        elems.push({ kind: "mary", text: msg.text, showAvatar });
+        // Every Mary message gets its own avatar — each is a distinct message block.
+        elems.push({ kind: "mary", text: msg.text, showAvatar: true });
       } else if (kind === "eikichi") {
         elems.push({ kind: "eikichi", text: msg.text });
       } else if (kind === "correction") {

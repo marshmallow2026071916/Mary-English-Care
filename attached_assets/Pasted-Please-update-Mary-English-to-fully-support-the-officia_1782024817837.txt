@@ -1,0 +1,124 @@
+Please update Mary English to fully support the official Version 3.1 Review Log format.
+
+Do not modify unrelated screens, Top, Tasks, Wardrobe, app icon, splash screen, XP logic, or game logic.
+
+This task is only for:
+- JSON import compatibility
+- Review Log rendering
+
+Official Version 3.1 JSON rules:
+
+- version: "3.1"
+- One day = one JSON
+- The JSON contains:
+  - progress
+  - reviewLog
+- reviewLog contains:
+  - level
+  - talkType
+  - maryAvatarVariant
+  - levelOutfit
+  - messages[]
+
+Each message has:
+- id
+- speaker
+- type
+- text
+
+Supported message types:
+
+- intro
+- question
+- answer
+- correction
+- reply
+- reward
+- summary
+- system
+
+Import behavior:
+
+- Accept version "3.1"
+- Keep existing version "3.0" support if it already exists
+- Validate reviewLog.messages
+- Save all messages without deleting or shortening them
+- Preserve line breaks in message.text
+- Do not summarize messages
+- Do not skip any message
+- Replace existing data if the same date already exists
+
+Review Log display behavior:
+
+- Display every message in reviewLog.messages
+- Sort messages by id ascending
+- Preserve line breaks
+- Do not collapse long messages into one line
+- Message bubbles and cards should use height: auto
+- Remove any fixed height that causes large blank spaces or text clipping
+
+Display rules by type:
+
+1. Mary normal messages
+Types:
+- intro
+- question
+- reply
+- system
+
+Display as Mary messages on the left.
+
+2. Eikichi messages
+Type:
+- answer
+
+Display as Eikichi messages on the right.
+
+3. Correction messages
+Type:
+- correction
+
+Display as a dedicated correction card, not a normal chat bubble.
+
+Use the title:
+
+Mary's Correction
+
+This card should be easy to read and should preserve line breaks.
+
+4. Reward messages
+Type:
+- reward
+
+Display as a small reward card.
+
+Keep it simple.
+
+5. Summary messages
+Type:
+- summary
+
+Display as a dedicated summary card.
+
+Use the title:
+
+Today's Summary
+
+Preserve line breaks.
+
+Mary icon behavior:
+
+- Show Mary's icon at the start of each Mary message block.
+- If a Mary reply and a Mary question are separate messages, show the Mary icon for both.
+- Do not show Mary icon on correction cards.
+- Do not show Mary icon on summary cards.
+
+Important:
+
+- Do not change the JSON format.
+- Do not change XP calculation.
+- Do not change level behavior.
+- Do not change Tasks behavior.
+- Do not change Wardrobe.
+- Do not change app icon.
+- Do not change splash screen.
