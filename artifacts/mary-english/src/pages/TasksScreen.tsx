@@ -2,13 +2,15 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Copy, CheckCircle2, Upload, X,
-  ChevronDown, ChevronUp, AlertCircle, CheckCircle, Gift,
+  ChevronDown, ChevronUp, AlertCircle, CheckCircle, Gift, RefreshCw,
 } from "lucide-react";
 import { getMaryBustPng } from "@/lib/maryAssets";
 import { BottomNav } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { useGame } from "@/context/GameContext";
 import { useSessionImport, SAMPLE_JSON } from "@/hooks/useSessionImport";
+import { usePwaUpdate } from "@/hooks/usePwaUpdate";
+import { APP_VERSION } from "@/lib/version";
 
 const COMMANDS = [
   { id: "daily",    label: "Daily Talk",    text: "Let's have our daily English conversation." },
@@ -84,6 +86,35 @@ function ProgressRow({
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── Version footer ───────────────────────────────────────────────────────────
+function VersionFooter() {
+  const { checkForUpdate } = usePwaUpdate();
+  const [checking, setChecking] = useState(false);
+
+  const handleCheck = () => {
+    setChecking(true);
+    checkForUpdate();
+    setTimeout(() => setChecking(false), 2000);
+  };
+
+  return (
+    <div className="mt-5 flex items-center justify-between">
+      <span className="text-xs text-muted-foreground/60">
+        Mary English v{APP_VERSION}
+      </span>
+      <button
+        onClick={handleCheck}
+        disabled={checking}
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary disabled:opacity-50 transition-colors"
+        data-testid="check-update-btn"
+      >
+        <RefreshCw className={`w-3 h-3 ${checking ? "animate-spin" : ""}`} />
+        {checking ? "Checking…" : "Check for update"}
+      </button>
     </div>
   );
 }
@@ -369,6 +400,9 @@ function ImportSection() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* ── Version + update check ── */}
+      <VersionFooter />
 
       {/* ── Developer tools ── */}
       <div className="mt-4">

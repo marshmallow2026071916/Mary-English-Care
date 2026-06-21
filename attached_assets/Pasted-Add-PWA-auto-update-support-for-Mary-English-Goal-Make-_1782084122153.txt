@@ -1,0 +1,97 @@
+Add PWA auto-update support for Mary English.
+
+Goal:
+Make the installed smartphone PWA update reliably when a new version is deployed.
+
+Problem:
+Desktop browser shows the latest version, but the installed smartphone PWA may keep showing an old cached version.
+
+Tasks:
+
+1. Add app version constant
+
+Create or update an app version value, for example:
+
+APP_VERSION = "3.1.1"
+
+Display this version quietly somewhere in the app, preferably near the bottom of Settings or Import screen:
+
+Mary English v3.1.1
+
+2. Improve service worker update behavior
+
+If the app already has a service worker:
+- Check for updates on app start.
+- If a new service worker is waiting, activate it.
+- After activation, reload the app once.
+
+If using Workbox or Vite PWA:
+- Enable immediate update / skipWaiting behavior.
+- Enable clientsClaim.
+- Register update check on app start.
+
+3. Add user-facing update banner
+
+When a new version is detected, show a small banner:
+
+"New version available. Updating Mary English..."
+
+Then reload automatically.
+
+If automatic reload is not safe, show:
+
+"New version available. Tap to update."
+
+Button:
+Update
+
+On tap:
+- activate waiting service worker
+- reload page
+
+4. Avoid reload loop
+
+Store a temporary flag in sessionStorage, for example:
+
+maryEnglishReloadedForUpdate = "true"
+
+Only reload once for the same update cycle.
+
+After reload, clear the flag when the app is stable.
+
+5. Add manual refresh button
+
+Add a small button in Settings or Import screen:
+
+"Check for update"
+
+When tapped:
+- ask service worker registration to update
+- if a waiting update exists, activate it
+- reload once
+
+6. Cache strategy
+
+Do not aggressively cache index.html forever.
+
+Ensure index.html / app shell checks network first or is refreshed on each app open.
+
+Static assets can remain cached with hashed filenames.
+
+7. Do not change
+
+Do NOT change:
+- JSON schema
+- JSON file import
+- Review Log
+- XP logic
+- level logic
+- hearts
+- wardrobe
+- localStorage data
+
+8. Success message
+
+After implementation, show:
+
+"PWA auto-update support added. Mary English v3.1.1"
