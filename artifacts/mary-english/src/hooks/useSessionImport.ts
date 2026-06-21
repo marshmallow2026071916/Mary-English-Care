@@ -67,12 +67,20 @@ function validateProgress(
 
   if (typeof d.dailyTalkCompleted !== "boolean")
     return { ok: false, error: '"progress.dailyTalkCompleted" must be a boolean.' };
-  if (typeof d.practiceTalkCompleted !== "boolean")
+
+  // Accept both spellings; normalize to the field name GameContext reads.
+  const practiceTalkCompleted = d.practiceTalkCompleted ?? d.practiceTaskCompleted;
+  if (typeof practiceTalkCompleted !== "boolean")
     return { ok: false, error: '"progress.practiceTalkCompleted" must be a boolean.' };
+
   if (typeof d.reviewChallengeCompleted !== "boolean")
     return { ok: false, error: '"progress.reviewChallengeCompleted" must be a boolean.' };
+
   if (typeof d.totalXp !== "number")
-    return { ok: false, error: '"progress.totalXp" must be a number.' };
+    return {
+      ok: false,
+      error: "progress.totalXp is missing. Please use the full Mary English progress format.",
+    };
   if (typeof d.dailyXp !== "number")
     return { ok: false, error: '"progress.dailyXp" must be a number.' };
   if (typeof d.practiceXp !== "number")
@@ -82,7 +90,14 @@ function validateProgress(
   if (typeof d.bonusXp !== "number")
     return { ok: false, error: '"progress.bonusXp" must be a number.' };
 
-  return { ok: true, data: d as unknown as ProgressData };
+  // Return normalized progress so GameContext always receives practiceTalkCompleted.
+  return {
+    ok: true,
+    data: {
+      ...(d as unknown as ProgressData),
+      practiceTalkCompleted,
+    },
+  };
 }
 
 function validate(
