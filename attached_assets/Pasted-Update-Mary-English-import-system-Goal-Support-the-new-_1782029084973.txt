@@ -1,0 +1,114 @@
+Update Mary English import system.
+
+Goal:
+Support the new practical JSON operation:
+- Usually import 1 JSON.
+- If a conversation is long, import 2 consecutive JSON parts.
+- Review Log must still display correctly.
+- Do not store rally count text in JSON.
+
+Tasks:
+
+1. Update JSON Import screen
+Add two paste areas:
+- JSON Paste Area 1 (required)
+- JSON Paste Area 2 (optional)
+
+Button:
+- Import JSON
+
+2. Import behavior
+If only Area 1 has text:
+- Import it as one normal JSON.
+
+If both Area 1 and Area 2 have text:
+- Parse both JSONs.
+- Validate that both have the same date.
+- Validate that both have the same version or compatible versions.
+- Combine them as one day.
+
+Combine rule:
+- Use progress from JSON 2 as the final progress.
+- Use reviewLog metadata from JSON 2 when needed.
+- Combine reviewLog.messages in this order:
+  JSON 1 reviewLog.messages
+  then
+  JSON 2 reviewLog.messages
+
+3. Support optional part fields
+JSON may contain:
+- part: 1
+- part: 2
+- totalParts: 2
+
+But do not require these fields.
+If they exist, use them to check order.
+If they do not exist, simply combine Area 1 then Area 2.
+
+4. Update schema compatibility
+Accept version:
+- 3.1
+- 3.2
+
+5. Support new correction format
+Correction messages may be either old format:
+
+{
+  "speaker": "Correction",
+  "type": "correction",
+  "text": "..."
+}
+
+or new compact format:
+
+{
+  "speaker": "Correction",
+  "type": "correction",
+  "original": "...",
+  "corrected": "..."
+}
+
+Display new compact correction format as a correction card:
+
+Title:
+Mary's Correction
+
+Body:
+❌ original
+✅ corrected
+
+Do not show Mary avatar on correction cards.
+
+6. Review Log display rules
+Keep current rules:
+- Mary messages show Mary avatar.
+- Correction cards do not show Mary avatar.
+- Summary cards do not show Mary avatar.
+- Reward cards display as reward cards.
+
+7. Error messages
+If JSON 1 is empty:
+Show:
+"JSON 1 is required."
+
+If JSON cannot be parsed:
+Show:
+"JSON could not be parsed. Please check the format."
+
+If dates are different:
+Show:
+"JSON 1 and JSON 2 have different dates."
+
+If messages cannot be found:
+Show:
+"reviewLog.messages is missing."
+
+8. Do not change XP calculation yet.
+Use imported progress values only.
+
+9. Do not add AI integration.
+Do not add database.
+Keep local storage behavior.
+
+10. After finishing, show a short success message:
+"Mary English now supports 1 or 2 JSON imports."

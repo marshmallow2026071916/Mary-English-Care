@@ -9,10 +9,10 @@ import {
   type ReviewLogReward,
 } from "@/hooks/useReviewLog";
 
-// Accepted import versions. Old stored data continues to render via Review Log.
-const SUPPORTED_VERSIONS = new Set(["3.0", "3.1"]);
+// Accepted import versions.
+const SUPPORTED_VERSIONS = new Set(["3.0", "3.1", "3.2"]);
 
-// ─── Types for the daily JSON format ─────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 type ProgressData = Omit<SessionImportData, "date">;
 
 interface ReviewLogData {
@@ -20,7 +20,6 @@ interface ReviewLogData {
   talkType?: string;
   maryAvatarVariant?: string;
   levelOutfit?: string;
-  // v3.0
   messages?: Message[];
   // v2.1 legacy
   rallies?: Rally[];
@@ -31,11 +30,13 @@ interface ReviewLogData {
 
 interface DailyImportJSON {
   date: string;
+  part?: number;       // optional — used to verify part order when both JSONs have it
+  totalParts?: number; // optional — informational
   progress: ProgressData;
   reviewLog?: ReviewLogData;
 }
 
-// ─── Duplicate tracking (keyed by date) ───────────────────────────────────────
+// ─── Duplicate tracking ───────────────────────────────────────────────────────
 const IMPORTED_KEY = "mary-english-imported-sessions";
 
 function loadImported(): Set<string> {
@@ -92,7 +93,10 @@ function validate(
   const d = data as Record<string, unknown>;
 
   if (!SUPPORTED_VERSIONS.has(String(d.version)))
-    return { ok: false, error: `Unsupported version. Expected "version": "3.0" or "3.1".` };
+    return {
+      ok: false,
+      error: `Unsupported version. Expected "version": "3.0", "3.1", or "3.2".`,
+    };
 
   if (typeof d.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(d.date))
     return { ok: false, error: 'Missing or invalid "date" field (expected YYYY-MM-DD).' };
@@ -116,8 +120,8 @@ function validate(
         return { ok: false, error: 'Each message must have a "speaker" string.' };
       if (typeof msg.type !== "string")
         return { ok: false, error: 'Each message must have a "type" string.' };
-      if (typeof msg.text !== "string")
-        return { ok: false, error: 'Each message must have a "text" string.' };
+      if (typeof msg.text !== "string" && msg.text !== undefined)
+        return { ok: false, error: 'Each message "text" must be a string.' };
     }
   }
   if (rl && rl.rallies !== undefined && !Array.isArray(rl.rallies))
@@ -127,6 +131,8 @@ function validate(
     ok: true,
     data: {
       date: d.date,
+      part: typeof d.part === "number" ? d.part : undefined,
+      totalParts: typeof d.totalParts === "number" ? d.totalParts : undefined,
       progress: progressResult.data,
       reviewLog: d.reviewLog as ReviewLogData | undefined,
     },
@@ -140,7 +146,7 @@ function normalizeTaskType(raw: string): TaskType {
   return "Daily Talk";
 }
 
-// ─── Official sample JSON (keys match TasksScreen buttons) ────────────────────
+// ─── Sample JSON ──────────────────────────────────────────────────────────────
 function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -213,7 +219,7 @@ export const SAMPLE_JSON = {
           messages: [
             { id: 1, speaker: "Mary", type: "question", text: "What did you read aloud today?" },
             { id: 2, speaker: "Eikichi", type: "answer", text: "Today, I read aloud Chapter 28 of Charlie and the Chocolate Factory." },
-            { id: 3, speaker: "Mary", type: "correction", text: "Today, I read aloud Chapter 28 of Charlie and the Chocolate Factory." },
+            { id: 3, speaker: "Correction", type: "correction", original: "Today, I read aloud Chapter 28.", corrected: "Today, I read Chapter 28 aloud." },
             { id: 4, speaker: "Mary", type: "reply", text: "That sounds great! What part did you enjoy the most?" },
             { id: 5, speaker: "Mary", type: "reward", text: "Practice Talk Complete!" },
             { id: 6, speaker: "Mary", type: "summary", text: "Practice Talk: Complete." },
@@ -266,94 +272,176 @@ export const SAMPLE_JSON = {
 export type ImportStatus = "idle" | "success" | "duplicate" | "error";
 
 export function useSessionImport() {
-  const [jsonText, setJsonText] = useState("");
+  const [json1Text, setJson1Text] = useState("");
+  const [json2Text, setJson2Text] = useState("");
   const [status, setStatus] = useState<ImportStatus>("idle");
   const [statusMsg, setStatusMsg] = useState("");
 
   const { gs, actions } = useGame();
   const { upsertByDate } = useReviewLog();
 
-  const clearText = useCallback(() => {
-    setJsonText("");
+  const clearAll = useCallback(() => {
+    setJson1Text("");
+    setJson2Text("");
     setStatus("idle");
     setStatusMsg("");
   }, []);
 
+  // ── Execute the actual state / localStorage changes for a validated DailyImportJSON
+  const executeImport = useCallback(
+    (data: DailyImportJSON): boolean => {
+      const imported = loadImported();
+      const alreadyImported = imported.has(data.date);
+      const levelAtImport = gs.level;
+
+      let levelForLog = levelAtImport;
+      if (!alreadyImported) {
+        const importResult = actions.importSessionData({ ...data.progress, date: data.date });
+        levelForLog = importResult.levelAfter;
+      }
+
+      actions.setImportedDailyCompleted(data.progress.dailyTalkCompleted);
+
+      const rl = data.reviewLog;
+      if (rl) {
+        const taskType = normalizeTaskType(rl.talkType ?? "");
+        upsertByDate(data.date, {
+          date: new Date(data.date + "T00:00:00Z").toISOString(),
+          level: levelForLog,
+          taskType,
+          messages: rl.messages,
+          levelOutfit: rl.levelOutfit,
+          maryAvatarVariant: rl.maryAvatarVariant,
+          rallies: rl.messages ? undefined : rl.rallies,
+          conversation:
+            rl.messages || rl.rallies
+              ? undefined
+              : (rl.conversation as ConversationItem[] | undefined),
+          rewards: rl.rewards,
+          dailyCompleted: data.progress.dailyTalkCompleted,
+        });
+      }
+
+      imported.add(data.date);
+      saveImported(imported);
+
+      return alreadyImported;
+    },
+    [gs.level, actions, upsertByDate]
+  );
+
   const importSession = useCallback(() => {
-    // 1. Parse
-    let parsed: unknown;
+    // ── 1. JSON 1 required
+    if (!json1Text.trim()) {
+      setStatus("error");
+      setStatusMsg("JSON 1 is required.");
+      return;
+    }
+
+    // ── 2. Parse JSON 1
+    let parsed1: unknown;
     try {
-      parsed = JSON.parse(jsonText);
+      parsed1 = JSON.parse(json1Text);
     } catch {
       setStatus("error");
-      setStatusMsg("Invalid JSON. Please check the format and try again.");
+      setStatusMsg("JSON could not be parsed. Please check the format.");
       return;
     }
 
-    // 2. Validate
-    const validation = validate(parsed);
-    if (!validation.ok) {
+    // ── 3. Validate JSON 1
+    const v1 = validate(parsed1);
+    if (!v1.ok) {
       setStatus("error");
-      setStatusMsg(validation.error);
+      setStatusMsg(v1.error);
       return;
     }
-    const data = validation.data;
 
-    // 3. Check whether this date has already been imported
-    const imported = loadImported();
-    const alreadyImported = imported.has(data.date);
+    let finalData: DailyImportJSON;
 
-    // 4. Capture level BEFORE any state changes (review log stores starting level)
-    const levelAtImport = gs.level;
+    if (json2Text.trim()) {
+      // ── Two-JSON mode ──────────────────────────────────────────────────────
 
-    // 5. Apply progress only on first import for this date (avoid double-XP on re-import).
-    //    Capture levelAfter so the review log entry goes under the correct level tab.
-    let levelForLog = levelAtImport;
-    if (!alreadyImported) {
-      const importResult = actions.importSessionData({ ...data.progress, date: data.date });
-      // Use the level AFTER XP is applied so the entry appears under the Current Level tab.
-      levelForLog = importResult.levelAfter;
+      // Parse JSON 2
+      let parsed2: unknown;
+      try {
+        parsed2 = JSON.parse(json2Text);
+      } catch {
+        setStatus("error");
+        setStatusMsg("JSON could not be parsed. Please check the format.");
+        return;
+      }
+
+      // Validate JSON 2
+      const v2 = validate(parsed2);
+      if (!v2.ok) {
+        setStatus("error");
+        setStatusMsg(v2.error);
+        return;
+      }
+
+      let data1 = v1.data;
+      let data2 = v2.data;
+
+      // Validate same date
+      if (data1.date !== data2.date) {
+        setStatus("error");
+        setStatusMsg("JSON 1 and JSON 2 have different dates.");
+        return;
+      }
+
+      // Respect part order if part fields are present — swap if necessary
+      if (
+        data1.part !== undefined &&
+        data2.part !== undefined &&
+        data1.part > data2.part
+      ) {
+        [data1, data2] = [data2, data1];
+      }
+
+      // Combine messages: part 1 messages first, then part 2
+      const msgs1 = data1.reviewLog?.messages ?? [];
+      const msgs2 = data2.reviewLog?.messages ?? [];
+
+      // Offset part 2 IDs so they sort after part 1 (avoids ID collisions on sort)
+      const maxId1 = msgs1.length > 0 ? Math.max(...msgs1.map((m) => m.id)) : 0;
+      const offsetMsgs2 = msgs2.map((m) => ({ ...m, id: m.id + maxId1 }));
+      const combinedMessages = [...msgs1, ...offsetMsgs2];
+
+      // Warn if reviewLog exists but produced no messages at all
+      if (combinedMessages.length === 0 && (data1.reviewLog || data2.reviewLog)) {
+        setStatus("error");
+        setStatusMsg("reviewLog.messages is missing.");
+        return;
+      }
+
+      // Use part 2's progress (final state) and reviewLog metadata
+      finalData = {
+        date: data1.date,
+        progress: data2.progress,
+        reviewLog: data2.reviewLog
+          ? {
+              ...data2.reviewLog,
+              messages: combinedMessages.length > 0 ? combinedMessages : undefined,
+            }
+          : data1.reviewLog
+          ? { ...data1.reviewLog, messages: combinedMessages.length > 0 ? combinedMessages : undefined }
+          : undefined,
+      };
+    } else {
+      // ── Single JSON mode ───────────────────────────────────────────────────
+      finalData = v1.data;
     }
 
-    // 5b. Always write importedDailyCompleted — even on re-import.
-    //     Uses a dedicated localStorage key + separate useState to avoid any
-    //     React batch-update ordering issues with the main GameState.
-    actions.setImportedDailyCompleted(data.progress.dailyTalkCompleted);
+    // ── Execute import
+    const alreadyImported = executeImport(finalData);
 
-    // 6. Always upsert review log — replaces any existing entry for the same date
-    const rl = data.reviewLog;
-    if (rl) {
-      const taskType = normalizeTaskType(rl.talkType ?? "");
-      upsertByDate(data.date, {
-        date: new Date(data.date + "T00:00:00Z").toISOString(),
-        // levelForLog = importResult.levelAfter (first import) or gs.level (re-import).
-        // Matches what the "Current Level" tab shows after import.
-        level: levelForLog,
-        taskType,
-        // v3.1/v3.0 messages take priority; then v2.1 rallies; then v2 flat conversation
-        messages: rl.messages,
-        levelOutfit: rl.levelOutfit,
-        maryAvatarVariant: rl.maryAvatarVariant,
-        rallies: rl.messages ? undefined : rl.rallies,
-        conversation: rl.messages || rl.rallies ? undefined : (rl.conversation as ConversationItem[] | undefined),
-        rewards: rl.rewards,
-        dailyCompleted: data.progress.dailyTalkCompleted,
-      });
-    }
-
-    // 7. Mark date as imported (no-op if already there)
-    imported.add(data.date);
-    saveImported(imported);
-
-    // 8. Done — differentiate first import from update
-    setJsonText("");
+    setJson1Text("");
+    setJson2Text("");
     setStatus("success");
     setStatusMsg(
-      alreadyImported
-        ? "Session updated successfully."
-        : "Session imported successfully."
+      alreadyImported ? "Session updated successfully." : "Session imported successfully."
     );
-  }, [jsonText, gs.level, actions, upsertByDate]);
+  }, [json1Text, json2Text, executeImport]);
 
   const resetImportHistory = useCallback(() => {
     clearImported();
@@ -362,10 +450,12 @@ export function useSessionImport() {
   }, []);
 
   return {
-    jsonText,
-    setJsonText,
+    json1Text,
+    setJson1Text,
+    json2Text,
+    setJson2Text,
     importSession,
-    clearText,
+    clearAll,
     status,
     statusMsg,
     resetImportHistory,

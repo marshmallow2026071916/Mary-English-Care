@@ -31,7 +31,7 @@ export interface Rally {
   reply: RallyMessage;
 }
 
-// v3.0 message format
+// v3.0+ message format
 export interface Message {
   id: number;
   speaker: string;
@@ -46,6 +46,9 @@ export interface Message {
     | "system"
     | string;
   text: string;
+  // Compact correction format (v3.2+): original/corrected instead of free-form text
+  original?: string;
+  corrected?: string;
 }
 
 export interface ReviewLogReward {

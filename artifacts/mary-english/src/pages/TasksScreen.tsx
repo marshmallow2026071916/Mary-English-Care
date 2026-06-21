@@ -92,13 +92,17 @@ function ProgressRow({
 function ImportSection() {
   const [devOpen, setDevOpen] = useState(false);
   const {
-    jsonText, setJsonText,
-    importSession, clearText,
+    json1Text, setJson1Text,
+    json2Text, setJson2Text,
+    importSession, clearAll,
     status, statusMsg,
     resetImportHistory,
   } = useSessionImport();
 
-  const isEmpty = jsonText.trim() === "";
+  const isEmpty = json1Text.trim() === "" && json2Text.trim() === "";
+
+  const TEXTAREA_CLASS =
+    "w-full bg-card border border-border rounded-2xl p-4 font-mono text-xs text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/60 transition-all";
 
   return (
     <div className="mb-8">
@@ -106,29 +110,61 @@ function ImportSection() {
         Import Session Data
       </h2>
       <p className="text-xs text-muted-foreground mb-4 pl-3 italic">
-        Paste the JSON from ChatGPT after End Talk.
+        Paste the JSON from ChatGPT after End Talk. For long conversations, paste each part separately.
       </p>
 
-      <div className="relative">
-        <textarea
-          value={jsonText}
-          onChange={(e) => setJsonText(e.target.value)}
-          placeholder={`{\n  "date": "2026-06-14",\n  "task_type": "Daily Talk",\n  "xp_gained": 10,\n  "daily_completed": true,\n  ...\n}`}
-          rows={7}
-          className="w-full bg-card border border-border rounded-2xl p-4 font-mono text-xs text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/60 transition-all"
-          data-testid="import-textarea"
-          spellCheck={false}
-        />
-        {!isEmpty && (
-          <button
-            onClick={clearText}
-            className="absolute top-3 right-3 p-1 text-muted-foreground hover:text-foreground transition-colors"
-            data-testid="import-clear-x"
-            aria-label="Clear"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
+      {/* JSON 1 */}
+      <div className="mb-3">
+        <label className="block text-xs font-bold text-foreground mb-1.5 pl-1">
+          JSON 1
+        </label>
+        <div className="relative">
+          <textarea
+            value={json1Text}
+            onChange={(e) => setJson1Text(e.target.value)}
+            placeholder={`{ "version": "3.1", "date": "2026-06-20", ... }`}
+            rows={6}
+            className={TEXTAREA_CLASS}
+            data-testid="import-textarea"
+            spellCheck={false}
+          />
+          {json1Text.trim() !== "" && (
+            <button
+              onClick={() => setJson1Text("")}
+              className="absolute top-3 right-3 p-1 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Clear JSON 1"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* JSON 2 */}
+      <div className="mb-3">
+        <label className="block text-xs font-bold text-muted-foreground mb-1.5 pl-1">
+          JSON 2 <span className="font-normal">(optional — for long conversations)</span>
+        </label>
+        <div className="relative">
+          <textarea
+            value={json2Text}
+            onChange={(e) => setJson2Text(e.target.value)}
+            placeholder={`{ "version": "3.1", "date": "2026-06-20", "part": 2, ... }`}
+            rows={5}
+            className={TEXTAREA_CLASS}
+            data-testid="import-textarea-2"
+            spellCheck={false}
+          />
+          {json2Text.trim() !== "" && (
+            <button
+              onClick={() => setJson2Text("")}
+              className="absolute top-3 right-3 p-1 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Clear JSON 2"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       <AnimatePresence>
@@ -140,7 +176,7 @@ function ImportSection() {
             className="overflow-hidden"
           >
             <div
-              className={`mt-3 flex items-start gap-2 px-4 py-3 rounded-xl text-sm font-medium ${
+              className={`mt-1 mb-3 flex items-start gap-2 px-4 py-3 rounded-xl text-sm font-medium ${
                 status === "success"
                   ? "bg-green-50 text-green-800 border border-green-200"
                   : status === "duplicate"
@@ -160,18 +196,17 @@ function ImportSection() {
         )}
       </AnimatePresence>
 
-      <div className="flex gap-3 mt-3">
+      <div className="flex gap-3">
         <button
           onClick={importSession}
-          disabled={isEmpty}
-          className="flex-1 flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-primary-foreground font-bold py-3 rounded-2xl shadow-sm border-b-4 border-primary-foreground/20"
+          className="flex-1 flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 active:scale-95 transition-all text-primary-foreground font-bold py-3 rounded-2xl shadow-sm border-b-4 border-primary-foreground/20"
           data-testid="import-btn"
         >
           <Upload className="w-4 h-4" />
-          Import
+          Import JSON
         </button>
         <button
-          onClick={clearText}
+          onClick={clearAll}
           disabled={isEmpty}
           className="px-5 bg-secondary hover:bg-secondary/80 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-secondary-foreground font-bold py-3 rounded-2xl"
           data-testid="import-clear-btn"
@@ -200,21 +235,21 @@ function ImportSection() {
             >
               <div className="mt-2 flex flex-wrap gap-2">
                 <button
-                  onClick={() => { setJsonText(SAMPLE_JSON.dailyTalk()); }}
+                  onClick={() => setJson1Text(SAMPLE_JSON.dailyTalk())}
                   className="px-3 py-1.5 rounded-xl text-xs font-bold bg-secondary text-secondary-foreground border border-border hover:bg-secondary/70 transition-all active:scale-95"
                   data-testid="import-fill-daily"
                 >
                   Fill: Daily Talk JSON
                 </button>
                 <button
-                  onClick={() => { setJsonText(SAMPLE_JSON.practiceTalk()); }}
+                  onClick={() => setJson1Text(SAMPLE_JSON.practiceTalk())}
                   className="px-3 py-1.5 rounded-xl text-xs font-bold bg-secondary text-secondary-foreground border border-border hover:bg-secondary/70 transition-all active:scale-95"
                   data-testid="import-fill-practice"
                 >
                   Fill: Practice Talk JSON
                 </button>
                 <button
-                  onClick={() => { setJsonText(SAMPLE_JSON.reviewTask()); }}
+                  onClick={() => setJson1Text(SAMPLE_JSON.reviewTask())}
                   className="px-3 py-1.5 rounded-xl text-xs font-bold bg-secondary text-secondary-foreground border border-border hover:bg-secondary/70 transition-all active:scale-95"
                   data-testid="import-fill-review"
                 >

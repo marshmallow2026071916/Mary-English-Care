@@ -54,7 +54,7 @@ function MaryBadge({ outfit }: { outfit: string }) {
 type RenderElem =
   | { kind: "mary"; text: string; showAvatar: boolean }
   | { kind: "eikichi"; text: string }
-  | { kind: "correction"; text: string }
+  | { kind: "correction"; text: string; original?: string; corrected?: string }
   | { kind: "reward"; reward: ReviewLogReward }
   | { kind: "reward_msg"; text: string }
   | { kind: "summary"; text: string };
@@ -98,7 +98,12 @@ function buildElements(entry: ReviewLogEntry): RenderElem[] {
       } else if (kind === "eikichi") {
         elems.push({ kind: "eikichi", text: msg.text });
       } else if (kind === "correction") {
-        elems.push({ kind: "correction", text: msg.text });
+        elems.push({
+          kind: "correction",
+          text: msg.text ?? "",
+          original: msg.original,
+          corrected: msg.corrected,
+        });
       } else if (kind === "reward_msg") {
         elems.push({ kind: "reward_msg", text: msg.text });
       } else if (kind === "summary") {
@@ -224,18 +229,48 @@ function EikichiBubble({
   );
 }
 
-function CorrectionCard({ text }: { text: string }) {
+function CorrectionCard({
+  text,
+  original,
+  corrected,
+}: {
+  text: string;
+  original?: string;
+  corrected?: string;
+}) {
+  const isCompact = original !== undefined && corrected !== undefined;
+
   return (
     <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
-      <div className="flex items-center gap-1.5 mb-1.5">
+      <div className="flex items-center gap-1.5 mb-2">
         <span className="text-amber-600 text-sm">✏</span>
         <span className="text-xs font-bold text-amber-700 tracking-wide">
           Mary's Correction
         </span>
       </div>
-      <p className="text-sm text-amber-900 leading-relaxed whitespace-pre-wrap">
-        {text}
-      </p>
+
+      {isCompact ? (
+        // Compact format: ❌ original / ✅ corrected
+        <div className="space-y-1.5">
+          <div className="flex items-start gap-2">
+            <span className="text-sm shrink-0 mt-0.5">❌</span>
+            <p className="text-sm text-amber-900 leading-relaxed whitespace-pre-wrap line-through opacity-70">
+              {original}
+            </p>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="text-sm shrink-0 mt-0.5">✅</span>
+            <p className="text-sm text-amber-900 font-medium leading-relaxed whitespace-pre-wrap">
+              {corrected}
+            </p>
+          </div>
+        </div>
+      ) : (
+        // Legacy free-form text
+        <p className="text-sm text-amber-900 leading-relaxed whitespace-pre-wrap">
+          {text}
+        </p>
+      )}
     </div>
   );
 }
