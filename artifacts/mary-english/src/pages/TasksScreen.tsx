@@ -92,8 +92,9 @@ function ProgressRow({
 
 // ─── Version footer ───────────────────────────────────────────────────────────
 function VersionFooter() {
-  const { checkForUpdate } = usePwaUpdate();
+  const { checkForUpdate, forceRefresh } = usePwaUpdate();
   const [checking, setChecking] = useState(false);
+  const [forcing, setForcing] = useState(false);
 
   const handleCheck = () => {
     setChecking(true);
@@ -101,20 +102,41 @@ function VersionFooter() {
     setTimeout(() => setChecking(false), 2000);
   };
 
+  const handleForce = async () => {
+    setForcing(true);
+    await forceRefresh();
+    // forceRefresh reloads the page, so we only reach here on error
+    setForcing(false);
+  };
+
   return (
-    <div className="mt-5 flex items-center justify-between">
-      <span className="text-xs text-muted-foreground/60">
-        Mary English v{APP_VERSION}
-      </span>
-      <button
-        onClick={handleCheck}
-        disabled={checking}
-        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary disabled:opacity-50 transition-colors"
-        data-testid="check-update-btn"
-      >
-        <RefreshCw className={`w-3 h-3 ${checking ? "animate-spin" : ""}`} />
-        {checking ? "Checking…" : "Check for update"}
-      </button>
+    <div className="mt-5 space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-muted-foreground/60">
+          Mary English v{APP_VERSION}
+        </span>
+        <button
+          onClick={handleCheck}
+          disabled={checking || forcing}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary disabled:opacity-50 transition-colors"
+          data-testid="check-update-btn"
+        >
+          <RefreshCw className={`w-3 h-3 ${checking ? "animate-spin" : ""}`} />
+          {checking ? "Checking…" : "Check for update"}
+        </button>
+      </div>
+
+      <div className="flex justify-end">
+        <button
+          onClick={handleForce}
+          disabled={forcing || checking}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground/50 hover:text-destructive disabled:opacity-40 transition-colors"
+          data-testid="force-refresh-btn"
+        >
+          <RefreshCw className={`w-3 h-3 ${forcing ? "animate-spin" : ""}`} />
+          {forcing ? "Clearing…" : "Force refresh app"}
+        </button>
+      </div>
     </div>
   );
 }
