@@ -345,118 +345,122 @@ export function useSessionImport() {
     [gs.level, actions, upsertByDate]
   );
 
-  const importSession = useCallback(() => {
-    // ── 1. JSON 1 required
-    if (!json1Text.trim()) {
-      setStatus("error");
-      setStatusMsg("JSON 1 is required.");
-      return;
-    }
+  // ── Core import logic — accepts text strings directly.
+  // Used by both the file-upload path and the text-paste path.
+  const importTexts = useCallback(
+    (text1: string, text2: string) => {
+      // 1. Text 1 required
+      if (!text1.trim()) {
+        setStatus("error");
+        setStatusMsg("JSON File 1 is required.");
+        return;
+      }
 
-    // ── 2. Parse JSON 1
-    let parsed1: unknown;
-    try {
-      parsed1 = JSON.parse(json1Text);
-    } catch {
-      setStatus("error");
-      setStatusMsg("JSON could not be parsed. Please check the format.");
-      return;
-    }
-
-    // ── 3. Validate JSON 1
-    const v1 = validate(parsed1);
-    if (!v1.ok) {
-      setStatus("error");
-      setStatusMsg(v1.error);
-      return;
-    }
-
-    let finalData: DailyImportJSON;
-
-    if (json2Text.trim()) {
-      // ── Two-JSON mode ──────────────────────────────────────────────────────
-
-      // Parse JSON 2
-      let parsed2: unknown;
+      // 2. Parse JSON 1
+      let parsed1: unknown;
       try {
-        parsed2 = JSON.parse(json2Text);
+        parsed1 = JSON.parse(text1);
       } catch {
         setStatus("error");
-        setStatusMsg("JSON could not be parsed. Please check the format.");
+        setStatusMsg("JSON could not be parsed. Please check the file.");
         return;
       }
 
-      // Validate JSON 2
-      const v2 = validate(parsed2);
-      if (!v2.ok) {
+      // 3. Validate JSON 1
+      const v1 = validate(parsed1);
+      if (!v1.ok) {
         setStatus("error");
-        setStatusMsg(v2.error);
+        setStatusMsg(v1.error);
         return;
       }
 
-      let data1 = v1.data;
-      let data2 = v2.data;
+      let finalData: DailyImportJSON;
 
-      // Validate same date
-      if (data1.date !== data2.date) {
-        setStatus("error");
-        setStatusMsg("JSON 1 and JSON 2 have different dates.");
-        return;
+      if (text2.trim()) {
+        // ── Two-JSON mode ────────────────────────────────────────────────────
+
+        let parsed2: unknown;
+        try {
+          parsed2 = JSON.parse(text2);
+        } catch {
+          setStatus("error");
+          setStatusMsg("JSON could not be parsed. Please check the file.");
+          return;
+        }
+
+        const v2 = validate(parsed2);
+        if (!v2.ok) {
+          setStatus("error");
+          setStatusMsg(v2.error);
+          return;
+        }
+
+        let data1 = v1.data;
+        let data2 = v2.data;
+
+        if (data1.date !== data2.date) {
+          setStatus("error");
+          setStatusMsg("JSON File 1 and JSON File 2 have different dates.");
+          return;
+        }
+
+        // Respect part order if part fields are present — swap if necessary
+        if (
+          data1.part !== undefined &&
+          data2.part !== undefined &&
+          data1.part > data2.part
+        ) {
+          [data1, data2] = [data2, data1];
+        }
+
+        const msgs1 = data1.reviewLog?.messages ?? [];
+        const msgs2 = data2.reviewLog?.messages ?? [];
+
+        // Offset part 2 IDs so they sort after part 1
+        const maxId1 = msgs1.length > 0 ? Math.max(...msgs1.map((m) => m.id)) : 0;
+        const offsetMsgs2 = msgs2.map((m) => ({ ...m, id: m.id + maxId1 }));
+        const combinedMessages = [...msgs1, ...offsetMsgs2];
+
+        if (combinedMessages.length === 0 && (data1.reviewLog || data2.reviewLog)) {
+          setStatus("error");
+          setStatusMsg("reviewLog.messages is missing.");
+          return;
+        }
+
+        finalData = {
+          date: data1.date,
+          progress: data2.progress,
+          reviewLog: data2.reviewLog
+            ? {
+                ...data2.reviewLog,
+                messages: combinedMessages.length > 0 ? combinedMessages : undefined,
+              }
+            : data1.reviewLog
+            ? {
+                ...data1.reviewLog,
+                messages: combinedMessages.length > 0 ? combinedMessages : undefined,
+              }
+            : undefined,
+        };
+      } else {
+        // ── Single JSON mode ─────────────────────────────────────────────────
+        finalData = v1.data;
       }
 
-      // Respect part order if part fields are present — swap if necessary
-      if (
-        data1.part !== undefined &&
-        data2.part !== undefined &&
-        data1.part > data2.part
-      ) {
-        [data1, data2] = [data2, data1];
-      }
+      executeImport(finalData);
 
-      // Combine messages: part 1 messages first, then part 2
-      const msgs1 = data1.reviewLog?.messages ?? [];
-      const msgs2 = data2.reviewLog?.messages ?? [];
+      setStatus("success");
+      setStatusMsg("JSON file import completed.");
+    },
+    [executeImport]
+  );
 
-      // Offset part 2 IDs so they sort after part 1 (avoids ID collisions on sort)
-      const maxId1 = msgs1.length > 0 ? Math.max(...msgs1.map((m) => m.id)) : 0;
-      const offsetMsgs2 = msgs2.map((m) => ({ ...m, id: m.id + maxId1 }));
-      const combinedMessages = [...msgs1, ...offsetMsgs2];
-
-      // Warn if reviewLog exists but produced no messages at all
-      if (combinedMessages.length === 0 && (data1.reviewLog || data2.reviewLog)) {
-        setStatus("error");
-        setStatusMsg("reviewLog.messages is missing.");
-        return;
-      }
-
-      // Use part 2's progress (final state) and reviewLog metadata
-      finalData = {
-        date: data1.date,
-        progress: data2.progress,
-        reviewLog: data2.reviewLog
-          ? {
-              ...data2.reviewLog,
-              messages: combinedMessages.length > 0 ? combinedMessages : undefined,
-            }
-          : data1.reviewLog
-          ? { ...data1.reviewLog, messages: combinedMessages.length > 0 ? combinedMessages : undefined }
-          : undefined,
-      };
-    } else {
-      // ── Single JSON mode ───────────────────────────────────────────────────
-      finalData = v1.data;
-    }
-
-    // ── Execute import
-    const alreadyImported = executeImport(finalData);
-
+  // Convenience wrapper for the text-paste path (reads from state).
+  const importSession = useCallback(() => {
+    importTexts(json1Text, json2Text);
     setJson1Text("");
     setJson2Text("");
-    setStatus("success");
-    setStatusMsg(
-      alreadyImported ? "Session updated successfully." : "Session imported successfully."
-    );
-  }, [json1Text, json2Text, executeImport]);
+  }, [json1Text, json2Text, importTexts]);
 
   const resetImportHistory = useCallback(() => {
     clearImported();
@@ -464,13 +468,20 @@ export function useSessionImport() {
     setStatusMsg("Import history cleared.");
   }, []);
 
+  const showError = useCallback((msg: string) => {
+    setStatus("error");
+    setStatusMsg(msg);
+  }, []);
+
   return {
     json1Text,
     setJson1Text,
     json2Text,
     setJson2Text,
+    importTexts,
     importSession,
     clearAll,
+    showError,
     status,
     statusMsg,
     resetImportHistory,

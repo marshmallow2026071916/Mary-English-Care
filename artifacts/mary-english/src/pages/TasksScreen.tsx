@@ -89,17 +89,90 @@ function ProgressRow({
 }
 
 // ─── Import Section ───────────────────────────────────────────────────────────
+function readFileText(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve((e.target?.result as string) ?? "");
+    reader.onerror = () => reject(new Error("read failed"));
+    reader.readAsText(file, "UTF-8");
+  });
+}
+
 function ImportSection() {
+  const [file1, setFile1] = useState<File | null>(null);
+  const [file2, setFile2] = useState<File | null>(null);
+  const [fileReading, setFileReading] = useState(false);
+  const [pasteOpen, setPasteOpen] = useState(false);
   const [devOpen, setDevOpen] = useState(false);
+
   const {
     json1Text, setJson1Text,
     json2Text, setJson2Text,
-    importSession, clearAll,
-    status, statusMsg,
+    importTexts, importSession, clearAll,
+    showError, status, statusMsg,
     resetImportHistory,
   } = useSessionImport();
 
-  const isEmpty = json1Text.trim() === "" && json2Text.trim() === "";
+  // ── File import handler
+  const handleFileImport = async () => {
+    if (!file1) {
+      showError("JSON File 1 is required.");
+      return;
+    }
+    setFileReading(true);
+    try {
+      let text1 = "";
+      let text2 = "";
+      try {
+        text1 = await readFileText(file1);
+      } catch {
+        showError("JSON file could not be read.");
+        return;
+      }
+      if (file2) {
+        try {
+          text2 = await readFileText(file2);
+        } catch {
+          showError("JSON file could not be read.");
+          return;
+        }
+      }
+      importTexts(text1, text2);
+    } finally {
+      setFileReading(false);
+    }
+  };
+
+  // ── Status banner (shared by both paths)
+  const statusBanner = status !== "idle" && statusMsg ? (
+    <AnimatePresence>
+      <motion.div
+        key="status"
+        initial={{ opacity: 0, height: 0, y: -4 }}
+        animate={{ opacity: 1, height: "auto", y: 0 }}
+        exit={{ opacity: 0, height: 0 }}
+        className="overflow-hidden mb-3"
+      >
+        <div
+          className={`flex items-start gap-2 px-4 py-3 rounded-xl text-sm font-medium ${
+            status === "success"
+              ? "bg-green-50 text-green-800 border border-green-200"
+              : status === "duplicate"
+                ? "bg-amber-50 text-amber-800 border border-amber-200"
+                : "bg-destructive/10 text-destructive border border-destructive/20"
+          }`}
+          data-testid="import-status-msg"
+        >
+          {status === "success" ? (
+            <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          ) : (
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          )}
+          <span>{statusMsg}</span>
+        </div>
+      </motion.div>
+    </AnimatePresence>
+  ) : null;
 
   const TEXTAREA_CLASS =
     "w-full bg-card border border-border rounded-2xl p-4 font-mono text-xs text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/60 transition-all";
@@ -110,111 +183,194 @@ function ImportSection() {
         Import Session Data
       </h2>
       <p className="text-xs text-muted-foreground mb-4 pl-3 italic">
-        Paste the JSON from ChatGPT after End Talk. For long conversations, paste each part separately.
+        Select the JSON file exported from ChatGPT after End Talk.
       </p>
 
-      {/* JSON 1 */}
-      <div className="mb-3">
-        <label className="block text-xs font-bold text-foreground mb-1.5 pl-1">
-          JSON 1
-        </label>
-        <div className="relative">
-          <textarea
-            value={json1Text}
-            onChange={(e) => setJson1Text(e.target.value)}
-            placeholder={`{ "version": "3.1", "date": "2026-06-20", ... }`}
-            rows={6}
-            className={TEXTAREA_CLASS}
-            data-testid="import-textarea"
-            spellCheck={false}
-          />
-          {json1Text.trim() !== "" && (
-            <button
-              onClick={() => setJson1Text("")}
-              className="absolute top-3 right-3 p-1 text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="Clear JSON 1"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-      </div>
+      {/* ── Primary: File upload ── */}
+      <div className="bg-card border border-border rounded-2xl p-4 mb-3 space-y-3">
 
-      {/* JSON 2 */}
-      <div className="mb-3">
-        <label className="block text-xs font-bold text-muted-foreground mb-1.5 pl-1">
-          JSON 2 <span className="font-normal">(optional — for long conversations)</span>
-        </label>
-        <div className="relative">
-          <textarea
-            value={json2Text}
-            onChange={(e) => setJson2Text(e.target.value)}
-            placeholder={`{ "version": "3.1", "date": "2026-06-20", "part": 2, ... }`}
-            rows={5}
-            className={TEXTAREA_CLASS}
-            data-testid="import-textarea-2"
-            spellCheck={false}
-          />
-          {json2Text.trim() !== "" && (
-            <button
-              onClick={() => setJson2Text("")}
-              className="absolute top-3 right-3 p-1 text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="Clear JSON 2"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-      </div>
-
-      <AnimatePresence>
-        {status !== "idle" && statusMsg && (
-          <motion.div
-            initial={{ opacity: 0, height: 0, y: -4 }}
-            animate={{ opacity: 1, height: "auto", y: 0 }}
-            exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
+        {/* File 1 */}
+        <div>
+          <label className="block text-xs font-bold text-foreground mb-1.5">
+            JSON File 1
+          </label>
+          <label
+            className="flex items-center gap-2 cursor-pointer px-4 py-2.5 rounded-xl border border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 transition-colors"
+            data-testid="file1-label"
           >
-            <div
-              className={`mt-1 mb-3 flex items-start gap-2 px-4 py-3 rounded-xl text-sm font-medium ${
-                status === "success"
-                  ? "bg-green-50 text-green-800 border border-green-200"
-                  : status === "duplicate"
-                    ? "bg-amber-50 text-amber-800 border border-amber-200"
-                    : "bg-destructive/10 text-destructive border border-destructive/20"
-              }`}
-              data-testid="import-status-msg"
+            <Upload className="w-4 h-4 text-primary shrink-0" />
+            <span className="text-sm font-medium text-primary truncate">
+              {file1 ? file1.name : "Choose JSON file…"}
+            </span>
+            <input
+              type="file"
+              accept=".json,application/json"
+              className="sr-only"
+              data-testid="file1-input"
+              onChange={(e) => {
+                const f = e.target.files?.[0] ?? null;
+                setFile1(f);
+                e.target.value = "";
+              }}
+            />
+          </label>
+          {file1 && (
+            <button
+              onClick={() => setFile1(null)}
+              className="mt-1 text-xs text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1"
             >
-              {status === "success" ? (
-                <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" />
-              ) : (
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-              )}
-              <span>{statusMsg}</span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <X className="w-3 h-3" /> Remove
+            </button>
+          )}
+        </div>
 
-      <div className="flex gap-3">
+        {/* File 2 */}
+        <div>
+          <label className="block text-xs font-bold text-muted-foreground mb-1.5">
+            JSON File 2{" "}
+            <span className="font-normal">(optional — for long conversations)</span>
+          </label>
+          <label
+            className="flex items-center gap-2 cursor-pointer px-4 py-2.5 rounded-xl border border-dashed border-border bg-secondary/40 hover:bg-secondary/70 transition-colors"
+            data-testid="file2-label"
+          >
+            <Upload className="w-4 h-4 text-muted-foreground shrink-0" />
+            <span className="text-sm text-muted-foreground truncate">
+              {file2 ? file2.name : "Choose JSON file… (optional)"}
+            </span>
+            <input
+              type="file"
+              accept=".json,application/json"
+              className="sr-only"
+              data-testid="file2-input"
+              onChange={(e) => {
+                const f = e.target.files?.[0] ?? null;
+                setFile2(f);
+                e.target.value = "";
+              }}
+            />
+          </label>
+          {file2 && (
+            <button
+              onClick={() => setFile2(null)}
+              className="mt-1 text-xs text-muted-foreground hover:text-destructive transition-colors flex items-center gap-1"
+            >
+              <X className="w-3 h-3" /> Remove
+            </button>
+          )}
+        </div>
+
+        {statusBanner}
+
         <button
-          onClick={importSession}
-          className="flex-1 flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 active:scale-95 transition-all text-primary-foreground font-bold py-3 rounded-2xl shadow-sm border-b-4 border-primary-foreground/20"
+          onClick={handleFileImport}
+          disabled={fileReading}
+          className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-primary-foreground font-bold py-3 rounded-2xl shadow-sm border-b-4 border-primary-foreground/20"
           data-testid="import-btn"
         >
           <Upload className="w-4 h-4" />
-          Import JSON
-        </button>
-        <button
-          onClick={clearAll}
-          disabled={isEmpty}
-          className="px-5 bg-secondary hover:bg-secondary/80 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-secondary-foreground font-bold py-3 rounded-2xl"
-          data-testid="import-clear-btn"
-        >
-          Clear
+          {fileReading ? "Reading…" : "Import JSON"}
         </button>
       </div>
 
+      {/* ── Secondary: Text paste (collapsible) ── */}
+      <div className="mt-2">
+        <button
+          onClick={() => setPasteOpen((v) => !v)}
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          data-testid="paste-toggle"
+        >
+          {pasteOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          Paste JSON instead (text)
+        </button>
+
+        <AnimatePresence>
+          {pasteOpen && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="mt-3 space-y-3">
+                <div>
+                  <label className="block text-xs font-bold text-foreground mb-1.5 pl-1">
+                    JSON 1
+                  </label>
+                  <div className="relative">
+                    <textarea
+                      value={json1Text}
+                      onChange={(e) => setJson1Text(e.target.value)}
+                      placeholder={`{ "version": "3.1", "date": "2026-06-21", ... }`}
+                      rows={5}
+                      className={TEXTAREA_CLASS}
+                      data-testid="import-textarea"
+                      spellCheck={false}
+                    />
+                    {json1Text.trim() !== "" && (
+                      <button
+                        onClick={() => setJson1Text("")}
+                        className="absolute top-3 right-3 p-1 text-muted-foreground hover:text-foreground transition-colors"
+                        aria-label="Clear JSON 1"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground mb-1.5 pl-1">
+                    JSON 2{" "}
+                    <span className="font-normal">(optional)</span>
+                  </label>
+                  <div className="relative">
+                    <textarea
+                      value={json2Text}
+                      onChange={(e) => setJson2Text(e.target.value)}
+                      placeholder={`{ "version": "3.1", "date": "2026-06-21", "part": 2, ... }`}
+                      rows={4}
+                      className={TEXTAREA_CLASS}
+                      data-testid="import-textarea-2"
+                      spellCheck={false}
+                    />
+                    {json2Text.trim() !== "" && (
+                      <button
+                        onClick={() => setJson2Text("")}
+                        className="absolute top-3 right-3 p-1 text-muted-foreground hover:text-foreground transition-colors"
+                        aria-label="Clear JSON 2"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={importSession}
+                    className="flex-1 flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 active:scale-95 transition-all text-primary-foreground font-bold py-3 rounded-2xl shadow-sm border-b-4 border-primary-foreground/20"
+                    data-testid="import-paste-btn"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Import
+                  </button>
+                  <button
+                    onClick={clearAll}
+                    disabled={json1Text.trim() === "" && json2Text.trim() === ""}
+                    className="px-5 bg-secondary hover:bg-secondary/80 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-secondary-foreground font-bold py-3 rounded-2xl"
+                    data-testid="import-clear-btn"
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* ── Developer tools ── */}
       <div className="mt-4">
         <button
           onClick={() => setDevOpen((v) => !v)}
@@ -235,21 +391,21 @@ function ImportSection() {
             >
               <div className="mt-2 flex flex-wrap gap-2">
                 <button
-                  onClick={() => setJson1Text(SAMPLE_JSON.dailyTalk())}
+                  onClick={() => { setJson1Text(SAMPLE_JSON.dailyTalk()); setPasteOpen(true); }}
                   className="px-3 py-1.5 rounded-xl text-xs font-bold bg-secondary text-secondary-foreground border border-border hover:bg-secondary/70 transition-all active:scale-95"
                   data-testid="import-fill-daily"
                 >
                   Fill: Daily Talk JSON
                 </button>
                 <button
-                  onClick={() => setJson1Text(SAMPLE_JSON.practiceTalk())}
+                  onClick={() => { setJson1Text(SAMPLE_JSON.practiceTalk()); setPasteOpen(true); }}
                   className="px-3 py-1.5 rounded-xl text-xs font-bold bg-secondary text-secondary-foreground border border-border hover:bg-secondary/70 transition-all active:scale-95"
                   data-testid="import-fill-practice"
                 >
                   Fill: Practice Talk JSON
                 </button>
                 <button
-                  onClick={() => setJson1Text(SAMPLE_JSON.reviewTask())}
+                  onClick={() => { setJson1Text(SAMPLE_JSON.reviewTask()); setPasteOpen(true); }}
                   className="px-3 py-1.5 rounded-xl text-xs font-bold bg-secondary text-secondary-foreground border border-border hover:bg-secondary/70 transition-all active:scale-95"
                   data-testid="import-fill-review"
                 >

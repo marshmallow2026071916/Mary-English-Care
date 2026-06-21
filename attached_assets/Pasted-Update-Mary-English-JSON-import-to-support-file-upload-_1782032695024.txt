@@ -1,0 +1,104 @@
+Update Mary English JSON import to support file upload import.
+
+Important:
+Do NOT change the JSON schema.
+Keep the current official JSON format exactly as-is.
+
+The official JSON format is:
+- version: "3.1"
+- date
+- progress
+- reviewLog
+- reviewLog.messages
+- compact correction format with original/corrected is already supported
+
+Goal:
+Replace or supplement text paste import with JSON file import.
+
+Requirements:
+
+1. Add JSON file import UI
+
+Add:
+- JSON File 1 (required)
+- JSON File 2 (optional)
+- Import button
+
+Accepted file type:
+- .json
+
+2. Import behavior
+
+If only JSON File 1 is selected:
+- Read the file as UTF-8 text.
+- Parse it as JSON.
+- Import it using the existing importer.
+
+If both JSON File 1 and JSON File 2 are selected:
+- Read both files as UTF-8 text.
+- Parse both as JSON.
+- Validate that both have the same date.
+- Combine them as one day.
+
+Combine rule:
+- Use progress from JSON File 2 as the final progress.
+- Use reviewLog metadata from JSON File 2 when needed.
+- Combine reviewLog.messages in this order:
+  JSON File 1 reviewLog.messages
+  then
+  JSON File 2 reviewLog.messages
+
+3. Optional part fields
+
+JSON files may contain:
+- part
+- totalParts
+
+But these fields are optional.
+Do not require them.
+If present, use them only to check order.
+If absent, simply combine File 1 then File 2.
+
+4. Keep existing text paste import if possible
+
+If easy, keep the existing text paste import as a fallback.
+But the main recommended import should now be file import.
+
+5. Error messages
+
+If JSON File 1 is missing:
+Show:
+"JSON File 1 is required."
+
+If a file cannot be read:
+Show:
+"JSON file could not be read."
+
+If JSON cannot be parsed:
+Show:
+"JSON could not be parsed. Please check the file."
+
+If dates are different:
+Show:
+"JSON File 1 and JSON File 2 have different dates."
+
+If reviewLog.messages is missing:
+Show:
+"reviewLog.messages is missing."
+
+6. Do not change
+
+Do NOT change:
+- XP logic
+- level logic
+- hearts
+- wardrobe
+- Review Log display
+- correction display
+- JSON schema
+- local storage structure unless necessary
+
+7. Success message
+
+After successful import, show:
+"JSON file import completed."
