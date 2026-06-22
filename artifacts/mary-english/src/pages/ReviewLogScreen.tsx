@@ -71,14 +71,19 @@ type RenderElem =
   | { kind: "eikichi";     text: string }
   | { kind: "review_card"; subtype: CorrectionSubtype; text: string; corrected?: string };
 
-// ─── Correction sub-type detection ───────────────────────────────────────────
+// ─── Correction grade detection ───────────────────────────────────────────────
+const VALID_SUBTYPES = new Set<string>(["excellent", "perfect", "suggestion", "correction"]);
+
 function detectSubtype(msg: Message): CorrectionSubtype {
-  // v3.1.1 explicit sub-type
-  if (msg.subtype === "excellent" || msg.subtype === "perfect" ||
-      msg.subtype === "suggestion" || msg.subtype === "correction") {
-    return msg.subtype;
+  // v3.1.1+: prefer explicit grade field
+  if (msg.grade && VALID_SUBTYPES.has(msg.grade)) {
+    return msg.grade as CorrectionSubtype;
   }
-  // Backward compat: compact format → correction
+  // Backward compat: legacy subtype field
+  if (msg.subtype && VALID_SUBTYPES.has(msg.subtype)) {
+    return msg.subtype as CorrectionSubtype;
+  }
+  // Infer: compact correction format → correction card
   if (msg.original !== undefined || msg.corrected !== undefined) {
     return "correction";
   }

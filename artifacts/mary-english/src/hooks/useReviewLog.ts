@@ -50,11 +50,13 @@ export interface Message {
   // Compact correction format (v3.2+): original/corrected instead of free-form text
   original?: string;
   corrected?: string;
-  // Correction sub-type (v3.1.1+): determines which review card to show
+  // Correction grade (v3.1.1+): determines which review card to show.
   // "excellent"  → 🌟 Excellent!
   // "perfect"    → ✅ Perfect!
   // "suggestion" → 💡 Mary's Suggestion
   // "correction" → ✏️ Mary's Correction  (default for old entries)
+  grade?: "excellent" | "perfect" | "suggestion" | "correction";
+  // Legacy alias kept for backward compat — prefer grade
   subtype?: "excellent" | "perfect" | "suggestion" | "correction";
 }
 
