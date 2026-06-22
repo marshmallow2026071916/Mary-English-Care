@@ -1,0 +1,244 @@
+Update Mary English Review Log to Version 3.1.1
+Specification: ReviewLog変更事項1537 Rev.1
+
+Goal:
+Transform Review Log from a chat history into a clean English review notebook.
+
+==================================================
+General Concept
+==================================================
+
+Review Log should contain only information useful for reviewing English.
+
+Remove all game-related information from Review Log.
+
+Do NOT change:
+- JSON file import
+- XP system
+- Level system
+- Hearts
+- Wardrobe
+- Progress calculation
+- Save data structure except where noted below.
+
+==================================================
+1. Conversation order
+==================================================
+
+Keep chronological order.
+
+Oldest day at the top.
+
+Newest day at the bottom.
+
+Example:
+
+June 17
+
+...
+
+June 18
+
+...
+
+June 19
+
+...
+
+==================================================
+2. Command display
+==================================================
+
+Display:
+
+✔ Daily Talk
+✔ Practice Talk
+✔ Review Challenge
+✔ Continue Talk
+
+Do NOT display:
+
+✘ End Talk
+
+End Talk may still exist internally if needed, but must not appear in Review Log.
+
+==================================================
+3. Remove game summary
+==================================================
+
+Remove the following from Review Log completely:
+
+- Today's Summary
+- Daily Complete
+- Practice Complete
+- Review Complete
+- XP Gained
+- Bonus XP
+- Total English Rallies
+- Cheer Emote
+- Reward information
+- Any game result messages
+
+These should not appear in Review Log.
+
+==================================================
+4. Mary's final message
+==================================================
+
+Keep Mary's final farewell message.
+
+Example:
+
+"Thank you, Eikichi.
+I enjoyed talking with you today.
+See you next time."
+
+This is part of the conversation and should remain.
+
+==================================================
+5. Correction card redesign
+==================================================
+
+Replace the current Correction card.
+
+There are now four review types.
+
+A)
+
+🌟 Excellent!
+
+Use when Mary especially praises the user's English.
+
+Card title:
+
+🌟 Excellent!
+
+Body:
+
+Short praise message only.
+
+--------------------------------------------------
+
+B)
+
+✅ Perfect!
+
+Use when the sentence is already natural.
+
+Card title:
+
+✅ Perfect!
+
+Body:
+
+Perfect!
+
+--------------------------------------------------
+
+C)
+
+💡 Mary's Suggestion
+
+Use when the user's sentence is correct but a more natural expression is suggested.
+
+Card title:
+
+💡 Mary's Suggestion
+
+Body:
+
+Display ONLY the suggested sentence.
+
+Do NOT display the user's original sentence.
+
+--------------------------------------------------
+
+D)
+
+✏️ Mary's Correction
+
+Use when the user's sentence needs correction.
+
+Card title:
+
+✏️ Mary's Correction
+
+Body:
+
+Display ONLY the corrected sentence.
+
+Do NOT display the user's original sentence.
+
+==================================================
+6. Review Log philosophy
+==================================================
+
+Review Log is NOT a transcript.
+
+Review Log is an English review notebook.
+
+Therefore:
+
+Keep:
+
+- Conversation
+- Mary
+- Eikichi
+- Review cards
+
+Remove:
+
+- System/game information
+
+==================================================
+7. Small Reward
+==================================================
+
+Do NOT display the Daily Small Reward in Review Log.
+
+Reason:
+
+- Rewards belong to gameplay.
+- Review Log belongs to English review.
+- Rewards are shown only when earned.
+- No reward information needs to be restored from JSON.
+
+==================================================
+8. JSON
+==================================================
+
+Reduce JSON size where possible.
+
+Do NOT save Review Log entries for:
+
+- Today's Summary
+- XP
+- Rally count
+- Reward messages
+- Cheer emotes
+- Game completion messages
+
+Keep:
+
+- Conversation
+- Mary's farewell
+- Review cards
+
+==================================================
+9. Future compatibility
+==================================================
+
+Design this Review Log so that future outfit images,
+poses,
+animations,
+and API integration
+can be added without changing Review Log philosophy.
+
+Review Log should always remain an English review notebook.
+
+==================================================
+Success message
+==================================================
+
+"Review Log updated to Version 3.1.1
+(ReviewLog変更事項1537 Rev.1)"

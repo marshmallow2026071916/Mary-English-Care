@@ -7,7 +7,8 @@ export type TaskType =
   | "Practice Talk"
   | "Review Talk"
   | "Reading Talk"
-  | "Review Challenge";
+  | "Review Challenge"
+  | "Continue Talk";
 
 // ─── Conversation formats ──────────────────────────────────────────────────────
 
@@ -49,6 +50,12 @@ export interface Message {
   // Compact correction format (v3.2+): original/corrected instead of free-form text
   original?: string;
   corrected?: string;
+  // Correction sub-type (v3.1.1+): determines which review card to show
+  // "excellent"  → 🌟 Excellent!
+  // "perfect"    → ✅ Perfect!
+  // "suggestion" → 💡 Mary's Suggestion
+  // "correction" → ✏️ Mary's Correction  (default for old entries)
+  subtype?: "excellent" | "perfect" | "suggestion" | "correction";
 }
 
 export interface ReviewLogReward {
@@ -228,6 +235,17 @@ export function useReviewLog() {
               eikichiText: "The word 'transmit' means to send something.",
               correction: null,
               maryText: "Very good! Can you use it in a sentence?",
+            },
+          ],
+          dailyCompleted: false,
+        },
+        "Continue Talk": {
+          openingText: "Sure! Let's continue.",
+          turns: [
+            {
+              eikichiText: "Let's continue our conversation from where we left off.",
+              correction: null,
+              maryText: "Of course! Where were we?",
             },
           ],
           dailyCompleted: false,

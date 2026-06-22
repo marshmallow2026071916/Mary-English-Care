@@ -5,24 +5,35 @@ import {
   useReviewLog,
   type ReviewLogEntry,
   type TaskType,
-  type ReviewLogReward,
   type Message,
 } from "@/hooks/useReviewLog";
 import { useGame } from "@/context/GameContext";
 import { getMaryBustPng, resolveOutfitId, OUTFIT_META } from "@/lib/maryAssets";
 
-// ─── Badge helpers ────────────────────────────────────────────────────────────
+// ─── Task type helpers ────────────────────────────────────────────────────────
+
+// Task types that appear in Review Log (End Talk is excluded)
+const DISPLAYED_TASK_TYPES = new Set<TaskType>([
+  "Daily Talk",
+  "Practice Talk",
+  "Review Talk",
+  "Reading Talk",
+  "Review Challenge",
+  "Continue Talk",
+]);
+
 const TASK_TYPE_COLORS: Record<TaskType, string> = {
-  "Daily Talk": "bg-primary/15 text-primary",
-  "Practice Talk": "bg-accent/20 text-accent-foreground",
-  "Review Talk": "bg-secondary text-secondary-foreground",
-  "Reading Talk": "bg-accent/20 text-accent-foreground",
-  "Review Challenge": "bg-secondary text-secondary-foreground",
+  "Daily Talk":      "bg-primary/15 text-primary",
+  "Practice Talk":   "bg-accent/20 text-accent-foreground",
+  "Review Talk":     "bg-secondary text-secondary-foreground",
+  "Reading Talk":    "bg-accent/20 text-accent-foreground",
+  "Review Challenge":"bg-secondary text-secondary-foreground",
+  "Continue Talk":   "bg-teal-500/15 text-teal-700",
 };
 
 function displayTaskType(type: TaskType): string {
-  if (type === "Reading Talk") return "Practice Talk";
-  if (type === "Review Challenge") return "Review Talk";
+  if (type === "Reading Talk")  return "Practice Talk";   // legacy alias
+  if (type === "Review Talk")   return "Review Challenge"; // legacy → new name
   return type;
 }
 
@@ -34,12 +45,14 @@ function formatDate(iso: string): string {
   });
 }
 
-// ─── Small Mary avatar ────────────────────────────────────────────────────────
+// ─── Small Mary avatar badge ──────────────────────────────────────────────────
 function MaryBadge({ outfit }: { outfit: string }) {
   const id = resolveOutfitId(outfit);
   const meta = OUTFIT_META[id];
   return (
-    <div className={`w-11 h-13 shrink-0 rounded-xl overflow-hidden border border-white/20 shadow-sm bg-gradient-to-br ${meta.cardBg}`}>
+    <div
+      className={`w-11 h-13 shrink-0 rounded-xl overflow-hidden border border-white/20 shadow-sm bg-gradient-to-br ${meta.cardBg}`}
+    >
       <img
         src={getMaryBustPng(outfit)}
         alt="Mary"
@@ -50,139 +63,129 @@ function MaryBadge({ outfit }: { outfit: string }) {
   );
 }
 
-// ─── Conversation element builder ─────────────────────────────────────────────
-type RenderElem =
-  | { kind: "mary"; text: string; showAvatar: boolean }
-  | { kind: "eikichi"; text: string }
-  | { kind: "correction"; text: string; original?: string; corrected?: string }
-  | { kind: "reward"; reward: ReviewLogReward }
-  | { kind: "reward_msg"; text: string }
-  | { kind: "summary"; text: string };
+// ─── Render element types ─────────────────────────────────────────────────────
+type CorrectionSubtype = "excellent" | "perfect" | "suggestion" | "correction";
 
-// Categorise a v3.0 message by its type field.
-// Returns the RenderElem kind (or null if unrecognised — caller decides fallback).
-function msgKind(msg: Message): RenderElem["kind"] | null {
-  switch (msg.type) {
-    case "intro":
-    case "question":
-    case "reply":
-    case "system":
-      return "mary";
-    case "answer":
-      return "eikichi";
-    case "correction":
-      return "correction";
-    case "reward":
-      return "reward_msg";
-    case "summary":
-      return "summary";
-    default:
-      return null;
+type RenderElem =
+  | { kind: "mary";        text: string; showAvatar: boolean }
+  | { kind: "eikichi";     text: string }
+  | { kind: "review_card"; subtype: CorrectionSubtype; text: string; corrected?: string };
+
+// ─── Correction sub-type detection ───────────────────────────────────────────
+function detectSubtype(msg: Message): CorrectionSubtype {
+  // v3.1.1 explicit sub-type
+  if (msg.subtype === "excellent" || msg.subtype === "perfect" ||
+      msg.subtype === "suggestion" || msg.subtype === "correction") {
+    return msg.subtype;
   }
+  // Backward compat: compact format → correction
+  if (msg.original !== undefined || msg.corrected !== undefined) {
+    return "correction";
+  }
+  // Legacy free-form text → default to correction
+  return "correction";
 }
 
+// ─── Build render elements from any entry format ──────────────────────────────
 function buildElements(entry: ReviewLogEntry): RenderElem[] {
   const elems: RenderElem[] = [];
-  let maryCount = 0;
 
-  // v3.0 format — Message[]
+  // ── v3.0+ message format ──────────────────────────────────────────────────
   if (entry.messages && entry.messages.length > 0) {
     const sorted = [...entry.messages].sort((a, b) => a.id - b.id);
 
     for (const msg of sorted) {
-      const kind = msgKind(msg) ?? (msg.speaker === "Mary" ? "mary" : "eikichi");
-
-      if (kind === "mary") {
-        // Every Mary message gets its own avatar — each is a distinct message block.
-        elems.push({ kind: "mary", text: msg.text, showAvatar: true });
-      } else if (kind === "eikichi") {
-        elems.push({ kind: "eikichi", text: msg.text });
-      } else if (kind === "correction") {
-        elems.push({
-          kind: "correction",
-          text: msg.text ?? "",
-          original: msg.original,
-          corrected: msg.corrected,
-        });
-      } else if (kind === "reward_msg") {
-        elems.push({ kind: "reward_msg", text: msg.text });
-      } else if (kind === "summary") {
-        elems.push({ kind: "summary", text: msg.text });
+      switch (msg.type) {
+        case "intro":
+        case "question":
+        case "reply":
+          // Conversation speech — always shown
+          elems.push({ kind: "mary", text: msg.text, showAvatar: true });
+          break;
+        case "answer":
+          elems.push({ kind: "eikichi", text: msg.text });
+          break;
+        case "correction":
+          elems.push({
+            kind: "review_card",
+            subtype: detectSubtype(msg),
+            text: msg.text ?? "",
+            corrected: msg.corrected,
+          });
+          break;
+        // summary, reward, system → intentionally skipped (game/meta info)
+        default:
+          // Unknown types: if speaker looks like Mary, show as a Mary bubble
+          if (
+            msg.speaker &&
+            msg.speaker.toLowerCase() !== "eikichi" &&
+            msg.speaker.toLowerCase() !== "user" &&
+            msg.speaker.toLowerCase() !== "correction" &&
+            msg.speaker.toLowerCase() !== "system"
+          ) {
+            elems.push({ kind: "mary", text: msg.text, showAvatar: true });
+          }
+          break;
       }
     }
     return elems;
   }
 
-  // v2.1 format — Rally[]
+  // ── v2.1 rally format ─────────────────────────────────────────────────────
   if (entry.rallies && entry.rallies.length > 0) {
     for (const rally of entry.rallies) {
       if (rally.user?.text) {
         elems.push({ kind: "eikichi", text: rally.user.text });
       }
       if (rally.correction?.text) {
-        elems.push({ kind: "correction", text: rally.correction.text });
+        elems.push({ kind: "review_card", subtype: "correction", text: rally.correction.text });
       }
       if (rally.reply?.text) {
-        elems.push({ kind: "mary", text: rally.reply.text, showAvatar: maryCount === 0 });
-        maryCount++;
-      }
-      if (entry.rewards) {
-        for (const r of entry.rewards) {
-          if (r.afterRally === rally.rally) {
-            elems.push({ kind: "reward", reward: r });
-          }
-        }
+        elems.push({ kind: "mary", text: rally.reply.text, showAvatar: true });
       }
     }
     return elems;
   }
 
-  // v2 flat format — ConversationItem[]
+  // ── v2 flat format ────────────────────────────────────────────────────────
   if (entry.conversation && entry.conversation.length > 0) {
     for (const item of entry.conversation) {
       if (item.type === "user") {
         elems.push({ kind: "eikichi", text: item.text });
       } else if (item.type === "correction") {
-        elems.push({ kind: "correction", text: item.text });
+        elems.push({ kind: "review_card", subtype: "correction", text: item.text });
       } else if (item.type === "reply") {
-        elems.push({ kind: "mary", text: item.text, showAvatar: maryCount === 0 });
-        maryCount++;
+        elems.push({ kind: "mary", text: item.text, showAvatar: true });
       }
     }
     return elems;
   }
 
-  // Legacy rich format — ConversationTurn[]
+  // ── Legacy rich format (turns) ────────────────────────────────────────────
   if (entry.turns && entry.turns.length > 0) {
     if (entry.openingText) {
       elems.push({ kind: "mary", text: entry.openingText, showAvatar: true });
-      maryCount++;
     }
     for (const turn of entry.turns) {
       if (turn.eikichiText) {
         elems.push({ kind: "eikichi", text: turn.eikichiText });
       }
       if (turn.correction) {
-        elems.push({ kind: "correction", text: turn.correction });
+        elems.push({ kind: "review_card", subtype: "correction", text: turn.correction });
       }
-      elems.push({
-        kind: "mary",
-        text: turn.maryText,
-        showAvatar: maryCount === 0,
-      });
-      maryCount++;
+      elems.push({ kind: "mary", text: turn.maryText, showAvatar: true });
     }
     return elems;
   }
 
-  // Legacy plain format
+  // ── Legacy plain format ───────────────────────────────────────────────────
   if (entry.maryText) {
     elems.push({ kind: "mary", text: entry.maryText, showAvatar: true });
   }
   return elems;
 }
 
-// ─── Individual element renderers ─────────────────────────────────────────────
+// ─── Bubble / card renderers ──────────────────────────────────────────────────
 
 function MaryBubble({
   elem,
@@ -229,81 +232,58 @@ function EikichiBubble({
   );
 }
 
-function CorrectionCard({
+// Four review card types (v3.1.1):
+// 🌟 Excellent!        — praise
+// ✅ Perfect!          — sentence already natural
+// 💡 Mary's Suggestion — more natural alternative (show corrected only)
+// ✏️ Mary's Correction — error corrected (show corrected only)
+function ReviewCard({
+  subtype,
   text,
-  original,
   corrected,
 }: {
+  subtype: CorrectionSubtype;
   text: string;
-  original?: string;
   corrected?: string;
 }) {
-  const isCompact = original !== undefined && corrected !== undefined;
-
-  return (
-    <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
-      <div className="flex items-center gap-1.5 mb-2">
-        <span className="text-amber-600 text-sm">✏</span>
-        <span className="text-xs font-bold text-amber-700 tracking-wide">
-          Mary's Correction
-        </span>
-      </div>
-
-      {isCompact ? (
-        // Compact format: ❌ original / ✅ corrected
-        <div className="space-y-1.5">
-          <div className="flex items-start gap-2">
-            <span className="text-sm shrink-0 mt-0.5">❌</span>
-            <p className="text-sm text-amber-900 leading-relaxed whitespace-pre-wrap line-through opacity-70">
-              {original}
-            </p>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-sm shrink-0 mt-0.5">✅</span>
-            <p className="text-sm text-amber-900 font-medium leading-relaxed whitespace-pre-wrap">
-              {corrected}
-            </p>
-          </div>
-        </div>
-      ) : (
-        // Legacy free-form text
-        <p className="text-sm text-amber-900 leading-relaxed whitespace-pre-wrap">
+  if (subtype === "excellent") {
+    return (
+      <div className="rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-3">
+        <p className="text-xs font-bold text-yellow-700 mb-1.5">🌟 Excellent!</p>
+        <p className="text-sm text-yellow-900 leading-relaxed whitespace-pre-wrap">
           {text}
         </p>
-      )}
-    </div>
-  );
-}
+      </div>
+    );
+  }
 
-function SummaryCard({ text }: { text: string }) {
+  if (subtype === "perfect") {
+    return (
+      <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3">
+        <p className="text-xs font-bold text-green-700 mb-1.5">✅ Perfect!</p>
+        <p className="text-sm text-green-900 leading-relaxed">Perfect!</p>
+      </div>
+    );
+  }
+
+  if (subtype === "suggestion") {
+    return (
+      <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3">
+        <p className="text-xs font-bold text-blue-700 mb-1.5">💡 Mary's Suggestion</p>
+        <p className="text-sm text-blue-900 font-medium leading-relaxed whitespace-pre-wrap">
+          {corrected ?? text}
+        </p>
+      </div>
+    );
+  }
+
+  // Default: "correction"
   return (
-    <div className="rounded-2xl border border-border bg-secondary/50 px-4 py-3">
-      <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-2">
-        Today's Summary
+    <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+      <p className="text-xs font-bold text-amber-700 mb-1.5">✏️ Mary's Correction</p>
+      <p className="text-sm text-amber-900 font-medium leading-relaxed whitespace-pre-wrap">
+        {corrected ?? text}
       </p>
-      <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-        {text}
-      </p>
-    </div>
-  );
-}
-
-function RewardPill({ text }: { text: string }) {
-  return (
-    <div className="flex justify-center">
-      <span className="text-[11px] text-primary/70 font-semibold tracking-wide px-3 py-1 rounded-full bg-primary/8 border border-primary/15">
-        ✓ {text}
-      </span>
-    </div>
-  );
-}
-
-function LegacyRewardPill({ reward }: { reward: ReviewLogReward }) {
-  return (
-    <div className="flex justify-center">
-      <span className="text-[11px] text-muted-foreground/60 italic tracking-wide px-3 py-1 rounded-full bg-muted/40">
-        ✓ {reward.text}
-      </span>
     </div>
   );
 }
@@ -323,18 +303,20 @@ function SessionCard({
     ? allElems.filter((e) => e.kind === "mary")
     : allElems;
 
+  const colorClass = TASK_TYPE_COLORS[entry.taskType] ?? "bg-secondary text-secondary-foreground";
+
   return (
     <div
       className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden"
       data-testid={`entry-card-${entry.id}`}
     >
-      {/* Header */}
+      {/* Header: ✔ task badge + date */}
       <div className="flex items-center gap-2 px-4 pt-4 pb-3 flex-wrap">
         <span
-          className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${TASK_TYPE_COLORS[entry.taskType]}`}
+          className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${colorClass}`}
           data-testid={`entry-tasktype-${entry.id}`}
         >
-          {displayTaskType(entry.taskType)}
+          ✔ {displayTaskType(entry.taskType)}
         </span>
         <span
           className="text-xs text-muted-foreground font-medium ml-auto shrink-0"
@@ -359,7 +341,6 @@ function SessionCard({
               />
             );
           }
-
           if (elem.kind === "eikichi") {
             return (
               <EikichiBubble
@@ -369,23 +350,16 @@ function SessionCard({
               />
             );
           }
-
-          if (elem.kind === "correction") {
-            return <CorrectionCard key={i} text={elem.text} />;
+          if (elem.kind === "review_card") {
+            return (
+              <ReviewCard
+                key={i}
+                subtype={elem.subtype}
+                text={elem.text}
+                corrected={elem.corrected}
+              />
+            );
           }
-
-          if (elem.kind === "reward") {
-            return <LegacyRewardPill key={i} reward={elem.reward} />;
-          }
-
-          if (elem.kind === "reward_msg") {
-            return <RewardPill key={i} text={elem.text} />;
-          }
-
-          if (elem.kind === "summary") {
-            return <SummaryCard key={i} text={elem.text} />;
-          }
-
           return null;
         })}
 
@@ -395,23 +369,6 @@ function SessionCard({
           </p>
         )}
       </div>
-
-      {/* Rewards footer — only for legacy entries without inline rewards */}
-      {!entry.messages && !entry.rallies && entry.rewards && entry.rewards.length > 0 ? (
-        <div className="mx-4 pb-3 pt-1 border-t border-border/40 flex flex-wrap gap-2 justify-center">
-          {entry.rewards.map((r, i) => (
-            <span key={i} className="text-[11px] text-muted-foreground/55 italic tracking-wide">
-              ✓ {r.text}
-            </span>
-          ))}
-        </div>
-      ) : !entry.messages && !entry.rallies && entry.dailyCompleted ? (
-        <div className="mx-4 pb-3 pt-1 border-t border-border/40 flex justify-center">
-          <span className="text-[11px] text-muted-foreground/55 italic tracking-wide">
-            ✓ Daily Talk Complete
-          </span>
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -426,7 +383,6 @@ export default function ReviewLogScreen() {
   const currentLevel = gs.level;
   const resolvedLevel =
     activeTab === "current" ? currentLevel : (activeTab as number);
-
   const tabOutfit = activeTab === "current" ? gs.equippedOutfit : "black";
 
   const pastLevels = Array.from(
@@ -434,8 +390,13 @@ export default function ReviewLogScreen() {
     (_, i) => currentLevel - 1 - i
   );
 
+  // Oldest first; filter out any entry whose taskType is not in the display set
   const filtered = entries
-    .filter((e) => e.level === resolvedLevel)
+    .filter(
+      (e) =>
+        e.level === resolvedLevel &&
+        DISPLAYED_TASK_TYPES.has(e.taskType)
+    )
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   return (
@@ -524,7 +485,7 @@ export default function ReviewLogScreen() {
           <div className="h-px flex-1 bg-border" />
         </div>
 
-        {/* Entries */}
+        {/* Entries — oldest at top, newest at bottom */}
         {filtered.length === 0 ? (
           <div
             className="flex flex-col items-center justify-center py-16 text-center gap-4"
