@@ -10,13 +10,14 @@ import { useToast } from "@/hooks/use-toast";
 import { useGame } from "@/context/GameContext";
 import { useSessionImport, SAMPLE_JSON } from "@/hooks/useSessionImport";
 import { usePwaUpdate } from "@/hooks/usePwaUpdate";
-import { APP_VERSION } from "@/lib/version";
+import { APP_VERSION, APP_BUILD } from "@/lib/version";
 
 const COMMANDS = [
-  { id: "daily",    label: "Daily Talk",    text: "Let's have our daily English conversation." },
-  { id: "practice", label: "Practice Talk", text: "Let's do a practice talk session." },
+  { id: "daily",    label: "Daily Talk",       text: "Let's have our daily English conversation." },
+  { id: "practice", label: "Practice Talk",    text: "Let's do a practice talk session." },
   { id: "review",   label: "Review Challenge", text: "Give me a review talk based on our conversations." },
-  { id: "end",      label: "End Talk",      text: "Let's end today's session. Please give me a summary." },
+  { id: "continue", label: "Continue Talk",    text: "Let's continue our conversation from where we left off." },
+  { id: "end",      label: "End Talk",         text: "Let's end today's session. Please give me a summary." },
 ];
 
 const DAILY_RALLY_MAX = 10;
@@ -92,49 +93,57 @@ function ProgressRow({
 
 // ─── Version footer ───────────────────────────────────────────────────────────
 function VersionFooter() {
-  const { checkForUpdate, forceRefresh } = usePwaUpdate();
-  const [checking, setChecking] = useState(false);
-  const [forcing, setForcing] = useState(false);
+  const { checkForUpdate, forceRefresh, resetAssetCache } = usePwaUpdate();
+  const [busy, setBusy] = useState<"check" | "force" | "assets" | null>(null);
 
-  const handleCheck = () => {
-    setChecking(true);
-    checkForUpdate();
-    setTimeout(() => setChecking(false), 2000);
-  };
-
-  const handleForce = async () => {
-    setForcing(true);
-    await forceRefresh();
-    // forceRefresh reloads the page, so we only reach here on error
-    setForcing(false);
+  const run = (key: "check" | "force" | "assets", fn: () => Promise<void> | void) => async () => {
+    if (busy) return;
+    setBusy(key);
+    try { await fn(); } finally { setBusy(null); }
   };
 
   return (
-    <div className="mt-5 space-y-2">
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground/60">
+    <div className="mt-5 space-y-2.5">
+      {/* Version label */}
+      <div className="flex items-baseline gap-2">
+        <span className="text-xs text-muted-foreground/60 font-medium">
           Mary English v{APP_VERSION}
         </span>
-        <button
-          onClick={handleCheck}
-          disabled={checking || forcing}
-          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary disabled:opacity-50 transition-colors"
-          data-testid="check-update-btn"
-        >
-          <RefreshCw className={`w-3 h-3 ${checking ? "animate-spin" : ""}`} />
-          {checking ? "Checking…" : "Check for update"}
-        </button>
+        <span className="text-[10px] text-muted-foreground/40">
+          Build: {APP_BUILD}
+        </span>
       </div>
 
-      <div className="flex justify-end">
+      {/* Three action buttons */}
+      <div className="flex flex-col gap-1.5">
         <button
-          onClick={handleForce}
-          disabled={forcing || checking}
-          className="flex items-center gap-1.5 text-xs text-muted-foreground/50 hover:text-destructive disabled:opacity-40 transition-colors"
+          onClick={run("check", checkForUpdate)}
+          disabled={!!busy}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary disabled:opacity-40 transition-colors w-fit"
+          data-testid="check-update-btn"
+        >
+          <RefreshCw className={`w-3 h-3 ${busy === "check" ? "animate-spin" : ""}`} />
+          {busy === "check" ? "Checking…" : "Check for update"}
+        </button>
+
+        <button
+          onClick={run("force", forceRefresh)}
+          disabled={!!busy}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground/55 hover:text-destructive disabled:opacity-40 transition-colors w-fit"
           data-testid="force-refresh-btn"
         >
-          <RefreshCw className={`w-3 h-3 ${forcing ? "animate-spin" : ""}`} />
-          {forcing ? "Clearing…" : "Force refresh app"}
+          <RefreshCw className={`w-3 h-3 ${busy === "force" ? "animate-spin" : ""}`} />
+          {busy === "force" ? "Clearing…" : "Force refresh app"}
+        </button>
+
+        <button
+          onClick={run("assets", resetAssetCache)}
+          disabled={!!busy}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground/55 hover:text-amber-600 disabled:opacity-40 transition-colors w-fit"
+          data-testid="reset-assets-btn"
+        >
+          <RefreshCw className={`w-3 h-3 ${busy === "assets" ? "animate-spin" : ""}`} />
+          {busy === "assets" ? "Clearing…" : "Reset downloaded assets"}
         </button>
       </div>
     </div>

@@ -1,0 +1,219 @@
+Update Mary English with two improvements:
+1. Smartphone PWA update/cache fix
+2. New Continue Talk command support
+
+Do not change:
+- JSON schema
+- XP logic
+- level logic
+- heart logic
+- wardrobe logic
+- Review Log data structure
+- JSON file import format
+
+==================================================
+1. Smartphone PWA update/cache fix
+==================================================
+
+Problem:
+Desktop shows the latest version, but smartphone browser and installed PWA may still show the old UI.
+Mary English also has an asset download / offline asset feature, so app cache and downloaded asset cache must be separated.
+
+Goal:
+Keep downloaded assets for data-saving, but make the app itself update reliably.
+
+Tasks:
+
+1. Add visible build version
+
+Show this at the bottom of Settings screen and Import screen:
+
+Mary English v3.1.1
+Build: 2026-06-22-001
+
+2. Separate caches
+
+Use separate cache names:
+
+- mary-english-app-cache-v3-1-1-20260622-001
+- mary-english-asset-cache-v1
+
+App cache:
+- index.html
+- main JS
+- CSS
+- manifest
+- service worker
+
+Asset cache:
+- avatar images
+- outfit images
+- emote images
+- icons
+- sounds
+- other downloaded assets
+
+3. App shell update rule
+
+App shell must not be stuck in old cache.
+
+For app shell files:
+- Use network-first or no-cache behavior.
+- Do not permanently cache index.html.
+- When a new app version is deployed, delete old app caches.
+
+For asset files:
+- Keep cache-first behavior.
+- Do not delete asset cache unless asset version changes or user manually resets assets.
+
+4. Service worker update activation
+
+When a waiting service worker exists:
+- Show banner:
+  "New version available. Tap to update."
+
+Button:
+Update
+
+On tap:
+- postMessage({ type: "SKIP_WAITING" }) to waiting service worker
+- listen for controllerchange
+- reload once
+
+In service worker, add:
+
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});
+
+On activate:
+- clients.claim()
+- delete old app caches
+- keep asset cache unless asset version changed
+
+5. Prevent reload loop
+
+Use sessionStorage flag:
+
+maryEnglishUpdateReloaded = "true"
+
+Reload only once per update cycle.
+
+6. Add manual buttons in Settings
+
+Button 1:
+Check for update
+
+Behavior:
+- call serviceWorkerRegistration.update()
+- if waiting service worker exists, activate it
+- reload once
+
+Button 2:
+Force refresh app
+
+Behavior:
+- unregister all service workers
+- delete only app caches
+- reload with cache-busting query string, for example:
+  ?refresh=timestamp
+
+Do not delete:
+- localStorage progress
+- Review Log
+- wardrobe
+- downloaded asset cache
+
+Button 3:
+Reset downloaded assets
+
+Behavior:
+- delete only asset cache
+- do not delete localStorage progress
+- do not delete Review Log
+- do not delete wardrobe
+
+7. Add console logs
+
+Log:
+- app version
+- build number
+- service worker registered
+- service worker waiting
+- service worker activated
+- old app caches deleted
+- asset cache kept
+- force refresh executed
+- downloaded assets reset
+
+Success message:
+"PWA cache separation and smartphone update support added."
+
+==================================================
+2. Continue Talk command support
+==================================================
+
+Goal:
+Add a new command for continuing the same day's conversation after End Talk / JSON export, without refreshing the topic.
+
+New command:
+Continue Talk
+
+Purpose:
+- Continue the same day's conversation naturally.
+- Used when the previous conversation was ended only because JSON export was needed.
+- Do not treat it as a new Daily Talk, Practice Talk, or Review Talk.
+
+Mary behavior:
+
+If previous context is available:
+Mary should respond shortly:
+
+Sure!
+Let's continue.
+
+If previous context is not available:
+Mary should respond shortly:
+
+Sorry!
+What were we talking about?
+
+Important:
+Do not make this greeting long.
+Keep it short to reduce Review Log / JSON size.
+
+Rally count:
+- Continue Talk should continue the same day's total rally count.
+- Do not reset the visible rally count.
+- Example:
+  Before End Talk: Mary: 😊🌿 (12 rallies)
+  After Continue Talk: Mary: 😊🌿 (13 rallies)
+
+JSON:
+- Do not store the rally count text in JSON.
+- Continue Talk may be saved as talkType:
+  "Continue Talk"
+  or, if it is part 2 of the same day:
+  "Daily Talk + Continue Talk"
+- Do not give additional XP just because Continue Talk starts.
+- XP is based only on completed tasks.
+
+UI:
+Add Continue Talk to the task/command reminder area, together with:
+- Daily Talk
+- Practice Talk
+- Review Challenge
+- End Talk
+
+Suggested command display:
+
+Daily Talk
+Practice Talk
+Review Challenge
+Continue Talk
+End Talk
+
+Success message:
+"Continue Talk command added."

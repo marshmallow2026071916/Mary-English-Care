@@ -32,7 +32,7 @@ function Router() {
 
 function App() {
   const [splashDone, setSplashDone] = useState(false);
-  const { updateAvailable } = usePwaUpdate();
+  const { updateAvailable, applyUpdate } = usePwaUpdate();
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -52,21 +52,28 @@ function App() {
           )}
         </AnimatePresence>
 
-        {/* PWA update banner — shown when a new service worker is activating */}
+        {/* PWA update banner — user taps "Update" to activate the new SW */}
         <AnimatePresence>
           {updateAvailable && (
             <motion.div
               key="update-banner"
-              initial={{ opacity: 0, y: -48 }}
+              initial={{ opacity: 0, y: -56 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -48 }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="fixed top-0 left-0 right-0 z-[200] flex items-center justify-center gap-2 px-4 py-3 bg-primary text-primary-foreground text-sm font-semibold shadow-lg"
+              exit={{ opacity: 0, y: -56 }}
+              transition={{ type: "spring", stiffness: 280, damping: 28 }}
+              className="fixed top-0 left-0 right-0 z-[200] flex items-center justify-between gap-3 px-5 py-3 bg-primary text-primary-foreground shadow-lg"
               role="status"
               aria-live="polite"
             >
-              <span className="animate-pulse">⟳</span>
-              New version available. Updating Mary English…
+              <span className="text-sm font-medium leading-tight">
+                New version available. Tap to update.
+              </span>
+              <button
+                onClick={applyUpdate}
+                className="shrink-0 px-4 py-1.5 rounded-full bg-primary-foreground text-primary text-sm font-bold active:scale-95 transition-transform"
+              >
+                Update
+              </button>
             </motion.div>
           )}
         </AnimatePresence>

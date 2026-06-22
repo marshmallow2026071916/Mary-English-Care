@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lock, Check, ChevronDown, ChevronUp, ChevronRight, User } from "lucide-react";
+import { Lock, Check, ChevronDown, ChevronUp, ChevronRight, User, RefreshCw, Download } from "lucide-react";
 import { Link } from "wouter";
 import { MaryAvatar } from "@/components/MaryAvatar";
 import { BottomNav } from "@/components/BottomNav";
@@ -8,6 +8,8 @@ import { useGame } from "@/context/GameContext";
 import { useReviewLog } from "@/hooks/useReviewLog";
 import { useToast } from "@/hooks/use-toast";
 import { OUTFIT_IMAGES, OUTFIT_META, getMaryPortraitPng, type OutfitId } from "@/lib/maryAssets";
+import { usePwaUpdate } from "@/hooks/usePwaUpdate";
+import { APP_VERSION, APP_BUILD } from "@/lib/version";
 
 // ─── Wardrobe registry ────────────────────────────────────────────────────────
 
@@ -279,6 +281,94 @@ function WardrobeSection() {
   );
 }
 
+// ─── App updates section ──────────────────────────────────────────────────────
+function AppUpdatesSection() {
+  const { checkForUpdate, forceRefresh, resetAssetCache } = usePwaUpdate();
+  const { toast } = useToast();
+  const [busy, setBusy] = useState<"check" | "force" | "assets" | null>(null);
+
+  const notify = (msg: string) => toast({ description: msg, duration: 2000 });
+
+  const run = (
+    key: "check" | "force" | "assets",
+    fn: () => Promise<void> | void,
+    msg?: string,
+  ) => async () => {
+    if (busy) return;
+    setBusy(key);
+    try {
+      await fn();
+      if (msg) notify(msg);
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <div className="mb-8">
+      <h2 className="text-lg font-bold text-foreground mb-4 pl-2 border-l-4 border-primary">
+        App Updates
+      </h2>
+
+      {/* Version info */}
+      <div className="bg-card border border-border rounded-2xl px-4 py-3 mb-3 flex items-center justify-between">
+        <div>
+          <p className="text-sm font-bold text-foreground">Mary English</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            v{APP_VERSION} &nbsp;·&nbsp; Build: {APP_BUILD}
+          </p>
+        </div>
+      </div>
+
+      {/* Action buttons */}
+      <div className="space-y-2">
+        {/* Check for update */}
+        <button
+          onClick={run("check", checkForUpdate, "Checking for update…")}
+          disabled={!!busy}
+          data-testid="options-check-update-btn"
+          className="w-full flex items-center gap-3 px-4 py-3.5 bg-card border border-border rounded-2xl text-sm font-medium text-foreground hover:border-primary/40 disabled:opacity-50 transition-colors active:scale-[0.98]"
+        >
+          <RefreshCw className={`w-4 h-4 text-primary shrink-0 ${busy === "check" ? "animate-spin" : ""}`} />
+          {busy === "check" ? "Checking…" : "Check for update"}
+        </button>
+
+        {/* Force refresh app */}
+        <button
+          onClick={run("force", forceRefresh)}
+          disabled={!!busy}
+          data-testid="options-force-refresh-btn"
+          className="w-full flex items-center gap-3 px-4 py-3.5 bg-card border border-border rounded-2xl text-sm font-medium text-foreground hover:border-destructive/40 disabled:opacity-50 transition-colors active:scale-[0.98]"
+        >
+          <RefreshCw className={`w-4 h-4 text-destructive/70 shrink-0 ${busy === "force" ? "animate-spin" : ""}`} />
+          <div className="text-left">
+            <span className="block">{busy === "force" ? "Clearing…" : "Force refresh app"}</span>
+            <span className="block text-[10px] text-muted-foreground font-normal">
+              Clears app cache only. Progress is kept.
+            </span>
+          </div>
+        </button>
+
+        {/* Reset downloaded assets */}
+        <button
+          onClick={run("assets", resetAssetCache)}
+          disabled={!!busy}
+          data-testid="options-reset-assets-btn"
+          className="w-full flex items-center gap-3 px-4 py-3.5 bg-card border border-border rounded-2xl text-sm font-medium text-foreground hover:border-amber-400/50 disabled:opacity-50 transition-colors active:scale-[0.98]"
+        >
+          <Download className={`w-4 h-4 text-amber-600/70 shrink-0 ${busy === "assets" ? "animate-spin" : ""}`} />
+          <div className="text-left">
+            <span className="block">{busy === "assets" ? "Clearing…" : "Reset downloaded assets"}</span>
+            <span className="block text-[10px] text-muted-foreground font-normal">
+              Re-downloads avatars &amp; sounds. Progress is kept.
+            </span>
+          </div>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Dev button ───────────────────────────────────────────────────────────────
 interface DevButtonProps {
   label: string;
@@ -379,6 +469,9 @@ export default function OptionsScreen() {
             </motion.div>
           </Link>
         </div>
+
+        {/* App Updates */}
+        <AppUpdatesSection />
 
         {/* Developer Testing Panel */}
         <div className="mb-8">
