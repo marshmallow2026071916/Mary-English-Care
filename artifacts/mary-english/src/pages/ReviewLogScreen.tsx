@@ -52,7 +52,7 @@ function MaryBadge({ outfit }: { outfit: string }) {
       <img
         src={getMaryFullPng(outfit)}
         alt="Mary"
-        className="w-full h-full object-contain object-top"
+        className="w-full h-full object-cover object-top"
         draggable={false}
       />
     </div>
