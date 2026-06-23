@@ -8,7 +8,7 @@ import {
   type Message,
 } from "@/hooks/useReviewLog";
 import { useGame } from "@/context/GameContext";
-import { getMaryBustPng, getMaryFullPng, resolveOutfitId, OUTFIT_META } from "@/lib/maryAssets";
+import { getMaryBustPng, resolveOutfitId, OUTFIT_META } from "@/lib/maryAssets";
 
 // ─── Task type helpers ────────────────────────────────────────────────────────
 
@@ -50,9 +50,9 @@ function MaryBadge({ outfit }: { outfit: string }) {
   return (
     <div className="w-11 h-13 shrink-0 rounded-xl overflow-hidden shadow-sm bg-gradient-to-br from-primary/20 to-accent/20">
       <img
-        src={getMaryFullPng(outfit)}
+        src={getMaryBustPng(outfit)}
         alt="Mary"
-        className="w-full h-full object-cover object-top"
+        className="w-full h-full object-contain object-top"
         draggable={false}
       />
     </div>
