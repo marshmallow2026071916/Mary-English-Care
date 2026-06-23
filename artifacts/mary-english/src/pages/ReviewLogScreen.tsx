@@ -8,7 +8,7 @@ import {
   type Message,
 } from "@/hooks/useReviewLog";
 import { useGame } from "@/context/GameContext";
-import { getMaryBustPng, resolveOutfitId, OUTFIT_META } from "@/lib/maryAssets";
+import { getMaryBustPng, getMaryFullPng, resolveOutfitId, OUTFIT_META } from "@/lib/maryAssets";
 
 // ─── Task type helpers ────────────────────────────────────────────────────────
 
@@ -47,14 +47,10 @@ function formatDate(iso: string): string {
 
 // ─── Small Mary avatar badge ──────────────────────────────────────────────────
 function MaryBadge({ outfit }: { outfit: string }) {
-  const id = resolveOutfitId(outfit);
-  const meta = OUTFIT_META[id];
   return (
-    <div
-      className={`w-11 h-13 shrink-0 rounded-xl overflow-hidden border border-white/20 shadow-sm bg-gradient-to-br ${meta.cardBg}`}
-    >
+    <div className="w-11 h-13 shrink-0 rounded-xl overflow-hidden shadow-sm bg-gradient-to-br from-primary/20 to-accent/20">
       <img
-        src={getMaryBustPng(outfit)}
+        src={getMaryFullPng(outfit)}
         alt="Mary"
         className="w-full h-full object-contain object-top"
         draggable={false}
