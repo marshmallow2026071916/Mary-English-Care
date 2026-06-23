@@ -204,7 +204,7 @@ function MaryBubble({
   return (
     <div className={`flex items-start gap-2.5 ${!elem.showAvatar ? "pl-[3.375rem]" : ""}`}>
       {elem.showAvatar && <MaryBadge outfit={outfit} />}
-      <div className="max-w-[82%] bg-white border border-border/60 rounded-2xl rounded-tl-sm px-4 py-2.5 shadow-sm">
+      <div className="max-w-[82%] bg-card border border-border/60 rounded-2xl rounded-tl-sm px-4 py-2.5 shadow-sm">
         <p
           className="text-sm text-foreground leading-relaxed whitespace-pre-wrap"
           data-testid={testId}
@@ -296,17 +296,12 @@ function ReviewCard({
 // ─── Session card ─────────────────────────────────────────────────────────────
 function SessionCard({
   entry,
-  readAloud,
   outfit,
 }: {
   entry: ReviewLogEntry;
-  readAloud: boolean;
   outfit: string;
 }) {
-  const allElems = buildElements(entry);
-  const displayElems = readAloud
-    ? allElems.filter((e) => e.kind === "mary")
-    : allElems;
+  const displayElems = buildElements(entry);
 
   const colorClass = TASK_TYPE_COLORS[entry.taskType] ?? "bg-secondary text-secondary-foreground";
 
@@ -383,7 +378,6 @@ export default function ReviewLogScreen() {
   const { entries } = useReviewLog();
   const { gs } = useGame();
   const [activeTab, setActiveTab] = useState<number | "current">("current");
-  const [readAloud, setReadAloud] = useState(false);
 
   const currentLevel = gs.level;
   const resolvedLevel =
@@ -408,25 +402,14 @@ export default function ReviewLogScreen() {
     <div className="min-h-[100dvh] w-full bg-background flex flex-col pb-24 items-center">
       <div className="w-full max-w-[430px] flex-1 flex flex-col px-6 pt-8">
 
-        {/* Title + Read Aloud toggle */}
-        <div className="flex items-center justify-between mb-6">
+        {/* Title */}
+        <div className="mb-6">
           <h1
             className="text-2xl font-bold text-foreground"
             data-testid="text-page-title"
           >
             Review Log
           </h1>
-          <button
-            onClick={() => setReadAloud((v) => !v)}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
-              readAloud
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "bg-secondary border border-border text-muted-foreground hover:border-primary/40"
-            }`}
-            data-testid="btn-read-aloud"
-          >
-            {readAloud ? "Exit Read Aloud" : "Read Aloud"}
-          </button>
         </div>
 
         {/* Mary header */}
@@ -441,9 +424,7 @@ export default function ReviewLogScreen() {
           </div>
           <div className="bg-card px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm border border-border flex-1">
             <p className="text-sm font-medium text-foreground">
-              {readAloud
-                ? "Read Aloud mode. Only my English is shown."
-                : "Here are our conversations."}
+              Here are our conversations.
             </p>
           </div>
         </div>
@@ -514,7 +495,6 @@ export default function ReviewLogScreen() {
               <SessionCard
                 key={entry.id}
                 entry={entry}
-                readAloud={readAloud}
                 outfit={tabOutfit}
               />
             ))}
