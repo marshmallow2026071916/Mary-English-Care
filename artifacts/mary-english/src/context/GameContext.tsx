@@ -43,6 +43,8 @@ export interface GameState {
   level: number;
   xp: number;
   hearts: number;
+  maxHearts: number;
+  lastHeartChangedAt: string | null;
   streakCount: number;
   lastDailyDate: string | null;
   // Practice Tasks — per-level, max 3, reset on level-up
@@ -145,6 +147,8 @@ const DEFAULT_STATE: GameState = {
   level: 0,
   xp: 0,
   hearts: 1,
+  maxHearts: MAX_HEARTS,
+  lastHeartChangedAt: null,
   streakCount: 0,
   lastDailyDate: null,
   practiceCount: 0,
@@ -184,11 +188,38 @@ function getDayBefore(dateStr: string): string {
   d.setUTCDate(d.getUTCDate() - 1);
   return d.toISOString().slice(0, 10);
 }
+
+const FOURTEEN_DAYS_MS = 14 * 24 * 60 * 60 * 1000;
+
+// Sets hearts to newHearts (clamped to 0–MAX_HEARTS) and records the timestamp.
+function setHeartCount(state: GameState, newHearts: number): GameState {
+  const clamped = Math.max(0, Math.min(MAX_HEARTS, newHearts));
+  return { ...state, hearts: clamped, lastHeartChangedAt: new Date().toISOString() };
+}
+
+// Applies the 14-day inactivity decay rule on app load (called synchronously in loadState).
+// Each 14-day period without a heart change decreases hearts by 1, min 0.
+// If lastHeartChangedAt is absent (first load with new field), initialises it to now with no decay.
+function applyInactivityDecay(state: GameState): GameState {
+  if (state.hearts === 0) return state;
+  const now = new Date();
+  if (!state.lastHeartChangedAt) {
+    return { ...state, lastHeartChangedAt: now.toISOString() };
+  }
+  const diffMs = now.getTime() - new Date(state.lastHeartChangedAt).getTime();
+  const steps = Math.floor(diffMs / FOURTEEN_DAYS_MS);
+  if (steps <= 0) return state;
+  return { ...state, hearts: Math.max(0, state.hearts - steps), lastHeartChangedAt: now.toISOString() };
+}
+
 function loadState(): GameState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULT_STATE };
-    return { ...DEFAULT_STATE, ...JSON.parse(raw) };
+    const loaded: GameState = { ...DEFAULT_STATE, ...JSON.parse(raw) };
+    const decayed = applyInactivityDecay(loaded);
+    if (decayed !== loaded) persist(decayed);
+    return decayed;
   } catch {
     return { ...DEFAULT_STATE };
   }
@@ -312,12 +343,17 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     let next = applyXP(prev, 10);
     const dayBefore = getDayBefore(today);
-    const newStreak = prev.lastDailyDate === dayBefore ? prev.streakCount + 1 : 1;
-    next = { ...next, lastDailyDate: today, streakCount: newStreak };
 
-    if (prev.hearts > 0 && newStreak >= 7) {
-      next = applyXP(next, 100);
-      next = { ...next, streakCount: 0 };
+    if (prev.hearts > 0) {
+      const newStreak = prev.lastDailyDate === dayBefore ? prev.streakCount + 1 : 1;
+      next = { ...next, lastDailyDate: today, streakCount: newStreak };
+      if (newStreak >= 7) {
+        next = applyXP(next, 100);
+        next = { ...next, streakCount: 0 };
+      }
+    } else {
+      // hearts = 0: streak counter stays at 0, no bonus
+      next = { ...next, lastDailyDate: today, streakCount: 0 };
     }
 
     if (next.level > prev.level) {
@@ -374,14 +410,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const addHeart = useCallback(() => {
     const prev = gsRef.current;
     if (prev.hearts >= MAX_HEARTS) return;
-    update({ ...prev, hearts: prev.hearts + 1 });
+    update(setHeartCount(prev, prev.hearts + 1));
     setEmote("smile");
     showModal("heart");
   }, [update, setEmote, showModal]);
 
   const removeHeart = useCallback(() => {
     const prev = gsRef.current;
-    update({ ...prev, hearts: Math.max(0, prev.hearts - 1) });
+    if (prev.hearts <= 0) return;
+    update(setHeartCount(prev, prev.hearts - 1));
   }, [update]);
 
   const resetData = useCallback(() => {
@@ -473,11 +510,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
     // 2. dailyTalkCompleted
     if (data.dailyTalkCompleted && state.lastDailyDate !== importDate) {
       const dayBefore = getDayBefore(importDate);
-      const newStreak = state.lastDailyDate === dayBefore ? state.streakCount + 1 : 1;
-      state = { ...state, lastDailyDate: importDate, streakCount: newStreak };
-      if (prev.hearts > 0 && newStreak >= 7) {
-        state = applyXP(state, 100);
-        state = { ...state, streakCount: 0 };
+      if (prev.hearts > 0) {
+        const newStreak = state.lastDailyDate === dayBefore ? state.streakCount + 1 : 1;
+        state = { ...state, lastDailyDate: importDate, streakCount: newStreak };
+        if (newStreak >= 7) {
+          state = applyXP(state, 100);
+          state = { ...state, streakCount: 0 };
+        }
+      } else {
+        // hearts = 0: streak counter stays at 0, no bonus
+        state = { ...state, lastDailyDate: importDate, streakCount: 0 };
       }
       result.dailyNewlyCompleted = true;
     }
@@ -504,13 +546,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     // 6. Review reward: when all 3 review tasks complete, recover a heart or
     //    unlock the seasonal outfit (whichever applies first).
+    //    When hearts are already full and the outfit is granted, hearts drop from 2→1.
     if (result.reviewNewlyCompleted && state.reviewCount === MAX_REVIEW) {
       result.reviewJustCompleted = true;
       if (state.hearts < MAX_HEARTS) {
-        state = { ...state, hearts: state.hearts + 1 };
+        state = setHeartCount(state, state.hearts + 1);
         result.heartRecovered = true;
       } else if (!state.unlockedOutfits.includes("seasonal")) {
         state = addOutfit(state, "seasonal");
+        state = setHeartCount(state, state.hearts - 1); // hearts 2→1 after outfit reward
         result.seasonalOutfitUnlocked = true;
       }
     }

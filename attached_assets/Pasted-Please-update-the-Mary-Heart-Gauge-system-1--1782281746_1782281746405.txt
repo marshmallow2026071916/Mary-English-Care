@@ -1,0 +1,157 @@
+Please update the Mary Heart Gauge system.
+
+==================================================
+1. Purpose
+==================================================
+
+The Heart Gauge is not a stressful stamina system.
+
+It represents the relationship / bond with Mary.
+
+The 14-day rule is only a gentle fallback for long inactivity.
+It should not feel like a countdown or pressure mechanic.
+
+==================================================
+2. Heart Gauge Basics
+==================================================
+
+Maximum hearts: 2
+
+Initial state:
+- hearts = 1
+- maxHearts = 2
+
+Display:
+- 1 heart filled, 1 heart empty
+
+Example:
+♥ ♡
+
+==================================================
+3. Review Reward Heart Logic
+==================================================
+
+When the user earns a Review Reward:
+
+If hearts = 0:
+- Increase hearts to 1
+
+If hearts = 1:
+- Increase hearts to 2
+
+If hearts = 2:
+- Unlock one outfit reward
+- Show / unlock Outfit Showcase
+- After receiving the outfit reward, decrease hearts to 1
+
+So the cycle is:
+
+♥ ♡
+→ Review Reward
+→ ♥ ♥
+
+→ Review Reward while hearts are full
+→ Outfit Reward
+→ Outfit Showcase
+→ ♥ ♡
+
+==================================================
+4. Important Heart Rule
+==================================================
+
+Hearts do NOT have separate individual timers.
+
+There is only one timer for the whole Heart Gauge.
+
+The timer starts or resets whenever the Heart Gauge changes.
+
+Examples of Heart Gauge changes:
+- hearts increase from 0 to 1
+- hearts increase from 1 to 2
+- hearts decrease from 2 to 1 after an outfit reward
+- hearts decrease due to inactivity
+
+Whenever any of these happens, update:
+
+lastHeartChangedAt = current date/time
+
+==================================================
+5. 14-Day Inactivity Rule
+==================================================
+
+If 14 days pass after lastHeartChangedAt with no Heart Gauge change:
+
+- decrease hearts by 1
+- update lastHeartChangedAt to the current date/time
+
+Examples:
+
+hearts = 2
+14 days of inactivity
+→ hearts = 1
+
+hearts = 1
+14 more days of inactivity
+→ hearts = 0
+
+hearts = 0
+→ no further decrease
+
+==================================================
+6. No Stressful UI
+==================================================
+
+Do not show a visible countdown timer.
+
+Do not show warnings such as:
+
+- "Your heart will disappear soon"
+- "Only 3 days left"
+- "Hurry up"
+
+The 14-day rule is only for long inactivity.
+It should remain gentle and mostly invisible.
+
+==================================================
+7. Weekly Streak Interaction
+==================================================
+
+If hearts = 0:
+
+- Weekly Streak Bonus should not progress
+- Weekly Streak counter should remain 0
+
+If hearts > 0:
+
+- Weekly Streak Bonus can progress normally
+
+==================================================
+8. Save / Import / Export
+==================================================
+
+Please make sure the following values are saved and restored in JSON:
+
+- hearts
+- maxHearts
+- lastHeartChangedAt
+
+These values must survive:
+
+- page reload
+- PWA restart
+- JSON export
+- JSON import
+
+==================================================
+9. Do Not Change Other Systems
+==================================================
+
+Do not change:
+
+- XP rules
+- Level rules
+- Review Log
+- Small Reward system
+- Wardrobe image logic
+
+This update is only for the Heart Gauge behavior.
