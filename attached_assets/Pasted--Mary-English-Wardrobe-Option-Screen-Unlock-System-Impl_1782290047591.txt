@@ -1,0 +1,334 @@
+# Mary English – Wardrobe (Option Screen) & Unlock System Implementation
+
+## Purpose
+
+Implement the Wardrobe (Option Screen) so the user can select, save, and restore Mary's appearance.
+
+The goal of this phase is to verify that the following four tabs work correctly using the Level 0 asset set:
+
+- Outfits
+- Emotes
+- Review Rewards
+- Backgrounds
+
+---
+
+# 1. Tab Structure
+
+The Option screen must contain the following four tabs:
+
+- Outfits
+- Emotes
+- Review Rewards
+- Backgrounds
+
+---
+
+# 2. Level 0 Initial State
+
+At Level 0, the following assets are available.
+
+## Outfit
+
+outfit_000
+
+## Emotes
+
+outfit_idle_000.png
+outfit_shy_000.png
+outfit_smile_000.png
+outfit_wave_000.png
+outfit_cheer_000.png
+
+## Review Reward
+
+review_reward_001.png
+
+(Available for testing purposes.)
+
+## Backgrounds
+
+background_001.png
+background_002.png
+
+Initial selection:
+
+selectedOutfit = outfit_000
+selectedEmote = idle
+selectedReviewReward = null
+selectedBackground = background_001
+
+---
+
+# 3. Outfits Tab
+
+Display:
+
+Black Outfit
+
+Use the outfit's Idle image as the thumbnail.
+
+When an outfit is selected:
+
+selectedOutfit = selected outfit
+selectedEmote = idle
+selectedReviewReward = null
+
+Always return to Idle when changing outfits.
+
+---
+
+# 4. Emotes Tab
+
+Display the following buttons:
+
+- Idle
+- Shy
+- Smile
+- Wave
+- Cheer
+
+Use buttons only (not image thumbnails).
+
+When selected:
+
+selectedEmote = selected emote
+selectedReviewReward = null
+
+The TOP screen should display the image corresponding to:
+
+selectedOutfit + selectedEmote
+
+---
+
+# 5. Review Rewards Tab
+
+Display:
+
+Outfit Showcase
+
+When selected:
+
+selectedReviewReward = review_reward_001
+
+The TOP screen should display:
+
+review_reward_001.png
+
+---
+
+## While a Review Reward is Active
+
+Emotes should be disabled or treated as Idle-only.
+
+Do NOT change:
+
+selectedOutfit
+
+The selected outfit must remain stored in the background.
+
+When the Review Reward is deselected, the user should return to their previously selected outfit and emote.
+
+---
+
+# 6. Backgrounds Tab
+
+Display:
+
+background_001
+background_002
+
+Show thumbnail previews.
+
+When selected:
+
+selectedBackground = background_001
+
+or
+
+selectedBackground = background_002
+
+The selected background must appear behind Mary on the TOP screen.
+
+---
+
+# 7. TOP Screen Rendering Priority
+
+Render layers in this order:
+
+1. Background
+2. Mary
+3. UI
+
+Mary image priority:
+
+Priority 1:
+If a Review Reward is selected
+
+→ Display review_reward_001.png
+
+Priority 2:
+If no Review Reward is selected
+
+→ Display the image corresponding to:
+
+selectedOutfit + selectedEmote
+
+---
+
+# 8. Level-Up Reward Structure
+
+Level 0 is a special starting set.
+
+Starting from Level 1, rewards follow a repeating 5-level cycle.
+
+---
+
+## Levels 1–5
+
+Lv1  outfit_001 Idle
+Lv2  outfit_001 Shy
+Lv3  outfit_001 Smile
+Lv4  outfit_001 Wave
+Lv5  outfit_001 Cheer
+
+---
+
+## Levels 6–10
+
+Lv6  outfit_002 Idle
+Lv7  outfit_002 Shy
+Lv8  outfit_002 Smile
+Lv9  outfit_002 Wave
+Lv10 outfit_002 Cheer
+
+---
+
+## Levels 11+
+
+Continue the same pattern indefinitely.
+
+---
+
+# 9. Automatic Display on Level-Up
+
+When a new outfit image is unlocked, automatically display the newly unlocked image.
+
+Example:
+
+Lv2 reached
+↓
+outfit_001 Shy unlocked
+↓
+Automatically display outfit_001 Shy
+
+Result:
+
+selectedOutfit = outfit_001
+selectedEmote = shy
+selectedReviewReward = null
+
+Do NOT force Idle.
+
+The newly unlocked emote should be displayed immediately.
+
+---
+
+# 10. Background Unlock Rules
+
+Backgrounds unlock every 5 levels.
+
+Examples:
+
+Lv5
+Lv10
+Lv15
+Lv20
+Lv25
+...
+
+When a background is unlocked:
+
+Automatically apply the new background.
+
+Example:
+
+Lv5
+↓
+background_002 unlocked
+↓
+selectedBackground = background_002
+
+---
+
+# 11. Review Reward Unlock Rules
+
+Review Rewards are unlocked through Review Challenge rewards.
+
+Example:
+
+review_reward_001
+
+When unlocked:
+
+Add it to the Review Rewards tab only.
+
+---
+
+## Important
+
+DO NOT automatically apply a Review Reward when it is unlocked.
+
+Do NOT change:
+
+selectedOutfit
+selectedEmote
+selectedBackground
+Current Mary display
+
+A Review Reward should only appear when the user manually selects it from the Review Rewards tab.
+
+---
+
+# 12. Save & Restore
+
+The following values must be saved and restored:
+
+selectedOutfit
+selectedEmote
+selectedReviewReward
+selectedBackground
+
+Support:
+
+- localStorage
+- JSON Export
+- JSON Import
+
+The state must persist after:
+
+- page refresh
+- PWA restart
+- JSON import/export
+
+---
+
+# 13. Out of Scope
+
+Do NOT modify:
+
+- XP system
+- Level calculation
+- Heart gauge
+- Small Reward system
+- Review Log
+- Daily Talk
+- Reading Talk
+- Conversation logic
+
+This task is limited to:
+
+Wardrobe (Option Screen),
+Outfit unlock/display system,
+Background unlock/display system,
+Review Reward unlock/display system.

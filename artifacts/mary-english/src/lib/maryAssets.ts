@@ -126,3 +126,33 @@ export function getMaryImage(outfit: string, emote?: EmoteState): string {
   if (emote && EMOTE_IMAGES[emote]) return EMOTE_IMAGES[emote]!;
   return OUTFIT_IMAGES[resolveOutfitId(outfit)];
 }
+
+// ─── New outfit naming system helpers (outfit_NNN) ────────────────────────────
+// These helpers use the numeric outfit naming scheme introduced in the wardrobe
+// system. outfitId = "outfit_000", emote = "idle" → /assets/outfits/outfit_idle_000.png
+
+// Full-body emote image for a given outfit + emote.
+// outfitId: "outfit_000", emote: "idle" → /assets/outfits/outfit_idle_000.png
+export function getOutfitEmoteImage(outfitId: string, emote: string): string {
+  const num = outfitId.split("_")[1] ?? "000";
+  return `/assets/outfits/outfit_${emote}_${num}.png`;
+}
+
+// Icon/thumbnail for a given outfit (used in the wardrobe grid).
+// outfitId: "outfit_000" → /assets/outfits/icon_outfit_000.png
+export function getOutfitIconImage(outfitId: string): string {
+  const num = outfitId.split("_")[1] ?? "000";
+  return `/assets/outfits/icon_outfit_${num}.png`;
+}
+
+// Image for a review reward (outfit showcase).
+// rewardId: "review_reward_001" → /assets/outfits/review_reward_001.png
+export function getReviewRewardImage(rewardId: string): string {
+  return `/assets/outfits/${rewardId}.png`;
+}
+
+// Background image path.
+// bgId: "background_001" → /assets/backgrounds/background_001.png
+export function getBackgroundImage(bgId: string): string {
+  return `/assets/backgrounds/${bgId}.png`;
+}

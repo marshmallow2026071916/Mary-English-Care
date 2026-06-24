@@ -66,6 +66,14 @@ export interface GameState {
   weeklyReadingCount: number;
   weeklyReadingMondayStr: string | null;
   lastReadingDate: string | null;
+  // ─── Wardrobe ───────────────────────────────────────────────────────────────
+  selectedOutfit: string;               // e.g. "outfit_000"
+  selectedEmote: string;                // "idle" | "shy" | "smile" | "wave" | "cheer"
+  selectedReviewReward: string | null;  // e.g. "review_reward_001" or null
+  selectedBackground: string;           // e.g. "background_001"
+  unlockedOutfitEmotes: string[];       // e.g. ["outfit_000_idle", "outfit_001_shy"]
+  unlockedBackgrounds: string[];        // e.g. ["background_001"]
+  unlockedReviewRewards: string[];      // e.g. ["review_reward_001"]
 }
 
 export interface SessionImportData {
@@ -130,6 +138,10 @@ interface GameContextValue {
     unlockLevelRewardOutfit: () => void;
     setImportedDailyCompleted: (val: boolean) => void;
     importSessionData: (data: SessionImportData) => ImportResult;
+    selectOutfit: (id: string) => void;
+    selectEmote: (emote: string) => void;
+    selectReviewReward: (rewardId: string | null) => void;
+    selectBackground: (bgId: string) => void;
   };
 }
 
@@ -156,13 +168,20 @@ const DEFAULT_STATE: GameState = {
   lastDailyRallies: 0,
   lastPracticeRallies: 0,
   lastReviewRallies: 0,
-  unlockedOutfits: ["black"],
+  unlockedOutfits: ["black", "outfit_000"],
   equippedOutfit: "black",
   importedDailyCompleted: false,
   lastImportDate: null,
   weeklyReadingCount: 0,
   weeklyReadingMondayStr: null,
   lastReadingDate: null,
+  selectedOutfit: "outfit_000",
+  selectedEmote: "idle",
+  selectedReviewReward: null,
+  selectedBackground: "background_001",
+  unlockedOutfitEmotes: ["outfit_000_idle", "outfit_000_shy", "outfit_000_smile", "outfit_000_wave", "outfit_000_cheer"],
+  unlockedBackgrounds: ["background_001"],
+  unlockedReviewRewards: [],
 };
 
 const DEFAULT_POPUP_CTX: PopupCtx = {
@@ -227,23 +246,83 @@ function loadState(): GameState {
 function persist(state: GameState) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
 }
-// Applies XP and auto-resets practiceCount/reviewCount on level-up
+// ─── Wardrobe level-unlock helpers ────────────────────────────────────────────
+
+const EMOTE_ORDER = ["idle", "shy", "smile", "wave", "cheer"] as const;
+
+// Returns the outfit-emote key and background id unlocked at a given level.
+// Level 0 → nothing (all of outfit_000 is in DEFAULT_STATE).
+// Levels 1-5 → outfit_001 emotes one by one; level 5 also unlocks background_002.
+function getWardrobeRewardsForLevel(level: number): { outfitEmoteKey?: string; backgroundId?: string } {
+  if (level === 0) return {};
+  const outfitNum = Math.ceil(level / 5);
+  const emoteIndex = (level - 1) % 5;
+  const outfitId = `outfit_${String(outfitNum).padStart(3, "0")}`;
+  const emote = EMOTE_ORDER[emoteIndex];
+  const result: { outfitEmoteKey?: string; backgroundId?: string } = {
+    outfitEmoteKey: `${outfitId}_${emote}`,
+  };
+  if (level % 5 === 0) {
+    const bgNum = Math.floor(level / 5) + 1;
+    result.backgroundId = `background_${String(bgNum).padStart(3, "0")}`;
+  }
+  return result;
+}
+
+// Applies wardrobe unlocks for a single newly-reached level.
+// Unlocks the outfit-emote combo, auto-displays it, and auto-applies any new background.
+function applyWardrobeUnlocksForLevel(state: GameState, level: number): GameState {
+  const { outfitEmoteKey, backgroundId } = getWardrobeRewardsForLevel(level);
+  let next = state;
+
+  if (outfitEmoteKey && !next.unlockedOutfitEmotes.includes(outfitEmoteKey)) {
+    const parts = outfitEmoteKey.split("_"); // ["outfit", "001", "shy"]
+    const emote = parts[parts.length - 1];   // "shy"
+    const outfitId = parts.slice(0, -1).join("_"); // "outfit_001"
+    next = {
+      ...next,
+      unlockedOutfitEmotes: [...next.unlockedOutfitEmotes, outfitEmoteKey],
+      selectedOutfit: outfitId,
+      selectedEmote: emote,
+      selectedReviewReward: null,
+    };
+    if (!next.unlockedOutfits.includes(outfitId)) {
+      next = { ...next, unlockedOutfits: [...next.unlockedOutfits, outfitId] };
+    }
+  }
+
+  if (backgroundId && !next.unlockedBackgrounds.includes(backgroundId)) {
+    next = {
+      ...next,
+      unlockedBackgrounds: [...next.unlockedBackgrounds, backgroundId],
+      selectedBackground: backgroundId,
+    };
+  }
+
+  return next;
+}
+
+// Applies XP and auto-resets practiceCount/reviewCount on level-up.
+// Also applies wardrobe unlocks for every new level gained.
 function applyXP(state: GameState, amount: number): GameState {
   if (amount <= 0) return state;
   let xp = state.xp + amount;
-  let level = state.level;
-  let practiceCount = state.practiceCount;
-  let reviewCount = state.reviewCount;
+  const prevLevel = state.level;
+  let level = prevLevel;
   while (xp >= XP_PER_LEVEL) {
     xp -= XP_PER_LEVEL;
     level++;
   }
-  if (level > state.level) {
-    practiceCount = 0;
-    reviewCount = 0;
+  let next: GameState = { ...state, xp, level };
+  if (level > prevLevel) {
+    next = { ...next, practiceCount: 0, reviewCount: 0 };
+    for (let lvl = prevLevel + 1; lvl <= level; lvl++) {
+      next = applyWardrobeUnlocksForLevel(next, lvl);
+    }
   }
-  return { ...state, xp, level, practiceCount, reviewCount };
+  return next;
 }
+
 function addOutfit(state: GameState, id: string): GameState {
   if (state.unlockedOutfits.includes(id)) return state;
   return { ...state, unlockedOutfits: [...state.unlockedOutfits, id] };
@@ -442,14 +521,30 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, [update]);
 
   const unlockSeasonalOutfit = useCallback(() => {
-    update(addOutfit(gsRef.current, "seasonal"));
+    const prev = gsRef.current;
+    let next = addOutfit(prev, "seasonal");
+    if (!next.unlockedReviewRewards.includes("review_reward_001")) {
+      next = { ...next, unlockedReviewRewards: [...next.unlockedReviewRewards, "review_reward_001"] };
+    }
+    update(next);
     setEmote("celebration", false);
     showModal("seasonal");
   }, [update, setEmote, showModal]);
 
   const resetWardrobe = useCallback(() => {
     const prev = gsRef.current;
-    update({ ...prev, unlockedOutfits: ["black"], equippedOutfit: "black" });
+    update({
+      ...prev,
+      unlockedOutfits: ["black", "outfit_000"],
+      equippedOutfit: "black",
+      selectedOutfit: "outfit_000",
+      selectedEmote: "idle",
+      selectedReviewReward: null,
+      selectedBackground: "background_001",
+      unlockedOutfitEmotes: ["outfit_000_idle", "outfit_000_shy", "outfit_000_smile", "outfit_000_wave", "outfit_000_cheer"],
+      unlockedBackgrounds: ["background_001"],
+      unlockedReviewRewards: [],
+    });
   }, [update]);
 
   const triggerSmallReward = useCallback(() => {
@@ -470,6 +565,32 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const unlockLevelRewardOutfit = useCallback(() => {
     update(addOutfit(gsRef.current, "level"));
+  }, [update]);
+
+  // ─ Wardrobe selection actions ────────────────────────────────────────────────
+  const selectOutfit = useCallback((outfitId: string) => {
+    const prev = gsRef.current;
+    if (!prev.unlockedOutfitEmotes.some((k) => k.startsWith(outfitId + "_"))) return;
+    update({ ...prev, selectedOutfit: outfitId, selectedEmote: "idle", selectedReviewReward: null });
+  }, [update]);
+
+  const selectEmote = useCallback((emote: string) => {
+    const prev = gsRef.current;
+    const key = `${prev.selectedOutfit}_${emote}`;
+    if (!prev.unlockedOutfitEmotes.includes(key)) return;
+    update({ ...prev, selectedEmote: emote, selectedReviewReward: null });
+  }, [update]);
+
+  const selectReviewReward = useCallback((rewardId: string | null) => {
+    const prev = gsRef.current;
+    if (rewardId !== null && !prev.unlockedReviewRewards.includes(rewardId)) return;
+    update({ ...prev, selectedReviewReward: rewardId });
+  }, [update]);
+
+  const selectBackground = useCallback((bgId: string) => {
+    const prev = gsRef.current;
+    if (!prev.unlockedBackgrounds.includes(bgId)) return;
+    update({ ...prev, selectedBackground: bgId });
   }, [update]);
 
   // Write directly to its own localStorage key AND update the separate useState.
@@ -555,6 +676,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       } else if (!state.unlockedOutfits.includes("seasonal")) {
         state = addOutfit(state, "seasonal");
         state = setHeartCount(state, state.hearts - 1); // hearts 2→1 after outfit reward
+        // Also add to review rewards tab so user can select it in the wardrobe
+        if (!state.unlockedReviewRewards.includes("review_reward_001")) {
+          state = { ...state, unlockedReviewRewards: [...state.unlockedReviewRewards, "review_reward_001"] };
+        }
         result.seasonalOutfitUnlocked = true;
       }
     }
@@ -647,6 +772,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       unlockLevelRewardOutfit,
       setImportedDailyCompleted,
       importSessionData,
+      selectOutfit,
+      selectEmote,
+      selectReviewReward,
+      selectBackground,
     },
   };
 

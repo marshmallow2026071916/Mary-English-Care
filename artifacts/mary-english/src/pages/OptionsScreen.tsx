@@ -1,55 +1,19 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Lock, Check, ChevronDown, ChevronUp, ChevronRight, User, RefreshCw, Download } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, ChevronRight, User, RefreshCw, Download } from "lucide-react";
 import { Link } from "wouter";
-import { MaryAvatar } from "@/components/MaryAvatar";
 import { BottomNav } from "@/components/BottomNav";
 import { useGame } from "@/context/GameContext";
 import { useReviewLog } from "@/hooks/useReviewLog";
 import { useToast } from "@/hooks/use-toast";
-import { OUTFIT_IMAGES, OUTFIT_META, getMaryPortraitPng, type OutfitId } from "@/lib/maryAssets";
+import {
+  getOutfitEmoteImage,
+  getOutfitIconImage,
+  getReviewRewardImage,
+  getBackgroundImage,
+} from "@/lib/maryAssets";
 import { usePwaUpdate } from "@/hooks/usePwaUpdate";
 import { APP_VERSION, APP_BUILD } from "@/lib/version";
-
-// ─── Wardrobe registry ────────────────────────────────────────────────────────
-
-type OutfitSource = "initial" | "levelUp" | "reviewTask";
-
-interface OutfitEntry {
-  id: string;
-  name: string;
-  source: OutfitSource;
-  unlockedAtLevel?: number;
-}
-
-interface EmoteEntry {
-  id: string;
-  name: string;
-  unlockedAtLevel: number;
-}
-
-interface ReviewRewardEntry {
-  id: string;
-  name: string;
-  source: "reviewTask";
-}
-
-const OUTFIT_REGISTRY: OutfitEntry[] = [
-  { id: "black", name: "Black Outfit",        source: "initial",    unlockedAtLevel: 0 },
-  { id: "level", name: "Level Reward Outfit", source: "levelUp" },
-];
-
-const EMOTE_REGISTRY: EmoteEntry[] = [
-  { id: "idle",        name: "Idle",        unlockedAtLevel: 0  },
-  { id: "smile",       name: "Smile",       unlockedAtLevel: 5  },
-  { id: "cheer",       name: "Cheer",       unlockedAtLevel: 10 },
-  { id: "celebration", name: "Celebration", unlockedAtLevel: 15 },
-  { id: "shy",         name: "Shy",         unlockedAtLevel: 20 },
-];
-
-const REVIEW_REWARD_REGISTRY: ReviewRewardEntry[] = [
-  { id: "seasonal", name: "Seasonal Outfit", source: "reviewTask" },
-];
 
 // ─── Tab button ───────────────────────────────────────────────────────────────
 function TabButton({
@@ -69,213 +33,217 @@ function TabButton({
   );
 }
 
-// ─── Outfit card ──────────────────────────────────────────────────────────────
-function OutfitCard({
-  outfit, unlocked, selected, onEquip, subtitle,
-}: {
-  outfit: OutfitEntry | ReviewRewardEntry;
-  unlocked: boolean;
-  selected: boolean;
-  onEquip: () => void;
-  subtitle: string;
-}) {
-  const id = outfit.id;
-  const meta = OUTFIT_META[id as OutfitId] ?? OUTFIT_META["default"];
-
-  return (
-    <motion.div
-      className={`
-        relative rounded-2xl border-2 p-3 flex flex-col items-center gap-2 transition-all
-        ${!unlocked
-          ? "bg-muted/50 border-transparent opacity-60"
-          : selected
-            ? "bg-card border-primary shadow-sm"
-            : "bg-card border-border shadow-sm cursor-pointer hover:border-primary/50"}
-      `}
-      onClick={() => unlocked && onEquip()}
-      whileTap={unlocked ? { scale: 0.96 } : undefined}
-      data-testid={`outfit-card-${id}`}
-    >
-      <div className={`w-16 h-20 rounded-xl overflow-hidden shadow-inner relative bg-gradient-to-br ${meta.cardBg}`}>
-        <picture style={{ display: "contents" }}>
-          <source srcSet={getMaryPortraitPng(id)} type="image/png" />
-          <img
-            src={OUTFIT_IMAGES[id as OutfitId] ?? OUTFIT_IMAGES["default"]}
-            alt={outfit.name}
-            className="w-full h-full object-contain"
-            draggable={false}
-          />
-        </picture>
-        {!unlocked && (
-          <div className="absolute inset-0 bg-background/40 backdrop-blur-[1px] flex items-center justify-center">
-            <Lock className="w-6 h-6 text-foreground/50" />
-          </div>
-        )}
-      </div>
-
-      <span className={`text-xs font-bold text-center leading-tight ${!unlocked ? "text-muted-foreground" : "text-foreground"}`}>
-        {outfit.name}
-      </span>
-      <span className="text-[10px] text-muted-foreground text-center leading-tight">
-        {subtitle}
-      </span>
-
-      {unlocked && selected && (
-        <div className="absolute -top-2 -right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center shadow-sm">
-          <Check className="w-4 h-4 text-primary-foreground" strokeWidth={3} />
-        </div>
-      )}
-
-      {unlocked && !selected && id !== "black" && (
-        <motion.div
-          className="absolute inset-0 rounded-2xl border-2 border-primary/40"
-          animate={{ opacity: [0.4, 1, 0.4] }}
-          transition={{ duration: 2, repeat: Infinity }}
-        />
-      )}
-    </motion.div>
-  );
-}
-
-// ─── Emote card ───────────────────────────────────────────────────────────────
-function EmoteCard({ emote }: { emote: EmoteEntry }) {
-  const src = `/assets/mary/emotes/${emote.id}.svg`;
-  const subtitle = emote.unlockedAtLevel === 0
-    ? "Available from the start"
-    : `Unlocked at Level ${emote.unlockedAtLevel}`;
-
-  return (
-    <div className="rounded-2xl border-2 border-border bg-card p-3 flex flex-col items-center gap-2">
-      <div className="w-16 h-16 rounded-xl overflow-hidden bg-secondary/40 flex items-center justify-center">
-        <img
-          src={src}
-          alt={emote.name}
-          className="w-12 h-12 object-contain"
-          draggable={false}
-        />
-      </div>
-      <span className="text-xs font-bold text-center text-foreground leading-tight">
-        {emote.name}
-      </span>
-      <span className="text-[10px] text-muted-foreground text-center leading-tight">
-        {subtitle}
-      </span>
-    </div>
-  );
-}
-
 // ─── Wardrobe section ─────────────────────────────────────────────────────────
-type WardrobeTab = "outfits" | "emotes" | "reviewRewards";
+type WardrobeTab = "outfits" | "emotes" | "reviewRewards" | "backgrounds";
+
+const ALL_EMOTES = ["idle", "shy", "smile", "wave", "cheer"] as const;
+const EMOTE_LABELS: Record<string, string> = {
+  idle: "Idle",
+  shy: "Shy",
+  smile: "Smile",
+  wave: "Wave",
+  cheer: "Cheer",
+};
+
+function outfitLabel(outfitId: string): string {
+  return outfitId === "outfit_000" ? "Black Outfit" : `Outfit ${outfitId.split("_")[1]}`;
+}
+
+const fadePanel = {
+  initial: { opacity: 0, y: 6 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -6 },
+  transition: { duration: 0.18 },
+};
 
 function WardrobeSection() {
   const [tab, setTab] = useState<WardrobeTab>("outfits");
-  const { gs, isUnlocked, actions } = useGame();
-  const { equippedOutfit } = gs;
+  const { gs, actions } = useGame();
+  const {
+    selectedOutfit,
+    selectedEmote,
+    selectedReviewReward,
+    selectedBackground,
+    unlockedOutfitEmotes,
+    unlockedBackgrounds,
+    unlockedReviewRewards,
+  } = gs;
 
-  // Outfits tab: source = "initial" | "levelUp"
-  // Show unlocked first (descending unlockedAtLevel), locked after.
-  const outfitsSorted = [...OUTFIT_REGISTRY].sort((a, b) => {
-    const aUnlocked = isUnlocked(a.id);
-    const bUnlocked = isUnlocked(b.id);
-    if (aUnlocked !== bUnlocked) return aUnlocked ? -1 : 1;
-    const aLevel = a.unlockedAtLevel ?? 999;
-    const bLevel = b.unlockedAtLevel ?? 999;
-    return bLevel - aLevel;
-  });
-
-  // Review rewards tab: source = "reviewTask"
-  const reviewSorted = [...REVIEW_REWARD_REGISTRY].sort((a, b) => {
-    const aUnlocked = isUnlocked(a.id);
-    const bUnlocked = isUnlocked(b.id);
-    if (aUnlocked !== bUnlocked) return aUnlocked ? -1 : 1;
-    return 0;
-  });
-
-  // Emotes: sorted by unlockedAtLevel descending (unlocked = all)
-  const emotesSorted = [...EMOTE_REGISTRY].sort((a, b) => b.unlockedAtLevel - a.unlockedAtLevel);
-
-  function outfitSubtitle(entry: OutfitEntry): string {
-    const unlocked = isUnlocked(entry.id);
-    if (!unlocked) return "Locked";
-    if (entry.unlockedAtLevel === 0) return "Unlocked at Level 1";
-    if (entry.unlockedAtLevel !== undefined) return `Unlocked at Level ${entry.unlockedAtLevel + 1}`;
-    return "Unlocked";
+  // Unique outfit IDs derived from unlocked emote keys (stable order)
+  const unlockedOutfitIds: string[] = [];
+  for (const key of unlockedOutfitEmotes) {
+    const parts = key.split("_");
+    const id = `${parts[0]}_${parts[1]}`; // "outfit_000"
+    if (!unlockedOutfitIds.includes(id)) unlockedOutfitIds.push(id);
   }
 
-  function reviewSubtitle(entry: ReviewRewardEntry): string {
-    return isUnlocked(entry.id) ? "Unlocked via Review Tasks" : "Locked";
-  }
+  // Emotes available for the currently selected outfit
+  const availableEmotes = unlockedOutfitEmotes
+    .filter((k) => k.startsWith(selectedOutfit + "_"))
+    .map((k) => k.split("_").pop()!);
 
   return (
     <div className="mb-8">
       <h2 className="text-lg font-bold text-foreground mb-4 pl-2 border-l-4 border-primary">Wardrobe</h2>
 
-      {/* Tab bar */}
-      <div className="flex gap-1 bg-secondary/50 rounded-2xl p-1 mb-4">
-        <TabButton label="Outfits"        active={tab === "outfits"}        onClick={() => setTab("outfits")} />
-        <TabButton label="Emotes"         active={tab === "emotes"}         onClick={() => setTab("emotes")} />
-        <TabButton label="Review Rewards" active={tab === "reviewRewards"}  onClick={() => setTab("reviewRewards")} />
+      {/* Tab bar — 4 tabs */}
+      <div className="grid grid-cols-4 gap-1 bg-secondary/50 rounded-2xl p-1 mb-4">
+        <TabButton label="Outfits"     active={tab === "outfits"}       onClick={() => setTab("outfits")} />
+        <TabButton label="Emotes"      active={tab === "emotes"}        onClick={() => setTab("emotes")} />
+        <TabButton label="Rewards"     active={tab === "reviewRewards"} onClick={() => setTab("reviewRewards")} />
+        <TabButton label="Backgrounds" active={tab === "backgrounds"}   onClick={() => setTab("backgrounds")} />
       </div>
 
       <AnimatePresence mode="wait">
+
+        {/* ── Outfits ──────────────────────────────────────────────────────── */}
         {tab === "outfits" && (
-          <motion.div
-            key="outfits"
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.18 }}
-            className="grid grid-cols-2 gap-4"
-          >
-            {outfitsSorted.map((outfit) => (
-              <OutfitCard
-                key={outfit.id}
-                outfit={outfit}
-                unlocked={isUnlocked(outfit.id)}
-                selected={equippedOutfit === outfit.id}
-                onEquip={() => actions.equipOutfit(outfit.id)}
-                subtitle={outfitSubtitle(outfit)}
-              />
-            ))}
+          <motion.div key="outfits" {...fadePanel} className="grid grid-cols-2 gap-4">
+            {unlockedOutfitIds.map((id) => {
+              const isSelected = selectedOutfit === id && !selectedReviewReward;
+              return (
+                <motion.div
+                  key={id}
+                  className={`relative rounded-2xl border-2 p-3 flex flex-col items-center gap-2 cursor-pointer transition-colors ${
+                    isSelected
+                      ? "bg-card border-primary shadow-sm"
+                      : "bg-card border-border shadow-sm hover:border-primary/50"
+                  }`}
+                  onClick={() => actions.selectOutfit(id)}
+                  whileTap={{ scale: 0.96 }}
+                  data-testid={`outfit-card-${id}`}
+                >
+                  <div className="w-16 h-20 rounded-xl overflow-hidden bg-secondary/30">
+                    <img
+                      src={getOutfitIconImage(id)}
+                      alt={outfitLabel(id)}
+                      className="w-full h-full object-contain object-top"
+                      draggable={false}
+                    />
+                  </div>
+                  <span className="text-xs font-bold text-center text-foreground leading-tight">
+                    {outfitLabel(id)}
+                  </span>
+                  {isSelected && (
+                    <div className="absolute -top-2 -right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center shadow-sm">
+                      <Check className="w-4 h-4 text-primary-foreground" strokeWidth={3} />
+                    </div>
+                  )}
+                </motion.div>
+              );
+            })}
           </motion.div>
         )}
 
+        {/* ── Emotes ───────────────────────────────────────────────────────── */}
         {tab === "emotes" && (
-          <motion.div
-            key="emotes"
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.18 }}
-            className="grid grid-cols-2 gap-4"
-          >
-            {emotesSorted.map((emote) => (
-              <EmoteCard key={emote.id} emote={emote} />
-            ))}
+          <motion.div key="emotes" {...fadePanel} className="flex flex-col gap-2">
+            {ALL_EMOTES.map((emote) => {
+              const available = availableEmotes.includes(emote);
+              const isSelected = selectedEmote === emote && !selectedReviewReward;
+              return (
+                <button
+                  key={emote}
+                  disabled={!available}
+                  onClick={() => available && actions.selectEmote(emote)}
+                  className={`w-full py-3.5 px-4 rounded-2xl text-sm font-bold transition-all text-left ${
+                    isSelected
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : available
+                        ? "bg-card border border-border text-foreground hover:border-primary/50"
+                        : "bg-muted/50 text-muted-foreground border border-transparent opacity-50 cursor-not-allowed"
+                  }`}
+                  data-testid={`emote-btn-${emote}`}
+                >
+                  {EMOTE_LABELS[emote]}
+                </button>
+              );
+            })}
           </motion.div>
         )}
 
+        {/* ── Review Rewards ───────────────────────────────────────────────── */}
         {tab === "reviewRewards" && (
-          <motion.div
-            key="reviewRewards"
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.18 }}
-            className="grid grid-cols-2 gap-4"
-          >
-            {reviewSorted.map((entry) => (
-              <OutfitCard
-                key={entry.id}
-                outfit={entry}
-                unlocked={isUnlocked(entry.id)}
-                selected={equippedOutfit === entry.id}
-                onEquip={() => actions.equipOutfit(entry.id)}
-                subtitle={reviewSubtitle(entry)}
-              />
-            ))}
+          <motion.div key="reviewRewards" {...fadePanel}>
+            {unlockedReviewRewards.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8 px-4 leading-relaxed">
+                Complete all 3 Review Tasks with a full Heart Gauge to unlock an Outfit Showcase reward.
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 gap-4">
+                {unlockedReviewRewards.map((rewardId) => {
+                  const isSelected = selectedReviewReward === rewardId;
+                  return (
+                    <motion.div
+                      key={rewardId}
+                      className={`relative rounded-2xl border-2 p-3 flex flex-col items-center gap-2 cursor-pointer transition-colors ${
+                        isSelected
+                          ? "bg-card border-primary shadow-sm"
+                          : "bg-card border-border shadow-sm hover:border-primary/50"
+                      }`}
+                      onClick={() => actions.selectReviewReward(isSelected ? null : rewardId)}
+                      whileTap={{ scale: 0.96 }}
+                      data-testid={`review-reward-card-${rewardId}`}
+                    >
+                      <div className="w-16 h-20 rounded-xl overflow-hidden bg-secondary/30">
+                        <img
+                          src={getReviewRewardImage(rewardId)}
+                          alt="Outfit Showcase"
+                          className="w-full h-full object-contain object-top"
+                          draggable={false}
+                        />
+                      </div>
+                      <span className="text-xs font-bold text-center text-foreground leading-tight">
+                        Outfit Showcase
+                      </span>
+                      {isSelected && (
+                        <div className="absolute -top-2 -right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center shadow-sm">
+                          <Check className="w-4 h-4 text-primary-foreground" strokeWidth={3} />
+                        </div>
+                      )}
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
           </motion.div>
         )}
+
+        {/* ── Backgrounds ──────────────────────────────────────────────────── */}
+        {tab === "backgrounds" && (
+          <motion.div key="backgrounds" {...fadePanel} className="grid grid-cols-2 gap-4">
+            {unlockedBackgrounds.map((bgId) => {
+              const isSelected = selectedBackground === bgId;
+              return (
+                <motion.div
+                  key={bgId}
+                  className={`relative rounded-2xl border-2 overflow-hidden cursor-pointer transition-colors ${
+                    isSelected
+                      ? "border-primary shadow-sm"
+                      : "border-border shadow-sm hover:border-primary/50"
+                  }`}
+                  style={{ aspectRatio: "9/16" }}
+                  onClick={() => actions.selectBackground(bgId)}
+                  whileTap={{ scale: 0.97 }}
+                  data-testid={`background-card-${bgId}`}
+                >
+                  <img
+                    src={getBackgroundImage(bgId)}
+                    alt={bgId}
+                    className="w-full h-full object-cover"
+                    draggable={false}
+                  />
+                  {isSelected && (
+                    <div className="absolute top-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center shadow-sm">
+                      <Check className="w-4 h-4 text-primary-foreground" strokeWidth={3} />
+                    </div>
+                  )}
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        )}
+
       </AnimatePresence>
     </div>
   );
@@ -310,7 +278,6 @@ function AppUpdatesSection() {
         App Updates
       </h2>
 
-      {/* Version info */}
       <div className="bg-card border border-border rounded-2xl px-4 py-3 mb-3 flex items-center justify-between">
         <div>
           <p className="text-sm font-bold text-foreground">Mary English</p>
@@ -320,9 +287,7 @@ function AppUpdatesSection() {
         </div>
       </div>
 
-      {/* Action buttons */}
       <div className="space-y-2">
-        {/* Check for update */}
         <button
           onClick={run("check", checkForUpdate, "Checking for update…")}
           disabled={!!busy}
@@ -333,7 +298,6 @@ function AppUpdatesSection() {
           {busy === "check" ? "Checking…" : "Check for update"}
         </button>
 
-        {/* Force refresh app */}
         <button
           onClick={run("force", forceRefresh)}
           disabled={!!busy}
@@ -349,7 +313,6 @@ function AppUpdatesSection() {
           </div>
         </button>
 
-        {/* Reset downloaded assets */}
         <button
           onClick={run("assets", resetAssetCache)}
           disabled={!!busy}
@@ -397,24 +360,24 @@ function DevButton({ label, onClick, testId, variant = "default" }: DevButtonPro
 export default function OptionsScreen() {
   const [devOpen, setDevOpen] = useState(false);
   const { toast } = useToast();
+  const { gs, xpPercent, actions } = useGame();
   const {
-    gs, xpPercent, emote,
-    actions,
-  } = useGame();
-  const { level, xp, hearts, streakCount, equippedOutfit } = gs;
+    level, xp, hearts, streakCount,
+    selectedOutfit, selectedEmote, selectedReviewReward,
+  } = gs;
   const { entries, addSampleEntry, clearLog } = useReviewLog();
 
   const notify = (msg: string) => toast({ description: msg, duration: 1800 });
 
   const gameDevActions: DevButtonProps[] = [
-    { label: "Add 1 XP",         testId: "dev-add-1xp",          onClick: () => { actions.addXP(1);               notify("+1 XP"); } },
-    { label: "Add 10 XP",        testId: "dev-add-10xp",         onClick: () => { actions.addXP(10);              notify("+10 XP"); } },
-    { label: "Complete Daily Talk",    testId: "dev-complete-daily",   onClick: () => { actions.completeDailyTalk();     } },
+    { label: "Add 1 XP",              testId: "dev-add-1xp",           onClick: () => { actions.addXP(1);               notify("+1 XP"); } },
+    { label: "Add 10 XP",             testId: "dev-add-10xp",          onClick: () => { actions.addXP(10);              notify("+10 XP"); } },
+    { label: "Complete Daily Talk",    testId: "dev-complete-daily",    onClick: () => { actions.completeDailyTalk(); } },
     { label: "Complete Practice Talk", testId: "dev-complete-practice", onClick: () => { actions.completePracticeTalk(); notify("Practice Talk completed!"); } },
-    { label: "Complete Review Talk",   testId: "dev-complete-review",  onClick: () => { actions.completeReviewTalk();  notify("Review Talk completed!"); } },
-    { label: "Add Heart",         testId: "dev-add-heart",        onClick: () => { actions.addHeart();             } },
-    { label: "Remove Heart",      testId: "dev-remove-heart",     onClick: () => { actions.removeHeart();          notify("Heart removed"); } },
-    { label: "Reset Data",        testId: "dev-reset",            variant: "danger", onClick: () => { actions.resetData(); notify("Data reset"); } },
+    { label: "Complete Review Talk",   testId: "dev-complete-review",   onClick: () => { actions.completeReviewTalk();  notify("Review Talk completed!"); } },
+    { label: "Add Heart",              testId: "dev-add-heart",         onClick: () => { actions.addHeart(); } },
+    { label: "Remove Heart",           testId: "dev-remove-heart",      onClick: () => { actions.removeHeart(); notify("Heart removed"); } },
+    { label: "Reset Data",             testId: "dev-reset",             variant: "danger", onClick: () => { actions.resetData(); notify("Data reset"); } },
   ];
 
   const rewardDevActions: DevButtonProps[] = [
@@ -433,6 +396,10 @@ export default function OptionsScreen() {
     { label: "Clear Review Log",             testId: "dev-log-clear",    variant: "danger", onClick: () => { clearLog(); notify("Review Log cleared"); } },
   ];
 
+  const maryImageSrc = selectedReviewReward
+    ? getReviewRewardImage(selectedReviewReward)
+    : getOutfitEmoteImage(selectedOutfit, selectedEmote);
+
   return (
     <div className="min-h-[100dvh] w-full bg-background flex flex-col pb-24 items-center">
       <div className="w-full max-w-[430px] flex-1 flex flex-col px-6 pt-8">
@@ -441,12 +408,18 @@ export default function OptionsScreen() {
           Options
         </h1>
 
-        {/* Avatar Preview */}
+        {/* Avatar Preview — uses wardrobe selection */}
         <div className="flex justify-center mb-10">
-          <MaryAvatar height={240} showEmote={false} outfit={equippedOutfit} emote={emote} />
+          <img
+            src={maryImageSrc}
+            alt="Mary"
+            style={{ height: 240 }}
+            className="object-contain object-top"
+            draggable={false}
+          />
         </div>
 
-        {/* Wardrobe — three-tab layout */}
+        {/* Wardrobe — four-tab layout */}
         <WardrobeSection />
 
         {/* Mary Profile link */}
@@ -502,8 +475,10 @@ export default function OptionsScreen() {
                     <div>Streak: <span className="text-foreground font-bold">{streakCount} / 7 days</span></div>
                     <div>Practice Tasks: <span className="text-foreground font-bold">{gs.practiceCount} / 3</span></div>
                     <div>Review Tasks: <span className="text-foreground font-bold">{gs.reviewCount} / 3</span></div>
-                    <div>Outfit: <span className="text-foreground font-bold">{equippedOutfit}</span></div>
-                    <div>Unlocked: <span className="text-foreground font-bold">{gs.unlockedOutfits.join(", ")}</span></div>
+                    <div>Outfit: <span className="text-foreground font-bold">{selectedOutfit} / {selectedEmote}</span></div>
+                    <div>Background: <span className="text-foreground font-bold">{gs.selectedBackground}</span></div>
+                    <div>Review Reward: <span className="text-foreground font-bold">{selectedReviewReward ?? "none"}</span></div>
+                    <div>Unlocked emotes: <span className="text-foreground font-bold">{gs.unlockedOutfitEmotes.length}</span></div>
                     <div>Review Log entries: <span className="text-foreground font-bold">{entries.length}</span></div>
                   </div>
 
