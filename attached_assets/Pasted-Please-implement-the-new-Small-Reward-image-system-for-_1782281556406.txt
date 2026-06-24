@@ -1,0 +1,208 @@
+Please implement the new Small Reward image system for Mary English.
+
+==================================================
+1. New Small Reward Images
+==================================================
+
+Five final production assets are attached.
+
+Please use these image files directly.
+
+Do NOT regenerate them.
+Do NOT modify them.
+
+Attached files:
+
+- reward_small_001.png
+- reward_small_002.png
+- reward_small_003.png
+- reward_small_004.png
+- reward_small_005.png
+
+These are the final production assets for Mary English Version 1.
+
+==================================================
+2. Daily Talk Complete
+==================================================
+
+Update the "Daily Talk Complete" reward popup.
+
+Replace the current full-body avatar image with one randomly selected Small Reward image.
+
+Use the following appearance rates:
+
+reward_small_001.png : 22.5%
+reward_small_002.png : 22.5%
+reward_small_003.png : 22.5%
+reward_small_004.png : 22.5%
+reward_small_005.png : 10%
+
+reward_small_005.png is intentionally rare.
+
+Do not display any "Rare" label or animation.
+
+The rarity should remain subtle.
+
+==================================================
+3. Image Display
+==================================================
+
+Each reward image is already:
+
+- transparent PNG
+- bust-up image
+- correctly cropped
+- final asset
+
+Do not resize, crop or edit these files.
+
+Simply display the selected image.
+
+==================================================
+4. Background Design
+==================================================
+
+Do not use the current dark wardrobe background.
+
+Instead, use the same light lavender background color already used throughout the Mary English UI.
+
+Please reuse the existing UI color.
+
+Do not introduce a new background color.
+
+The PNG images themselves must remain completely transparent.
+
+==================================================
+5. Keep Existing Layout
+==================================================
+
+Keep the following unchanged:
+
+- Daily Talk Complete
+- Well done, Eikichi.
+- Finish button
+
+No other layout changes are required.
+
+==================================================
+6. Asset Folder Structure
+==================================================
+
+Please organize the image assets using the following structure.
+
+assets/
+
+    avatars/
+        outfit_000/
+            idle.png
+            shy.png
+            smile.png
+            wave.png
+            cheer.png
+
+        outfit_001/
+            idle.png
+            shy.png
+            smile.png
+            wave.png
+            cheer.png
+
+    icons/
+        icon_outfit_000.png
+        icon_outfit_001.png
+
+    backgrounds/
+        background_000_plain.png
+        background_001_canada_default.png
+        background_002_canada_summer.png
+
+    review_rewards/
+        showcase_000.png
+        showcase_001.png
+
+    reward_small/
+        reward_small_001.png
+        reward_small_002.png
+        reward_small_003.png
+        reward_small_004.png
+        reward_small_005.png
+
+==================================================
+7. Image Usage Rules
+==================================================
+
+avatars
+
+Use only for:
+
+- Home screen
+- Daily Talk
+- Reading Talk
+- Wardrobe preview
+
+--------------------------------------
+
+icons
+
+Use only for:
+
+- Profile
+- Review Log
+- Mary Says
+- Small circular profile icons
+
+--------------------------------------
+
+reward_small
+
+Use only for:
+
+- Daily Talk Complete
+- Reading Talk Complete
+- XP reward popup
+
+--------------------------------------
+
+review_rewards
+
+Use only for:
+
+- Outfit Showcase
+- Review Rewards tab
+
+--------------------------------------
+
+backgrounds
+
+Use only for:
+
+- Avatar background selection
+- Home screen
+- Talk screen
+
+==================================================
+8. Important Rules
+==================================================
+
+Do not mix image asset types.
+
+Examples:
+
+- Review Log uses icons.
+- Wardrobe uses avatars.
+- Daily Talk Complete uses reward_small.
+- Outfit Showcase uses review_rewards.
+
+==================================================
+9. No Gameplay Changes
+==================================================
+
+Do not modify:
+
+- XP system
+- Heart system
+- Level system
+- Review Log
+- Wardrobe logic
+
+This update only introduces the new Small Reward image system and establishes the official asset management structure for Mary English Version 1.

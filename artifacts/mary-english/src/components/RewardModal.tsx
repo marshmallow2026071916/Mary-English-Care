@@ -1,9 +1,30 @@
 import type { ReactElement } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Zap, Star, Sparkles, Heart, BookOpen } from "lucide-react";
 import { useGame, type ModalType } from "@/context/GameContext";
 import { MaryAvatar } from "@/components/MaryAvatar";
 import { OUTFIT_IMAGES, getMaryPortraitPng, OUTFIT_META } from "@/lib/maryAssets";
+
+// ─── Reward Small image picker ────────────────────────────────────────────────
+// Weighted random: 001–004 = 22.5% each, 005 = 10% (intentionally rare).
+const REWARD_SMALL_IMAGES = [
+  { src: "/assets/reward_small/reward_small_001.png", weight: 22.5 },
+  { src: "/assets/reward_small/reward_small_002.png", weight: 22.5 },
+  { src: "/assets/reward_small/reward_small_003.png", weight: 22.5 },
+  { src: "/assets/reward_small/reward_small_004.png", weight: 22.5 },
+  { src: "/assets/reward_small/reward_small_005.png", weight: 10.0 },
+];
+
+function pickRewardSmall(): string {
+  const r = Math.random() * 100;
+  let cumulative = 0;
+  for (const entry of REWARD_SMALL_IMAGES) {
+    cumulative += entry.weight;
+    if (r < cumulative) return entry.src;
+  }
+  return REWARD_SMALL_IMAGES[0].src;
+}
 
 // ─── Local constants ──────────────────────────────────────────────────────────
 const XP_PER_LEVEL = 200;
@@ -137,23 +158,28 @@ function XpGainedModal({ onClose, isLast }: { onClose: () => void; isLast: boole
 }
 
 // ─── 2. Small Reward ──────────────────────────────────────────────────────────
-// Shows Mary in cheer emote + task completion label. No dialogue.
+// Shows a randomly selected reward_small image + task completion label.
 function SmallRewardModal({ onClose, isLast }: { onClose: () => void; isLast: boolean }) {
-  const { popupCtx, gs } = useGame();
+  const { popupCtx } = useGame();
   const { smallRewardLabel } = popupCtx;
-  const { equippedOutfit } = gs;
+  const [imgSrc] = useState(() => pickRewardSmall());
 
   return (
     <>
       <Backdrop onClick={onClose} />
       <ModalCard big>
-        <div className="px-5 pt-7 pb-6 flex flex-col items-center gap-5">
-          <MaryAvatar
-            outfit={equippedOutfit}
-            emote="cheer"
-            height={180}
-            showEmote={false}
+        {/* Light lavender image area — transparent PNG displayed as-is */}
+        <div className="bg-gradient-to-br from-primary/20 to-accent/20 flex justify-center items-end overflow-hidden" style={{ height: 220 }}>
+          <img
+            src={imgSrc}
+            alt="Mary"
+            className="h-full w-auto object-contain object-bottom"
+            draggable={false}
           />
+        </div>
+
+        {/* Text + button */}
+        <div className="px-5 pt-5 pb-6 flex flex-col items-center gap-5">
           <div className="text-center flex flex-col gap-1">
             <h2 className="text-xl font-bold text-foreground">{smallRewardLabel}</h2>
             <p className="text-sm text-muted-foreground">Well done, Eikichi.</p>
