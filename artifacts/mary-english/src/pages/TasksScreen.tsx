@@ -363,7 +363,7 @@ function ImportSection() {
                     <textarea
                       value={json1Text}
                       onChange={(e) => setJson1Text(e.target.value)}
-                      placeholder={`{ "version": "3.1", "date": "2026-06-21", ... }`}
+                      placeholder={`{ "version": "3.2", "date": "2026-06-25", "part": 1, ... }`}
                       rows={5}
                       className={TEXTAREA_CLASS}
                       data-testid="import-textarea"
@@ -390,7 +390,7 @@ function ImportSection() {
                     <textarea
                       value={json2Text}
                       onChange={(e) => setJson2Text(e.target.value)}
-                      placeholder={`{ "version": "3.1", "date": "2026-06-21", "part": 2, ... }`}
+                      placeholder={`{ "version": "3.2", "date": "2026-06-25", "part": 2, ... }`}
                       rows={4}
                       className={TEXTAREA_CLASS}
                       data-testid="import-textarea-2"

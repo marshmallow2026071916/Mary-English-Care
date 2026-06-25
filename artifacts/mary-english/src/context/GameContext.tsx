@@ -90,6 +90,8 @@ export interface SessionImportData {
   heart?: number;
   level?: number;
   notes?: string[];
+  // v3.2: date of last Heart change, as YYYY-MM-DD. Optional for backward compat with v3.1.
+  lastHeartChanged?: string;
 }
 
 export interface ImportResult {
@@ -693,6 +695,18 @@ export function GameProvider({ children }: { children: ReactNode }) {
     //    mechanism (set by setImportedDailyCompleted in useSessionImport) rather
     //    than here, to avoid React batch-update ordering issues.
     state = { ...state, lastImportDate: importDate };
+
+    // v3.2: If the JSON includes lastHeartChanged (YYYY-MM-DD), use it to set
+    // lastHeartChangedAt so that the 14-day inactivity decay uses the correct
+    // reference date even after a localStorage reset. Falls back silently for
+    // v3.1 JSONs that omit the field.
+    if (data.lastHeartChanged && /^\d{4}-\d{2}-\d{2}$/.test(data.lastHeartChanged)) {
+      state = {
+        ...state,
+        lastHeartChangedAt: new Date(data.lastHeartChanged + "T00:00:00Z").toISOString(),
+      };
+    }
+
     update(state);
 
     // 9. Build ordered popup queue — skip types whose event did not occur

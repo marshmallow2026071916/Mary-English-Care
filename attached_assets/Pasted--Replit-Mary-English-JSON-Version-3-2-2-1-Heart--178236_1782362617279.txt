@@ -1,0 +1,153 @@
+@Replit
+
+Mary English のJSON仕様を Version 3.2 に更新してください。
+
+今回修正するのは次の2点です。
+
+---
+
+## 1. Heartの最終変化日時を保存する
+
+現在のHeart仕様では、ハートは単なるスタミナではなく、Maryとのつながりを表すゲージです。
+
+ハートには個別タイマーはありません。
+
+ハートゲージ全体で、最後に変化があった日時を1つだけ保存してください。
+
+### 追加する保存項目
+
+progress または heart 関連の保存領域に、次の項目を追加してください。
+
+```json
+"lastHeartChanged": "2026-06-25"
+```
+
+### 保存・更新ルール
+
+lastHeartChanged は、次の場合に更新してください。
+
+* Heartが増えたとき
+* Review Reward獲得によりHeartが減ったとき
+* 放置判定によりHeartが1つ減ったとき
+
+### 放置時のHeart減少ルール
+
+最後のHeart変化日から約14日間、新たなHeart変化がなかった場合、
+
+* ❤2 → ❤1
+* ❤1 → ❤0
+
+のように、Heartを1つだけ減少させてください。
+
+Heartを減少させた日を、新しい lastHeartChanged として保存してください。
+
+Heartが0の場合は、それ以上減少させないでください。
+
+---
+
+## 2. JSON Part管理を追加する
+
+Continue Talk により、同じ日の会話がJSON出力後に続く場合があります。
+
+その場合、同じ日付で2つ目以降のJSONを保存できるようにしてください。
+
+### 追加する保存項目
+
+JSONのルート階層に part を追加してください。
+
+```json
+"part": 1
+```
+
+同じ日の2つ目のJSONは、
+
+```json
+"part": 2
+```
+
+3つ目は、
+
+```json
+"part": 3
+```
+
+としてください。
+
+### ファイル名ルール
+
+1つ目：
+
+```text
+MaryEnglish_2026-06-25.json
+```
+
+2つ目：
+
+```text
+MaryEnglish_2026-06-25_Part2.json
+```
+
+3つ目：
+
+```text
+MaryEnglish_2026-06-25_Part3.json
+```
+
+### Continue Talkとの関係
+
+Continue Talk自体ではXPを加算しません。
+
+Daily Talk / Practice Talk / Review Challenge の達成判定は通常ルールどおり継続してください。
+
+Maryが前の会話を覚えている場合は、ラリー数を継続します。
+
+Maryが前の会話を覚えていない場合は、無理に続き扱いにせず、新しいDaily Talkとして開始して構いません。
+
+---
+
+## JSON Version
+
+JSONのバージョン表記を次に更新してください。
+
+```json
+"version": "3.2"
+```
+
+既存のVersion 3.1 JSONをインポートした場合は、後方互換として読み込めるようにしてください。
+
+Version 3.1に lastHeartChanged や part がない場合は、次のように補完してください。
+
+```json
+"lastHeartChanged": "インポート日"
+"part": 1
+```
+
+---
+
+## Review Logについて
+
+今回、Review Logの保存内容は変更しないでください。
+
+英文チェックの4段階評価は現在の仕様どおりです。
+
+* Excellent
+* Perfect
+* Mary's Suggestion
+* Mary's Correction
+
+Review Logには、現在の表示仕様に従った内容を保存してください。
+
+---
+
+## 目的
+
+今回の修正目的は、
+
+1. Heartの14日判定を正しく行えるようにすること
+2. Continue Talk後の同日2ファイル目以降のJSONを安全に扱えるようにすること
+
+です。
+
+UIや画面デザインは大きく変更しなくて構いません。
+
+まずはJSON保存・インポート・エクスポートの整合性を優先してください。

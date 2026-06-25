@@ -170,8 +170,9 @@ export const SAMPLE_JSON = {
   dailyTalk: () =>
     JSON.stringify(
       {
-        version: "3.1",
+        version: "3.2",
         date: todayStr(),
+        part: 1,
         progress: {
           dailyTalkCompleted: true,
           practiceTalkCompleted: false,
@@ -184,6 +185,7 @@ export const SAMPLE_JSON = {
           weeklyStreak: 1,
           heart: 2,
           level: 1,
+          lastHeartChanged: todayStr(),
           notes: ["Daily Talk completed."],
         },
         reviewLog: {
@@ -210,8 +212,9 @@ export const SAMPLE_JSON = {
   practiceTalk: () =>
     JSON.stringify(
       {
-        version: "3.1",
+        version: "3.2",
         date: todayStr(),
+        part: 1,
         progress: {
           dailyTalkCompleted: false,
           practiceTalkCompleted: true,
@@ -224,6 +227,7 @@ export const SAMPLE_JSON = {
           weeklyStreak: 1,
           heart: 2,
           level: 1,
+          lastHeartChanged: todayStr(),
           notes: ["Practice Talk completed."],
         },
         reviewLog: {
@@ -248,8 +252,9 @@ export const SAMPLE_JSON = {
   reviewTask: () =>
     JSON.stringify(
       {
-        version: "3.1",
+        version: "3.2",
         date: todayStr(),
+        part: 1,
         progress: {
           dailyTalkCompleted: false,
           practiceTalkCompleted: false,
@@ -262,6 +267,7 @@ export const SAMPLE_JSON = {
           weeklyStreak: 1,
           heart: 2,
           level: 1,
+          lastHeartChanged: todayStr(),
           notes: ["Review Challenge completed."],
         },
         reviewLog: {
