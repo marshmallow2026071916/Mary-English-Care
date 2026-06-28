@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageSquare, Upload, TrendingUp } from "lucide-react";
-import { SPLASH_IMAGE, SPLASH_IMAGE_PNG } from "@/lib/maryAssets";
 
 interface IntroScreenProps {
   onDone: () => void;
@@ -28,23 +27,28 @@ function Screen1({ onNext }: { onNext: () => void }) {
       exit="exit"
       transition={slideTransition}
     >
-      {/* Portrait card */}
+      {/* Mary Display Area — scene BG + Mary avatar */}
       <motion.div
-        className="relative w-44 h-60 rounded-3xl border-2 border-white/20 shadow-2xl overflow-hidden bg-slate-900"
+        className="relative w-44 h-60 rounded-3xl border-2 border-white/20 shadow-2xl overflow-hidden"
         initial={{ scale: 0.88, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
       >
-        <picture style={{ display: "contents" }}>
-          <source srcSet={SPLASH_IMAGE_PNG} type="image/png" />
-          <img
-            src={SPLASH_IMAGE}
-            alt="Mary"
-            className="w-full h-full object-contain"
-            draggable={false}
-          />
-        </picture>
-        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
+        {/* Layer 1: Scene Background */}
+        <img
+          src="/assets/backgrounds/background_002.png"
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+          draggable={false}
+        />
+        {/* Layer 2: Mary — transparent PNG */}
+        <img
+          src="/assets/outfits/outfit_idle_000.png"
+          alt="Mary"
+          className="absolute inset-0 w-full h-full object-contain object-bottom z-10"
+          draggable={false}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none z-20" />
       </motion.div>
 
       {/* Title */}

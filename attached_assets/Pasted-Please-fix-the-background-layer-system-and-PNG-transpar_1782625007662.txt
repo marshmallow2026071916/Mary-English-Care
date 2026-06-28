@@ -1,0 +1,88 @@
+Please fix the background layer system and PNG transparency rendering based on the Mary Display Area concept.
+
+Mary English should use the following visual structure:
+
+1. App UI Background
+2. Mary Display Area
+   - Scene Background
+   - Mary Avatar or Review Reward image
+3. UI Elements
+
+The important concept is:
+
+The “background” selected in Wardrobe does not mean the whole app page background.
+It means the Scene Background inside the Mary Display Area, behind Mary.
+
+In other words:
+- The pale lavender page background is the App UI Background.
+- The area behind Mary is the Scene Background.
+- Mary is displayed on top of the Scene Background.
+- Buttons, hearts, text, and navigation are UI Elements.
+
+This concept must apply to:
+- Splash Screen
+- TOP Screen
+- Wardrobe / Option Screen preview
+
+Splash Screen:
+- Splash Screen is a fixed startup branding screen.
+- It is not controlled by Wardrobe.
+- Always use:
+  - background_002.png as the Scene Background inside the splash card
+  - outfit_idle_000.png as Mary
+- In the Splash Screen example, the Scene Background means the dark navy / black area behind Mary inside the rounded card.
+- It does not mean the pale lavender app page background outside the card.
+
+Splash Screen layer order:
+1. App UI Background
+2. Splash card / Mary Display Area
+3. Scene Background: background_002.png
+4. Mary: outfit_idle_000.png
+5. Text UI: Mary / Mary English / Mary English Story 1 / English Conversation Practice
+
+TOP Screen:
+- TOP Screen must use the Wardrobe state.
+- The Mary Display Area must show:
+  - selectedBackground as the Scene Background
+  - selectedOutfit + selectedEmote as Mary
+  - selectedReviewReward instead of Mary if a Review Reward is active
+- Do not display Mary directly on the pale lavender app page background.
+- Mary should be displayed inside the Mary Display Area, on top of the selected Scene Background.
+- Changing selectedBackground must change only the Scene Background inside the Mary Display Area.
+- It must not change the whole app page background.
+
+Wardrobe / Option Screen:
+- The preview area should also use the same Mary Display Area structure.
+- When previewing outfits, emotes, review rewards, or backgrounds, display them as:
+  - Scene Background
+  - Mary Avatar or Review Reward
+- The Wardrobe preview must not treat the whole app background as the selected background.
+
+PNG Transparency Rule:
+All PNG assets used in Mary English must be rendered with their alpha channel preserved.
+
+This applies to:
+- outfits
+- emotes
+- review rewards
+- backgrounds
+- icons
+- splash screen assets
+- UI illustrations
+
+Transparent areas must remain transparent.
+
+Do not replace transparent pixels with:
+- white
+- black
+- checkerboard patterns
+- solid colors
+
+The checkerboard pattern is not a background design.
+It only represents transparency preview and must never appear in the app UI.
+
+If a checkerboard pattern appears in the app, treat it as one of these problems:
+- the PNG asset itself contains a checkerboard pattern
+- the app is not rendering PNG transparency correctly
+
+Mary English assumes that every PNG asset supports transparency.

@@ -408,15 +408,27 @@ export default function OptionsScreen() {
           Options
         </h1>
 
-        {/* Avatar Preview — uses wardrobe selection */}
-        <div className="flex justify-center mb-10">
-          <img
-            src={maryImageSrc}
-            alt="Mary"
-            style={{ height: 240 }}
-            className="object-contain object-top"
-            draggable={false}
-          />
+        {/* Mary Display Area Preview — scene BG + Mary, same layer concept as TopScreen */}
+        <div className="flex justify-center mb-8">
+          <div
+            className="relative rounded-3xl overflow-hidden shadow-md"
+            style={{ width: 152, height: 240 }}
+          >
+            {/* Layer 1: Scene Background */}
+            <img
+              src={getBackgroundImage(gs.selectedBackground)}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover"
+              draggable={false}
+            />
+            {/* Layer 2: Mary — transparent PNG on top */}
+            <img
+              src={maryImageSrc}
+              alt="Mary"
+              className="absolute inset-0 w-full h-full object-contain object-bottom z-10"
+              draggable={false}
+            />
+          </div>
         </div>
 
         {/* Wardrobe — four-tab layout */}

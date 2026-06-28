@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { motion } from "framer-motion";
-import { SPLASH_IMAGE, SPLASH_IMAGE_PNG } from "@/lib/maryAssets";
 
 const SPLASH_MS = 2500;
 
@@ -21,31 +20,35 @@ export function SplashScreen({ onDone }: SplashScreenProps) {
       exit={{ opacity: 0, transition: { duration: 0.55, ease: "easeInOut" } }}
       onClick={onDone}
     >
-      {/* Mary card — bg-slate-900 shows through letterbox areas when using object-contain */}
+      {/* Mary Display Area — rounded card containing scene BG + Mary avatar */}
       <motion.div
-        className="relative w-52 h-72 rounded-3xl border-2 border-white/20 shadow-2xl overflow-hidden mb-8 bg-slate-900"
+        className="relative w-52 h-72 rounded-3xl border-2 border-white/20 shadow-2xl overflow-hidden mb-8"
         initial={{ opacity: 0, y: 40, scale: 0.88 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
       >
-        {/* Portrait artwork — PNG first (official), SVG fallback (placeholder).
-            Drop public/assets/mary/ui/splash.png to update with no code change. */}
-        <picture style={{ display: "contents" }}>
-          <source srcSet={SPLASH_IMAGE_PNG} type="image/png" />
-          <img
-            src={SPLASH_IMAGE}
-            alt="Mary"
-            className="w-full h-full object-contain"
-            draggable={false}
-          />
-        </picture>
+        {/* Layer 1: Scene Background (background_002.png) */}
+        <img
+          src="/assets/backgrounds/background_002.png"
+          alt=""
+          className="absolute inset-0 w-full h-full object-cover"
+          draggable={false}
+        />
 
-        {/* Bottom fade */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none" />
+        {/* Layer 2: Mary — outfit_idle_000.png, transparent PNG */}
+        <img
+          src="/assets/outfits/outfit_idle_000.png"
+          alt="Mary"
+          className="absolute inset-0 w-full h-full object-contain object-bottom z-10"
+          draggable={false}
+        />
+
+        {/* Bottom fade overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent pointer-events-none z-20" />
 
         {/* Animated "Mary" label */}
         <motion.span
-          className="absolute bottom-6 left-1/2 -translate-x-1/2 text-2xl italic font-semibold text-slate-200 z-10 whitespace-nowrap"
+          className="absolute bottom-6 left-1/2 -translate-x-1/2 text-2xl italic font-semibold text-slate-200 z-30 whitespace-nowrap"
           animate={{ opacity: [0.8, 1, 0.8] }}
           transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
         >
@@ -54,7 +57,7 @@ export function SplashScreen({ onDone }: SplashScreenProps) {
 
         {/* Shimmer */}
         <motion.div
-          className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/25 to-white/0 pointer-events-none"
+          className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/25 to-white/0 pointer-events-none z-30"
           animate={{ x: ["-200%", "200%"] }}
           transition={{ duration: 5, repeat: Infinity, ease: "linear", delay: 0.8 }}
         />
