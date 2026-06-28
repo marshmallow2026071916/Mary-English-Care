@@ -161,20 +161,29 @@ export function getBackgroundImage(bgId: string): string {
 //
 // Icon rules:
 //   No review reward → icon_outfit_NNN.png for the selected outfit
-//   review_reward_001 → icon_outfit_000.png (shares the black outfit design)
-//   review_reward_002+ → icon_review_reward_NNN.png (each reward has its own icon)
+//   review_reward_NNN → icon_review_reward_NNN.png  (each reward has its own icon file)
 //
-// This is the single source-of-truth for the "active state icon" anywhere in the UI.
-// Adding a new review_reward_NNN only requires placing icon_review_reward_NNN.png in
+// This is the single source-of-truth for the "current appearance icon" shown in the
+// Tasks header, Review Log header, Mary Says, and Mary Profile card.
+// Adding a new reward only requires placing icon_review_reward_NNN.png in
 // public/assets/outfits/ — no code change needed.
 export function getActiveIconImage(
   selectedOutfit: string,
   selectedReviewReward: string | null,
 ): string {
   if (!selectedReviewReward) return getOutfitIconImage(selectedOutfit);
-  // review_reward_001 reuses outfit_000's icon (same black outfit visual)
-  if (selectedReviewReward === "review_reward_001") return getOutfitIconImage("outfit_000");
-  // review_reward_002, 003, … each have a dedicated icon file
-  const num = selectedReviewReward.split("_")[2] ?? "002";
+  // review_reward_NNN → icon_review_reward_NNN.png
+  const num = selectedReviewReward.split("_")[2] ?? "001";
   return `/assets/outfits/icon_review_reward_${num}.png`;
+}
+
+// Returns the icon image for Review Log conversation badges.
+// These are NOT the current appearance — they are based on the entry's level:
+//   Level 0          → icon_outfit_000.png
+//   Level 1–5        → icon_outfit_001.png
+//   Level 6–10       → icon_outfit_002.png
+//   …and so on.
+export function getLogLevelIconImage(level: number): string {
+  const outfitNum = level === 0 ? 0 : Math.ceil(level / 5);
+  return `/assets/outfits/icon_outfit_${String(outfitNum).padStart(3, "0")}.png`;
 }

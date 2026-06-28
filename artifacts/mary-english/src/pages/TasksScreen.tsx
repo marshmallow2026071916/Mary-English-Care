@@ -4,7 +4,7 @@ import {
   Copy, CheckCircle2, Upload, X,
   ChevronDown, ChevronUp, AlertCircle, CheckCircle, Gift, RefreshCw,
 } from "lucide-react";
-import { getMaryBustPng } from "@/lib/maryAssets";
+import { getActiveIconImage } from "@/lib/maryAssets";
 import { BottomNav } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { useGame } from "@/context/GameContext";
@@ -500,6 +500,7 @@ export default function TasksScreen() {
   const {
     streakCount, equippedOutfit, practiceCount, reviewCount,
     lastDailyRallies, lastPracticeRallies, lastReviewRallies,
+    selectedOutfit, selectedReviewReward,
   } = gs;
 
   const practiceCompleted = practiceCount >= 3;
@@ -526,7 +527,7 @@ export default function TasksScreen() {
         <div className="flex items-center gap-4 mb-8">
           <div className="w-36 h-44 flex-shrink-0">
             <img
-              src={getMaryBustPng(equippedOutfit)}
+              src={getActiveIconImage(selectedOutfit, selectedReviewReward)}
               alt="Mary portrait"
               className="w-full h-full object-contain object-top"
               draggable={false}
@@ -675,7 +676,7 @@ export default function TasksScreen() {
                   <div className="flex items-start gap-3">
                     <div className="w-36 h-44 flex-shrink-0">
                       <img
-                        src={getMaryBustPng(equippedOutfit)}
+                        src={getActiveIconImage(selectedOutfit, selectedReviewReward)}
                         alt="Mary portrait"
                         className="w-full h-full object-contain object-top"
                         draggable={false}

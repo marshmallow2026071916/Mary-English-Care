@@ -1,0 +1,126 @@
+Please update the Mary icon system.
+
+Do not republish yet.
+
+The goal of this update is to make Mary images and icons consistent throughout the application.
+
+There are three image categories.
+
+--------------------------------------------------
+1. Display Images
+--------------------------------------------------
+
+These are the large Mary images displayed on the main screens.
+
+Examples:
+- outfit_idle_000.png
+- outfit_idle_001.png
+- review_reward_001.png
+- review_reward_002.png
+
+--------------------------------------------------
+2. Wardrobe Card Images
+--------------------------------------------------
+
+Current behavior:
+
+- Outfit cards currently display icon images.
+- Review Reward cards currently display full-body reward images.
+
+Preferred behavior:
+
+If the current implementation is simple and stable, keep this behavior.
+
+If maintaining the mixed behavior is complicated, it is acceptable to use icon images for both Outfit cards and Review Reward cards.
+
+Do not change the Background cards.
+
+--------------------------------------------------
+3. Mary UI Icons
+--------------------------------------------------
+
+These are the small Mary images used throughout the UI.
+
+Examples:
+
+- icon_outfit_000.png
+- icon_outfit_001.png
+- icon_review_reward_001.png
+- icon_review_reward_002.png
+
+--------------------------------------------------
+Current Appearance Icons
+--------------------------------------------------
+
+The following UI locations should always display the icon that corresponds to the currently selected Outfit or Review Reward.
+
+- Tasks screen header
+- Tasks screen after Start Talk
+- Review Log header
+- Mary Says
+- Mary Profile card
+
+Icon mapping:
+
+If no Review Reward is selected:
+
+outfit_000
+→ icon_outfit_000.png
+
+outfit_001
+→ icon_outfit_001.png
+
+outfit_002
+→ icon_outfit_002.png
+
+(and continue the same naming pattern)
+
+If a Review Reward is selected:
+
+review_reward_001
+→ icon_review_reward_001.png
+
+review_reward_002
+→ icon_review_reward_002.png
+
+(and continue the same naming pattern)
+
+Whenever the selected Outfit or Review Reward changes, these UI icons should update automatically.
+
+--------------------------------------------------
+Review Log Conversation Icons
+--------------------------------------------------
+
+Conversation icons inside Review Log cards are different.
+
+They DO NOT use the currently selected appearance.
+
+Instead, they always use the icon corresponding to the Review Log level.
+
+Example:
+
+Level 0
+→ icon_outfit_000.png
+
+Level 1–5
+→ icon_outfit_001.png
+
+Level 6–10
+→ icon_outfit_002.png
+
+Continue using the same rule for higher levels.
+
+Review Reward icons are NOT used inside Review Log conversation cards.
+
+--------------------------------------------------
+
+Keep existing JSON compatibility.
+
+Do not republish yet.
+
+Finally, please report:
+
+1. Files changed.
+2. Which UI locations now use the Current Appearance Icon.
+3. How Review Log conversation icons are determined.
+4. How to test both systems.

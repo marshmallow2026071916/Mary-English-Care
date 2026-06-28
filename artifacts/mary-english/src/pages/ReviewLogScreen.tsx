@@ -8,7 +8,7 @@ import {
   type Message,
 } from "@/hooks/useReviewLog";
 import { useGame } from "@/context/GameContext";
-import { getMaryBustPng, resolveOutfitId, OUTFIT_META } from "@/lib/maryAssets";
+import { getActiveIconImage, getLogLevelIconImage } from "@/lib/maryAssets";
 
 // ─── Task type helpers ────────────────────────────────────────────────────────
 
@@ -46,11 +46,12 @@ function formatDate(iso: string): string {
 }
 
 // ─── Small Mary avatar badge ──────────────────────────────────────────────────
-function MaryBadge({ outfit }: { outfit: string }) {
+// Uses the level-based icon rule: Level 0 → outfit_000, Level 1–5 → outfit_001, etc.
+function MaryBadge({ level }: { level: number }) {
   return (
     <div className="w-11 h-13 shrink-0 rounded-xl overflow-hidden shadow-sm bg-gradient-to-br from-primary/20 to-accent/20">
       <img
-        src={getMaryBustPng(outfit)}
+        src={getLogLevelIconImage(level)}
         alt="Mary"
         className="w-full h-full object-contain object-top"
         draggable={false}
@@ -190,16 +191,16 @@ function buildElements(entry: ReviewLogEntry): RenderElem[] {
 
 function MaryBubble({
   elem,
-  outfit,
+  level,
   testId,
 }: {
   elem: Extract<RenderElem, { kind: "mary" }>;
-  outfit: string;
+  level: number;
   testId?: string;
 }) {
   return (
     <div className={`flex items-start gap-2.5 ${!elem.showAvatar ? "pl-[3.375rem]" : ""}`}>
-      {elem.showAvatar && <MaryBadge outfit={outfit} />}
+      {elem.showAvatar && <MaryBadge level={level} />}
       <div className="max-w-[82%] bg-card border border-border/60 rounded-2xl rounded-tl-sm px-4 py-2.5 shadow-sm">
         <p
           className="text-sm text-foreground leading-relaxed whitespace-pre-wrap"
@@ -292,10 +293,8 @@ function ReviewCard({
 // ─── Session card ─────────────────────────────────────────────────────────────
 function SessionCard({
   entry,
-  outfit,
 }: {
   entry: ReviewLogEntry;
-  outfit: string;
 }) {
   const displayElems = buildElements(entry);
 
@@ -332,7 +331,7 @@ function SessionCard({
               <MaryBubble
                 key={i}
                 elem={elem}
-                outfit={outfit}
+                level={entry.level}
                 testId={i === 0 ? `entry-mary-${entry.id}` : undefined}
               />
             );
@@ -378,7 +377,6 @@ export default function ReviewLogScreen() {
   const currentLevel = gs.level;
   const resolvedLevel =
     activeTab === "current" ? currentLevel : (activeTab as number);
-  const tabOutfit = activeTab === "current" ? gs.equippedOutfit : "black";
 
   const pastLevels = Array.from(
     { length: currentLevel },
@@ -412,7 +410,7 @@ export default function ReviewLogScreen() {
         <div className="flex items-center gap-4 mb-7">
           <div className="w-36 h-44 flex-shrink-0">
             <img
-              src={getMaryBustPng(gs.equippedOutfit)}
+              src={getActiveIconImage(gs.selectedOutfit, gs.selectedReviewReward)}
               alt="Mary portrait"
               className="w-full h-full object-contain object-top"
               draggable={false}
@@ -491,7 +489,6 @@ export default function ReviewLogScreen() {
               <SessionCard
                 key={entry.id}
                 entry={entry}
-                outfit={tabOutfit}
               />
             ))}
           </div>

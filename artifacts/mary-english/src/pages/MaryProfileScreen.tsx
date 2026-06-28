@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { BottomNav } from "@/components/BottomNav";
 import { useGame } from "@/context/GameContext";
-import { getMaryBustPng, OUTFIT_META, resolveOutfitId } from "@/lib/maryAssets";
+import { getActiveIconImage, OUTFIT_META, resolveOutfitId } from "@/lib/maryAssets";
 
 // ─── Static profile data ──────────────────────────────────────────────────────
 const PROFILE = {
@@ -41,7 +41,7 @@ function Tag({ label }: { label: string }) {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function MaryProfileScreen() {
   const { gs, emote } = useGame();
-  const { equippedOutfit } = gs;
+  const { equippedOutfit, selectedOutfit, selectedReviewReward } = gs;
   const id = resolveOutfitId(equippedOutfit);
   const meta = OUTFIT_META[id];
 
@@ -66,10 +66,10 @@ export default function MaryProfileScreen() {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.4, delay: 0.05 }}
         >
-          {/* Official bust portrait — direct img on neutral bg so transparent areas are clean */}
+          {/* Current appearance icon — updates when outfit or review reward changes */}
           <div className="w-36 h-44 flex-shrink-0">
             <img
-              src={getMaryBustPng(equippedOutfit)}
+              src={getActiveIconImage(selectedOutfit, selectedReviewReward)}
               alt="Mary portrait"
               className="w-full h-full object-contain object-top"
               draggable={false}
@@ -143,10 +143,10 @@ export default function MaryProfileScreen() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, delay: 0.25 }}
         >
-          {/* Small avatar bust */}
+          {/* Current appearance icon — updates when outfit or review reward changes */}
           <div className="shrink-0 w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
             <img
-              src={getMaryBustPng(equippedOutfit)}
+              src={getActiveIconImage(selectedOutfit, selectedReviewReward)}
               alt="Mary"
               className="w-full h-full object-contain object-top"
               draggable={false}
