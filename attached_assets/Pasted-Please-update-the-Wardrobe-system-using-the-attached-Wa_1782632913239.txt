@@ -1,0 +1,98 @@
+Please update the Wardrobe system using the attached Wardrobe specification files.
+
+Do not republish yet.
+
+The goal of this update is to add the next level-up rewards and the next Review Reward asset.
+
+Please add the following new image assets.
+
+Outfit assets:
+- outfit_idle_001.png
+- outfit_shy_001.png
+- outfit_smile_001.png
+- outfit_wave_001.png
+- outfit_cheer_001.png
+
+Background asset:
+- background_003.png
+
+Review Reward asset:
+- review_reward_002.png
+
+Please implement the following level-up reward behavior.
+
+Level 1:
+- Unlock outfit_idle_001.png.
+- Automatically display outfit_idle_001.png on the TOP screen.
+- Set selectedOutfit to outfit_001.
+- Set selectedEmote to idle.
+- Set selectedReviewReward to null.
+
+Level 2:
+- Unlock outfit_shy_001.png.
+- Automatically display outfit_shy_001.png on the TOP screen.
+- Set selectedOutfit to outfit_001.
+- Set selectedEmote to shy.
+- Set selectedReviewReward to null.
+
+Level 3:
+- Unlock outfit_smile_001.png.
+- Automatically display outfit_smile_001.png on the TOP screen.
+- Set selectedOutfit to outfit_001.
+- Set selectedEmote to smile.
+- Set selectedReviewReward to null.
+
+Level 4:
+- Unlock outfit_wave_001.png.
+- Automatically display outfit_wave_001.png on the TOP screen.
+- Set selectedOutfit to outfit_001.
+- Set selectedEmote to wave.
+- Set selectedReviewReward to null.
+
+Level 5:
+- Unlock outfit_cheer_001.png.
+- Automatically display outfit_cheer_001.png on the TOP screen.
+- Set selectedOutfit to outfit_001.
+- Set selectedEmote to cheer.
+- Set selectedReviewReward to null.
+- Unlock background_003.png.
+- Add background_003.png to the Backgrounds tab.
+- Automatically apply background_003.png as selectedBackground.
+
+Please keep the existing Level 0 assets and behavior unchanged.
+
+Review Reward:
+- Register review_reward_002.png as the next unlockable Review Reward.
+- It must not be available at the start.
+- It should become available only after the next Review Reward is earned through the Review Challenge / Heart reward system.
+- Once unlocked, add it to the Review Rewards tab.
+- Selecting it should display review_reward_002.png on the TOP screen.
+- Do not automatically switch to review_reward_002.png when it is unlocked.
+- Keep the existing review_reward_001 behavior unchanged.
+
+Important:
+- For this update, do not implement new icon behavior yet.
+- Do not use icon_outfit_001.png or icon_review_reward_002.png in the UI yet.
+- Icon behavior will be handled in a later update.
+- This update should focus on image unlocks, automatic display after level-up, background unlock, Review Reward registration, and state persistence.
+
+State persistence:
+- Save selectedOutfit, selectedEmote, selectedReviewReward, and selectedBackground to localStorage.
+- Include unlocked assets and the selected visual state in JSON export.
+- Restore unlocked assets and the selected visual state on JSON import.
+- Keep existing JSON compatibility.
+
+Small UI fix:
+- The speech bubble currently overlaps Mary's face.
+- Move the speech bubble above Mary's head or near the upper part of the Mary Display Area.
+- Mary’s face should always remain clearly visible.
+- This is only a layout adjustment.
+- Do not change any conversation logic.
+
+Please report:
+1. Files changed.
+2. Where each new image asset should be placed.
+3. How to test Level 1 to Level 5 unlocks.
+4. How to test background_003.png.
+5. How to test review_reward_002.png.
+6. Do not republish yet.

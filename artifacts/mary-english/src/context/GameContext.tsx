@@ -284,7 +284,9 @@ function getWardrobeRewardsForLevel(level: number): { outfitEmoteKey?: string; b
     outfitEmoteKey: `${outfitId}_${emote}`,
   };
   if (level % 5 === 0) {
-    const bgNum = Math.floor(level / 5) + 1;
+    // background_001 and background_002 are unlocked from the start (Level 0).
+    // Level 5 → background_003, level 10 → background_004, etc.
+    const bgNum = Math.floor(level / 5) + 2;
     result.backgroundId = `background_${String(bgNum).padStart(3, "0")}`;
   }
   return result;
@@ -689,6 +691,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
     // 6. Review reward: when all 3 review tasks complete, recover a heart or
     //    unlock the seasonal outfit (whichever applies first).
     //    When hearts are already full and the outfit is granted, hearts drop from 2→1.
+    //    Once the seasonal outfit is already earned and hearts are full, unlock the
+    //    next review reward (review_reward_002), without auto-switching the display.
     if (result.reviewNewlyCompleted && state.reviewCount === MAX_REVIEW) {
       result.reviewJustCompleted = true;
       if (state.hearts < MAX_HEARTS) {
@@ -702,6 +706,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
           state = { ...state, unlockedReviewRewards: [...state.unlockedReviewRewards, "review_reward_001"] };
         }
         result.seasonalOutfitUnlocked = true;
+      } else {
+        // Seasonal outfit already earned and hearts are full: unlock review_reward_002.
+        // Do NOT auto-switch selectedReviewReward — user chooses if/when to equip it.
+        if (!state.unlockedReviewRewards.includes("review_reward_002")) {
+          state = { ...state, unlockedReviewRewards: [...state.unlockedReviewRewards, "review_reward_002"] };
+        }
       }
     }
 

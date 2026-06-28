@@ -76,6 +76,19 @@ export default function TopScreen() {
           </div>
         </motion.div>
 
+        {/* ── Speech bubble — above the Mary Display Area, never overlaps her face */}
+        <motion.div
+          className="flex justify-end mb-2"
+          initial={{ opacity: 0, x: 10, scale: 0.9 }}
+          animate={{ opacity: 1, x: 0, scale: 1 }}
+          transition={{ delay: 0.25, type: "spring", bounce: 0.4 }}
+          data-testid="bubble-mary-message"
+        >
+          <div className="bg-white/90 backdrop-blur-sm px-4 py-3 rounded-2xl rounded-tr-sm shadow-md border border-white/40 max-w-[220px]">
+            <p className="text-sm font-medium text-foreground leading-snug">{welcomeMsg}</p>
+          </div>
+        </motion.div>
+
         {/* ── Mary Display Area ───────────────────────────────────────────── */}
         {/* Clip container: rounded corners clip the scene background image.  */}
         {/* Mary PNG alpha channel renders transparently over scene background. */}
@@ -92,19 +105,6 @@ export default function TopScreen() {
             className="absolute inset-0 w-full h-full object-cover"
             draggable={false}
           />
-
-          {/* Layer 2 (UI overlay): Speech bubble */}
-          <motion.div
-            className="absolute top-4 right-4 z-20"
-            initial={{ opacity: 0, x: 10, scale: 0.9 }}
-            animate={{ opacity: 1, x: 0, scale: 1 }}
-            transition={{ delay: 0.25, type: "spring", bounce: 0.4 }}
-            data-testid="bubble-mary-message"
-          >
-            <div className="bg-white/90 backdrop-blur-sm px-4 py-3 rounded-2xl rounded-tr-sm shadow-md border border-white/40 max-w-[190px]">
-              <p className="text-sm font-medium text-foreground leading-snug">{welcomeMsg}</p>
-            </div>
-          </motion.div>
 
           {/* Layer 2: Mary — transparent PNG on top of scene background */}
           <img
