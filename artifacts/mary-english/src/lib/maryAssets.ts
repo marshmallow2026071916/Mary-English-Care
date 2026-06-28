@@ -156,3 +156,25 @@ export function getReviewRewardImage(rewardId: string): string {
 export function getBackgroundImage(bgId: string): string {
   return `/assets/backgrounds/${bgId}.png`;
 }
+
+// Returns the icon image that represents the current active display state.
+//
+// Icon rules:
+//   No review reward → icon_outfit_NNN.png for the selected outfit
+//   review_reward_001 → icon_outfit_000.png (shares the black outfit design)
+//   review_reward_002+ → icon_review_reward_NNN.png (each reward has its own icon)
+//
+// This is the single source-of-truth for the "active state icon" anywhere in the UI.
+// Adding a new review_reward_NNN only requires placing icon_review_reward_NNN.png in
+// public/assets/outfits/ — no code change needed.
+export function getActiveIconImage(
+  selectedOutfit: string,
+  selectedReviewReward: string | null,
+): string {
+  if (!selectedReviewReward) return getOutfitIconImage(selectedOutfit);
+  // review_reward_001 reuses outfit_000's icon (same black outfit visual)
+  if (selectedReviewReward === "review_reward_001") return getOutfitIconImage("outfit_000");
+  // review_reward_002, 003, … each have a dedicated icon file
+  const num = selectedReviewReward.split("_")[2] ?? "002";
+  return `/assets/outfits/icon_review_reward_${num}.png`;
+}

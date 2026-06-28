@@ -100,7 +100,11 @@ function WardrobeSection() {
         {tab === "outfits" && (
           <motion.div key="outfits" {...fadePanel} className="grid grid-cols-2 gap-4">
             {unlockedOutfitIds.map((id) => {
-              const isSelected = selectedOutfit === id && !selectedReviewReward;
+              // Icon Display Rule: review_reward_001 uses the same black outfit as outfit_000,
+              // so outfit_000's card shows as active when that reward is selected.
+              const activeViaReviewReward =
+                selectedReviewReward === "review_reward_001" && id === "outfit_000";
+              const isSelected = activeViaReviewReward || (!selectedReviewReward && selectedOutfit === id);
               return (
                 <motion.div
                   key={id}

@@ -182,8 +182,10 @@ const DEFAULT_STATE: GameState = {
   selectedReviewReward: null,
   selectedBackground: "background_001",
   unlockedOutfitEmotes: ["outfit_000_idle", "outfit_000_shy", "outfit_000_smile", "outfit_000_wave", "outfit_000_cheer"],
-  unlockedBackgrounds: ["background_001"],
-  unlockedReviewRewards: [],
+  // background_002 unlocked from the start for Level 0 testing
+  unlockedBackgrounds: ["background_001", "background_002"],
+  // review_reward_001 unlocked from the start for Level 0 testing
+  unlockedReviewRewards: ["review_reward_001"],
 };
 
 const DEFAULT_POPUP_CTX: PopupCtx = {

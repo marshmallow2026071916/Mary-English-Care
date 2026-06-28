@@ -1,0 +1,174 @@
+Please implement the Review Reward selection system together with the icon display rule.
+
+At Level 0, the following assets must be available for testing.
+
+Review Reward
+- review_reward_001.png
+- Display name: Outfit Showcase
+
+Backgrounds
+- background_001
+- background_002.png
+
+These assets should be selectable even if they have not been unlocked through gameplay yet.
+
+The purpose is to verify the display, selection, save, and restore behavior before enabling the full unlock system.
+
+--------------------------------------------------
+Review Reward
+--------------------------------------------------
+
+The Rewards tab must display review_reward_001.
+
+Do not hide it behind the "Complete all 3 Review Tasks..." message during Level 0 testing.
+
+When selected:
+
+selectedReviewReward = "review_reward_001"
+
+Immediately update the following screens:
+
+- TOP Screen
+- Wardrobe Preview
+- Option Preview
+
+Instead of displaying:
+
+selectedOutfit + selectedEmote
+
+display:
+
+review_reward_001.png
+
+This is an immediate selection system.
+No confirmation dialog is required.
+
+--------------------------------------------------
+When deselected
+--------------------------------------------------
+
+When the Review Reward is deselected:
+
+selectedReviewReward = null
+
+Do NOT modify:
+
+- selectedOutfit
+- selectedEmote
+
+The application should automatically display:
+
+selectedOutfit + selectedEmote
+
+according to the normal rendering priority.
+
+There is no "restore" process.
+The previously selected outfit and emote remain stored at all times.
+
+--------------------------------------------------
+Background
+--------------------------------------------------
+
+The Backgrounds tab must display:
+
+- background_001
+- background_002
+
+Both backgrounds must be selectable.
+
+When background_002 is selected:
+
+selectedBackground = "background_002"
+
+Immediately update the Scene Background inside the Mary Display Area on:
+
+- TOP Screen
+- Wardrobe Preview
+- Option Preview
+
+Do not modify the App UI Background.
+
+This is also an immediate selection system.
+No confirmation dialog is required.
+
+--------------------------------------------------
+Icon Display Rule
+--------------------------------------------------
+
+The icon displayed throughout the application must always represent the currently displayed visual state.
+
+Normal Outfit
+
+selectedOutfit
+
+↓
+
+icon_outfit_xxx.png
+
+Review Reward
+
+selectedReviewReward
+
+↓
+
+Review Reward icon
+
+Level 0 special rule:
+
+review_reward_001.png uses the same black outfit as outfit_000.
+
+Therefore:
+
+review_reward_001.png
+
+↓
+
+icon_outfit_000.png
+
+Beginning with review_reward_002:
+
+Each Review Reward should have its own dedicated icon.
+
+Example:
+
+review_reward_002.png
+
+↓
+
+icon_review_reward_002.png
+
+review_reward_003.png
+
+↓
+
+icon_review_reward_003.png
+
+Please design the implementation so future Review Reward icons can be added without changing the rendering logic.
+
+--------------------------------------------------
+Save / Restore
+--------------------------------------------------
+
+The following values must be saved immediately:
+
+- selectedReviewReward
+- selectedBackground
+
+Selections should immediately update:
+
+- localStorage
+- TOP Screen
+- Wardrobe Preview
+- Option Preview
+
+JSON Export and JSON Import must preserve the latest selected state.
+
+Please confirm that:
+
+1. review_reward_001 appears in the Rewards tab.
+2. Selecting it immediately updates all screens.
+3. Deselecting it automatically returns the display to selectedOutfit + selectedEmote.
+4. background_002 appears in the Backgrounds tab.
+5. Selecting it immediately updates the Mary Display Area.
+6. The correct icon is displayed.
+7. The selected state is preserved after localStorage restore, JSON Import, JSON Export, and app restart.
