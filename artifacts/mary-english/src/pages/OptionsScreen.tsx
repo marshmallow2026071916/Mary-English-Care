@@ -226,19 +226,20 @@ function WardrobeSection() {
                       ? "border-primary shadow-sm"
                       : "border-border shadow-sm hover:border-primary/50"
                   }`}
-                  style={{ aspectRatio: "9/16" }}
+                  style={{ aspectRatio: "9 / 16" }}
                   onClick={() => actions.selectBackground(bgId)}
                   whileTap={{ scale: 0.97 }}
                   data-testid={`background-card-${bgId}`}
                 >
+                  {/* absolute inset-0 ensures image fills the aspect-ratio container */}
                   <img
                     src={getBackgroundImage(bgId)}
                     alt={bgId}
-                    className="w-full h-full object-cover"
+                    className="absolute inset-0 w-full h-full object-cover"
                     draggable={false}
                   />
                   {isSelected && (
-                    <div className="absolute top-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center shadow-sm">
+                    <div className="absolute top-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center shadow-sm z-10">
                       <Check className="w-4 h-4 text-primary-foreground" strokeWidth={3} />
                     </div>
                   )}

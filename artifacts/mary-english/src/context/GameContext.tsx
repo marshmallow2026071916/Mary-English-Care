@@ -240,9 +240,26 @@ function loadState(): GameState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULT_STATE };
     const loaded: GameState = { ...DEFAULT_STATE, ...JSON.parse(raw) };
-    const decayed = applyInactivityDecay(loaded);
-    if (decayed !== loaded) persist(decayed);
-    return decayed;
+
+    // Always ensure the Level-0 test assets are present, even for users whose
+    // stored state pre-dates their addition to DEFAULT_STATE. Using Set merges
+    // so we never create duplicates.
+    const bgSet = new Set(loaded.unlockedBackgrounds);
+    DEFAULT_STATE.unlockedBackgrounds.forEach((id) => bgSet.add(id));
+
+    const rwSet = new Set(loaded.unlockedReviewRewards);
+    DEFAULT_STATE.unlockedReviewRewards.forEach((id) => rwSet.add(id));
+
+    const patched: GameState = {
+      ...loaded,
+      unlockedBackgrounds: [...bgSet],
+      unlockedReviewRewards: [...rwSet],
+    };
+
+    const decayed = applyInactivityDecay(patched);
+    // Persist so next load doesn't need patching
+    persist(decayed !== patched ? decayed : patched);
+    return decayed !== patched ? decayed : patched;
   } catch {
     return { ...DEFAULT_STATE };
   }
