@@ -44,7 +44,15 @@ function parseRestoreJSON(
   raw: unknown
 ): { ok: true; data: FullProgressRestoreData } | { ok: false; error: string } {
   if (!raw || typeof raw !== "object") return { ok: false, error: "JSON must be an object." };
-  const d = raw as Record<string, unknown>;
+  const top = raw as Record<string, unknown>;
+
+  // Accept progress fields at the top level, inside a `progress` sub-object, or both.
+  // Top-level fields take priority so explicit overrides always win.
+  const sub =
+    top.progress && typeof top.progress === "object"
+      ? (top.progress as Record<string, unknown>)
+      : {};
+  const d: Record<string, unknown> = { ...sub, ...top };
 
   const date =
     typeof d.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d.date)
