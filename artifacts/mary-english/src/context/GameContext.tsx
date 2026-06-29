@@ -118,7 +118,8 @@ export interface ImportResult {
 // or are reconstructed from the restored level.
 export interface FullProgressRestoreData {
   date: string;                         // YYYY-MM-DD (used as lastImportDate / lastDailyDate)
-  restoreMode: "full_progress_restore";
+  // Kept optional for backward compat; superseded by jsonType: "game" going forward.
+  restoreMode?: "full_progress_restore";
   level?: number;
   xpInCurrentLevel?: number;            // XP within the current level (preferred)
   totalXp?: number;                     // fallback: totalXp - level*200

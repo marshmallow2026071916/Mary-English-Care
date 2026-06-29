@@ -46,9 +46,6 @@ function parseRestoreJSON(
   if (!raw || typeof raw !== "object") return { ok: false, error: "JSON must be an object." };
   const d = raw as Record<string, unknown>;
 
-  if (d.restoreMode !== "full_progress_restore")
-    return { ok: false, error: '"restoreMode" must be "full_progress_restore".' };
-
   const date =
     typeof d.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d.date)
       ? d.date
@@ -515,12 +512,24 @@ export function useSessionImport() {
         return;
       }
 
-      // 3a. Full Progress Restore mode — bypass normal session import entirely
-      if (
-        parsed1 &&
-        typeof parsed1 === "object" &&
-        (parsed1 as Record<string, unknown>).restoreMode === "full_progress_restore"
-      ) {
+      // ── Extract jsonType (new standard identifier).
+      // When present it takes priority over all legacy shape-based detection.
+      const jsonType =
+        parsed1 && typeof parsed1 === "object"
+          ? ((parsed1 as Record<string, unknown>).jsonType as string | undefined)
+          : undefined;
+
+      // 3a. Full Game Progress Restore
+      //   Primary:  jsonType === "game"
+      //   Fallback: restoreMode === "full_progress_restore" (legacy, kept for compat)
+      const isGameRestore =
+        jsonType === "game" ||
+        (jsonType === undefined &&
+          parsed1 &&
+          typeof parsed1 === "object" &&
+          (parsed1 as Record<string, unknown>).restoreMode === "full_progress_restore");
+
+      if (isGameRestore) {
         const restoreResult = parseRestoreJSON(parsed1);
         if (!restoreResult.ok) {
           setStatus("error");
@@ -529,12 +538,18 @@ export function useSessionImport() {
         }
         actions.restoreFullProgress(restoreResult.data);
         setStatus("success");
-        setStatusMsg("Progress restored. No popups. Review Log is unchanged.");
+        setStatusMsg("Progress restored. Review Log unchanged.");
         return;
       }
 
-      // 3b. Review Log Recovery mode — restore conversation history only, no game state changes
-      if (isReviewLogRecovery(parsed1)) {
+      // 3b. Review Log Recovery — restores conversation history only, never touches game progress
+      //   Primary:  jsonType === "review"
+      //   Fallback: auto-detect by shape (date + reviewLog, no progress/restoreMode/jsonType)
+      const isReviewRestore =
+        jsonType === "review" ||
+        (jsonType === undefined && isReviewLogRecovery(parsed1));
+
+      if (isReviewRestore) {
         const r = parseReviewLogRecovery(parsed1);
         if (!r.ok) {
           setStatus("error");
