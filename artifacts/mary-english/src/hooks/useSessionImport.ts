@@ -54,35 +54,57 @@ function parseRestoreJSON(
       ? d.date
       : new Date().toISOString().slice(0, 10);
 
-  const num = (key: string) => (typeof d[key] === "number" ? (d[key] as number) : undefined);
-  const bool = (key: string) => (typeof d[key] === "boolean" ? (d[key] as boolean) : undefined);
-  const str = (key: string) => (typeof d[key] === "string" ? (d[key] as string) : undefined);
-  const arr = (key: string) =>
-    Array.isArray(d[key]) ? (d[key] as string[]) : undefined;
+  // Accept multiple naming conventions: user-facing names AND internal GameState field names.
+  // Try each key in order and return the first match found.
+  const numOr = (...keys: string[]): number | undefined => {
+    for (const k of keys) {
+      if (typeof d[k] === "number") return d[k] as number;
+    }
+    return undefined;
+  };
+  const boolOr = (...keys: string[]): boolean | undefined => {
+    for (const k of keys) {
+      if (typeof d[k] === "boolean") return d[k] as boolean;
+    }
+    return undefined;
+  };
+  const strOr = (...keys: string[]): string | undefined => {
+    for (const k of keys) {
+      if (typeof d[k] === "string") return d[k] as string;
+    }
+    return undefined;
+  };
+  const arrOr = (...keys: string[]): string[] | undefined => {
+    for (const k of keys) {
+      if (Array.isArray(d[k])) return d[k] as string[];
+    }
+    return undefined;
+  };
 
   return {
     ok: true,
     data: {
       date,
       restoreMode: "full_progress_restore",
-      level: num("level"),
-      xpInCurrentLevel: num("xpInCurrentLevel"),
-      totalXp: num("totalXp"),
-      weeklyStreak: num("weeklyStreak"),
-      heart: num("heart"),
-      hearts: num("hearts"),
-      maxHeart: num("maxHeart"),
-      maxHearts: num("maxHearts"),
-      lastHeartChanged: str("lastHeartChanged"),
-      dailyTalkCompleted: bool("dailyTalkCompleted"),
-      practiceTasksCompleted: num("practiceTasksCompleted"),
-      reviewTasksCompleted: num("reviewTasksCompleted"),
-      reviewRewardEarned: bool("reviewRewardEarned"),
-      currentOutfit: str("currentOutfit"),
-      unlockedOutfits: arr("unlockedOutfits"),
-      unlockedEmotes: arr("unlockedEmotes"),
-      unlockedBackgrounds: arr("unlockedBackgrounds"),
-      unlockedReviewRewards: arr("unlockedReviewRewards"),
+      // User-facing name first, then internal GameState field name as fallback
+      level: numOr("level"),
+      xpInCurrentLevel: numOr("xpInCurrentLevel", "xp"),
+      totalXp: numOr("totalXp"),
+      weeklyStreak: numOr("weeklyStreak", "streakCount"),
+      heart: numOr("heart"),
+      hearts: numOr("hearts"),
+      maxHeart: numOr("maxHeart"),
+      maxHearts: numOr("maxHearts"),
+      lastHeartChanged: strOr("lastHeartChanged"),
+      dailyTalkCompleted: boolOr("dailyTalkCompleted"),
+      practiceTasksCompleted: numOr("practiceTasksCompleted", "practiceCount"),
+      reviewTasksCompleted: numOr("reviewTasksCompleted", "reviewCount"),
+      reviewRewardEarned: boolOr("reviewRewardEarned"),
+      currentOutfit: strOr("currentOutfit", "equippedOutfit"),
+      unlockedOutfits: arrOr("unlockedOutfits"),
+      unlockedEmotes: arrOr("unlockedEmotes"),
+      unlockedBackgrounds: arrOr("unlockedBackgrounds"),
+      unlockedReviewRewards: arrOr("unlockedReviewRewards"),
     },
   };
 }
