@@ -293,8 +293,10 @@ function ReviewCard({
 // ─── Session card ─────────────────────────────────────────────────────────────
 function SessionCard({
   entry,
+  tabLevel,
 }: {
   entry: ReviewLogEntry;
+  tabLevel: number;
 }) {
   const displayElems = buildElements(entry);
 
@@ -331,7 +333,7 @@ function SessionCard({
               <MaryBubble
                 key={i}
                 elem={elem}
-                level={entry.level}
+                level={tabLevel}
                 testId={i === 0 ? `entry-mary-${entry.id}` : undefined}
               />
             );
@@ -489,6 +491,7 @@ export default function ReviewLogScreen() {
               <SessionCard
                 key={entry.id}
                 entry={entry}
+                tabLevel={resolvedLevel}
               />
             ))}
           </div>
