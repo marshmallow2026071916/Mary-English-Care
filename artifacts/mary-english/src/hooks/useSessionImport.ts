@@ -7,6 +7,7 @@ import {
   type Rally,
   type ConversationItem,
   type ReviewLogReward,
+  type ReviewLogEntry,
 } from "@/hooks/useReviewLog";
 
 // Accepted import versions.
@@ -82,6 +83,74 @@ function parseRestoreJSON(
       unlockedEmotes: arr("unlockedEmotes"),
       unlockedBackgrounds: arr("unlockedBackgrounds"),
       unlockedReviewRewards: arr("unlockedReviewRewards"),
+    },
+  };
+}
+
+// ─── Review Log Recovery types & parser ───────────────────────────────────────
+
+// Exported so TasksScreen can render the conflict resolution UI.
+export interface PendingConflict {
+  newEntry: Omit<ReviewLogEntry, "id">;
+  existingEntry: ReviewLogEntry;
+  nextPartIfAppend: number;       // pre-computed for display in Append button
+}
+
+interface ReviewLogRecoveryData {
+  date: string;
+  part: number;                   // always normalised; 1 if absent in JSON
+  level: number;                  // always normalised; 0 if absent in JSON
+  conversationType: string;
+  messages: Message[];
+  levelOutfit?: string;
+  maryAvatarVariant?: string;
+}
+
+// A JSON is a Review Log Recovery if it has `date` + `reviewLog` but no `progress`
+// and no `restoreMode` (those two are reserved for the other import modes).
+function isReviewLogRecovery(raw: unknown): boolean {
+  if (!raw || typeof raw !== "object") return false;
+  const d = raw as Record<string, unknown>;
+  return (
+    !d.progress &&
+    !d.restoreMode &&
+    typeof d.date === "string" &&
+    d.reviewLog !== undefined
+  );
+}
+
+function parseReviewLogRecovery(
+  raw: unknown
+): { ok: true; data: ReviewLogRecoveryData } | { ok: false; error: string } {
+  if (!raw || typeof raw !== "object")
+    return { ok: false, error: "JSON must be an object." };
+  const d = raw as Record<string, unknown>;
+
+  if (typeof d.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(d.date))
+    return { ok: false, error: 'Missing or invalid "date" field (expected YYYY-MM-DD).' };
+
+  const rl = d.reviewLog;
+  if (!rl || typeof rl !== "object")
+    return { ok: false, error: 'Missing "reviewLog" object.' };
+  const rlObj = rl as Record<string, unknown>;
+  if (!Array.isArray(rlObj.messages))
+    return { ok: false, error: '"reviewLog.messages" must be an array.' };
+
+  return {
+    ok: true,
+    data: {
+      date: d.date,
+      part: typeof d.part === "number" ? d.part : 1,
+      level: typeof d.level === "number" ? d.level : 0,
+      conversationType:
+        typeof d.conversationType === "string" ? d.conversationType : "",
+      messages: rlObj.messages as Message[],
+      levelOutfit:
+        typeof rlObj.levelOutfit === "string" ? rlObj.levelOutfit : undefined,
+      maryAvatarVariant:
+        typeof rlObj.maryAvatarVariant === "string"
+          ? rlObj.maryAvatarVariant
+          : undefined,
     },
   };
 }
@@ -349,13 +418,15 @@ export function useSessionImport() {
   const [statusMsg, setStatusMsg] = useState("");
 
   const { gs, actions } = useGame();
-  const { upsertByDate } = useReviewLog();
+  const { upsertByDate, insertWithMode, entries } = useReviewLog();
+  const [pendingConflict, setPendingConflict] = useState<PendingConflict | null>(null);
 
   const clearAll = useCallback(() => {
     setJson1Text("");
     setJson2Text("");
     setStatus("idle");
     setStatusMsg("");
+    setPendingConflict(null);
   }, []);
 
   // ── Execute the actual state / localStorage changes for a validated DailyImportJSON
@@ -440,7 +511,57 @@ export function useSessionImport() {
         return;
       }
 
-      // 3b. Normal session — validate
+      // 3b. Review Log Recovery mode — restore conversation history only, no game state changes
+      if (isReviewLogRecovery(parsed1)) {
+        const r = parseReviewLogRecovery(parsed1);
+        if (!r.ok) {
+          setStatus("error");
+          setStatusMsg(r.error);
+          return;
+        }
+        const data = r.data;
+        const dateKey = data.date;
+
+        const newEntry: Omit<ReviewLogEntry, "id"> = {
+          date: new Date(dateKey + "T00:00:00Z").toISOString(),
+          level: data.level,
+          taskType: normalizeTaskType(data.conversationType),
+          messages: data.messages,
+          part: data.part,
+          levelOutfit: data.levelOutfit,
+          maryAvatarVariant: data.maryAvatarVariant,
+        };
+
+        // Duplicate check: same date + level + part
+        const conflict = entries.find(
+          (e) =>
+            e.date.startsWith(dateKey) &&
+            e.level === data.level &&
+            (e.part ?? 1) === data.part
+        );
+
+        if (conflict) {
+          const existingParts = entries
+            .filter((e) => e.date.startsWith(dateKey) && e.level === data.level)
+            .map((e) => e.part ?? 1);
+          const nextPartIfAppend =
+            existingParts.length > 0 ? Math.max(...existingParts) + 1 : 2;
+          setPendingConflict({ newEntry, existingEntry: conflict, nextPartIfAppend });
+          setStatus("duplicate");
+          setStatusMsg(
+            `A Review Log already exists for ${dateKey} · Part ${data.part} · Level ${data.level}. Choose an action below.`
+          );
+          return;
+        }
+
+        // No conflict — insert directly
+        insertWithMode(newEntry, "overwrite");
+        setStatus("success");
+        setStatusMsg(`Review Log imported: ${dateKey} · Part ${data.part}.`);
+        return;
+      }
+
+      // 3c. Normal session — validate
       const v1 = validate(parsed1);
       if (!v1.ok) {
         setStatus("error");
@@ -526,7 +647,7 @@ export function useSessionImport() {
       setStatus("success");
       setStatusMsg("JSON file import completed.");
     },
-    [executeImport]
+    [executeImport, entries, insertWithMode]
   );
 
   // Convenience wrapper for the text-paste path (reads from state).
@@ -535,6 +656,32 @@ export function useSessionImport() {
     setJson1Text("");
     setJson2Text("");
   }, [json1Text, json2Text, importTexts]);
+
+  // Resolves a pending Review Log conflict (set by the duplicate-detection branch above).
+  const resolveConflict = useCallback(
+    (mode: "skip" | "overwrite" | "append") => {
+      if (!pendingConflict) return;
+      const dateStr = pendingConflict.newEntry.date.slice(0, 10);
+      const part = pendingConflict.newEntry.part ?? 1;
+
+      if (mode !== "skip") {
+        insertWithMode(pendingConflict.newEntry, mode);
+      }
+
+      setPendingConflict(null);
+      setStatus("success");
+      if (mode === "skip") {
+        setStatusMsg("Review Log skipped. Existing entry kept.");
+      } else if (mode === "overwrite") {
+        setStatusMsg(`Review Log overwritten: ${dateStr} · Part ${part}.`);
+      } else {
+        setStatusMsg(
+          `Review Log imported as Part ${pendingConflict.nextPartIfAppend}: ${dateStr}.`
+        );
+      }
+    },
+    [pendingConflict, insertWithMode]
+  );
 
   const resetImportHistory = useCallback(() => {
     clearImported();
@@ -559,5 +706,7 @@ export function useSessionImport() {
     status,
     statusMsg,
     resetImportHistory,
+    pendingConflict,
+    resolveConflict,
   };
 }

@@ -1,0 +1,278 @@
+# Mary English – Review Log Recovery Import Specification
+
+Please implement a **Review Log Recovery Import** feature.
+
+This feature is independent from **Full Progress Restore Mode**.
+
+The purpose is to restore learning history only, without affecting game progress.
+
+---
+
+# 1. Use the Existing Import Screen
+
+Do **NOT** create a new import screen or an additional import button.
+
+Continue using the existing import entry point:
+
+**Import Session Data**
+
+The application should automatically determine the import mode after the user selects a JSON file.
+
+The existing **Import Session Data** function should support all of the following:
+
+* Normal Session JSON
+* Full Progress Restore JSON
+* Review Log Recovery JSON
+* Simplified Review Log Recovery JSON
+
+The user should never have to choose a different import menu.
+
+Expected flow:
+
+Import Session Data
+
+↓
+
+Select JSON file
+
+↓
+
+Automatically detect JSON type
+
+↓
+
+Execute the appropriate import mode
+
+---
+
+# 2. Purpose
+
+Review Log Recovery restores conversation history only.
+
+It must **never** modify official game progress.
+
+Game progress and learning history should remain independent.
+
+---
+
+# 3. Minimum Required Fields
+
+The application should accept simplified Review Log JSON files.
+
+Required:
+
+* date
+* reviewLog.messages
+
+Recommended:
+
+* part
+* level
+* conversationType
+
+Example:
+
+```json
+{
+  "date": "2026-06-28",
+  "part": 1,
+  "level": 0,
+  "conversationType": "Daily Talk",
+  "reviewLog": {
+    "messages": [...]
+  }
+}
+```
+
+Rules:
+
+* If **part** is missing, assume **Part 1**.
+* If **level** is missing, import normally.
+* If **conversationType** is missing, infer it if possible; otherwise use **"Unknown"**.
+
+---
+
+# 4. Do Not Modify Game Progress
+
+Review Log Recovery must never change:
+
+* Level
+* XP
+* Weekly Streak
+* Hearts
+* Tasks
+* Reward status
+* Current Outfit
+* Wardrobe
+* Any other game progress
+
+It restores learning history only.
+
+---
+
+# 5. Insert Order
+
+Imported Review Logs should automatically be inserted in chronological order.
+
+Sort by:
+
+1. Date
+2. Part
+3. createdAt (if available)
+
+Example:
+
+2026-06-17 Part 1
+
+2026-06-18 Part 1
+
+2026-06-19 Part 1
+
+2026-06-19 Part 2
+
+2026-06-20 Part 1
+
+---
+
+# 6. Duplicate Detection
+
+A duplicate candidate is defined as:
+
+Same
+
+* date
+* level
+* part
+
+When a duplicate candidate is detected, ask the user to choose one of the following:
+
+### Skip
+
+Keep the existing Review Log.
+
+Do not import the new one.
+
+---
+
+### Overwrite
+
+Replace the existing Review Log with the imported one.
+
+---
+
+### Append
+
+Keep both Review Logs.
+
+If necessary, automatically assign the next available Part number.
+
+Example:
+
+Existing:
+
+2026-06-19 Part 1
+
+Imported:
+
+2026-06-19 Part 1
+
+Append result:
+
+2026-06-19 Part 1
+
+2026-06-19 Part 2
+
+Default recommendation:
+
+**Skip**
+
+The application should never overwrite an existing Review Log automatically.
+
+---
+
+# 7. Multiple Conversations Per Day
+
+The application must fully support multiple conversations on the same date.
+
+Use Part numbers to distinguish them.
+
+Example:
+
+Part 1
+
+Part 2
+
+Part 3
+
+If the imported JSON has the same date but a different Part number, import it as another Review Log.
+
+If the imported JSON has no Part number and the same date already exists, ask the user whether to:
+
+* Skip
+* Overwrite
+* Append as the next available Part
+
+---
+
+# 8. Backward Compatibility
+
+Review Log Recovery should accept older JSON versions and simplified JSON.
+
+If the application can read:
+
+* date
+* reviewLog.messages
+
+the import should succeed.
+
+Missing optional fields should be initialized safely.
+
+The JSON version should never prevent Review Log recovery.
+
+---
+
+# 9. Silent Import
+
+Review Log Recovery is not a gameplay event.
+
+Do NOT trigger:
+
+* XP gain
+* Level Up
+* Heart changes
+* Task completion
+* Reward popups
+* Outfit unlocks
+* Cheer animations
+* Reward animations
+* Achievement sounds
+
+Only display a small status message such as:
+
+"Review Log imported."
+
+or
+
+"Review Log skipped."
+
+---
+
+# 10. Expected Result
+
+After importing a Review Log Recovery JSON:
+
+* The Review Log appears in the correct chronological position.
+* Same-day logs are ordered by Part.
+* Existing logs are preserved unless the user explicitly chooses Overwrite.
+* Duplicate logs can safely be Skipped or Appended.
+* Game progress remains completely unchanged.
+
+---
+
+# Final Design Goal
+
+The Review Log should become a long-term learning archive.
+
+Even if the JSON schema changes in future versions, the application should still be able to reconstruct learning history from simple Review Log JSON files.
+
+This makes Review Log recovery robust, future-proof, and independent from game progress.

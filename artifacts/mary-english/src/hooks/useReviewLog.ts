@@ -80,6 +80,8 @@ export interface ReviewLogEntry {
   date: string;
   level: number;
   taskType: TaskType;
+  // Part number for multi-conversation days (1-indexed). Absent on older entries → treated as 1.
+  part?: number;
   // v3.1 / v3.0 message format:
   messages?: Message[];
   levelOutfit?: string;      // outfit worn during this session (v3.1)
@@ -145,6 +147,44 @@ export function useReviewLog() {
       setEntries((prev) => {
         const filtered = prev.filter((e) => !e.date.startsWith(dateKey));
         return [...filtered, { ...entry, id: makeId() }];
+      });
+    },
+    [setEntries]
+  );
+
+  // Insert or update an entry according to the chosen conflict resolution mode.
+  //   skip     → do nothing (caller should not call if they intend to skip)
+  //   overwrite → remove the conflicting entry (same date + level + part) and add new one
+  //   append   → add as a new entry with the next available part number
+  const insertWithMode = useCallback(
+    (
+      entry: Omit<ReviewLogEntry, "id">,
+      mode: "skip" | "overwrite" | "append"
+    ): void => {
+      if (mode === "skip") return;
+      const dateKey = entry.date.slice(0, 10);
+      const entryLevel = entry.level;
+      const entryPart = entry.part ?? 1;
+
+      setEntries((prev) => {
+        if (mode === "overwrite") {
+          const filtered = prev.filter(
+            (e) =>
+              !(
+                e.date.startsWith(dateKey) &&
+                e.level === entryLevel &&
+                (e.part ?? 1) === entryPart
+              )
+          );
+          return [...filtered, { ...entry, id: makeId() }];
+        }
+        // append: assign the next available part for this date + level
+        const existingParts = prev
+          .filter((e) => e.date.startsWith(dateKey) && e.level === entryLevel)
+          .map((e) => e.part ?? 1);
+        const nextPart =
+          existingParts.length > 0 ? Math.max(...existingParts) + 1 : 2;
+        return [...prev, { ...entry, part: nextPart, id: makeId() }];
       });
     },
     [setEntries]
@@ -267,5 +307,5 @@ export function useReviewLog() {
     [addEntry]
   );
 
-  return { entries, addEntry, upsertByDate, addSampleEntry, clearLog };
+  return { entries, addEntry, upsertByDate, insertWithMode, addSampleEntry, clearLog };
 }

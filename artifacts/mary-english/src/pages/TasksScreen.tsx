@@ -173,6 +173,7 @@ function ImportSection() {
     importTexts, importSession, clearAll,
     showError, status, statusMsg,
     resetImportHistory,
+    pendingConflict, resolveConflict,
   } = useSessionImport();
 
   // ── File import handler
@@ -324,9 +325,62 @@ function ImportSection() {
 
         {statusBanner}
 
+        {/* ── Conflict resolution panel (Review Log Recovery duplicate) ── */}
+        <AnimatePresence>
+          {pendingConflict && (
+            <motion.div
+              key="conflict"
+              initial={{ opacity: 0, height: 0, y: -4 }}
+              animate={{ opacity: 1, height: "auto", y: 0 }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4 space-y-3">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-bold text-amber-800">Duplicate Review Log</p>
+                    <p className="text-xs text-amber-700 mt-0.5">
+                      {pendingConflict.existingEntry.date.slice(0, 10)}{" "}
+                      · Part {pendingConflict.existingEntry.part ?? 1}{" "}
+                      · Level {pendingConflict.existingEntry.level}
+                    </p>
+                    <p className="text-xs text-amber-600 mt-1">
+                      An existing entry matches this date, level, and part. Choose how to handle it:
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <button
+                    onClick={() => resolveConflict("skip")}
+                    className="w-full text-left px-3 py-2.5 rounded-xl bg-white border-2 border-amber-400 text-amber-900 text-sm font-bold hover:bg-amber-50 active:scale-[0.98] transition-all flex items-center gap-2"
+                  >
+                    <span className="text-base">⏭</span>
+                    <span>Skip — keep existing <span className="font-normal text-amber-700">(recommended)</span></span>
+                  </button>
+                  <button
+                    onClick={() => resolveConflict("append")}
+                    className="w-full text-left px-3 py-2.5 rounded-xl bg-white border border-amber-200 text-amber-900 text-sm font-medium hover:bg-amber-50 active:scale-[0.98] transition-all flex items-center gap-2"
+                  >
+                    <span className="text-base">➕</span>
+                    <span>Append as Part {pendingConflict.nextPartIfAppend}</span>
+                  </button>
+                  <button
+                    onClick={() => resolveConflict("overwrite")}
+                    className="w-full text-left px-3 py-2.5 rounded-xl bg-white border border-amber-200 text-amber-900 text-sm font-medium hover:bg-amber-50 active:scale-[0.98] transition-all flex items-center gap-2"
+                  >
+                    <span className="text-base">🔄</span>
+                    <span>Overwrite existing entry</span>
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <button
           onClick={handleFileImport}
-          disabled={fileReading}
+          disabled={fileReading || !!pendingConflict}
           className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-primary-foreground font-bold py-3 rounded-2xl shadow-sm border-b-4 border-primary-foreground/20"
           data-testid="import-btn"
         >
