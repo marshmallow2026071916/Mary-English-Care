@@ -112,6 +112,34 @@ export interface ImportResult {
   seasonalOutfitUnlocked: boolean;   // review completed + hearts already full
 }
 
+// ─── Full Progress Restore ────────────────────────────────────────────────────
+// Sent to restoreFullProgress() when the JSON contains restoreMode: "full_progress_restore".
+// All fields except date and restoreMode are optional; missing values fall back to defaults
+// or are reconstructed from the restored level.
+export interface FullProgressRestoreData {
+  date: string;                         // YYYY-MM-DD (used as lastImportDate / lastDailyDate)
+  restoreMode: "full_progress_restore";
+  level?: number;
+  xpInCurrentLevel?: number;            // XP within the current level (preferred)
+  totalXp?: number;                     // fallback: totalXp - level*200
+  weeklyStreak?: number;
+  heart?: number;                       // current hearts (both spellings accepted)
+  hearts?: number;
+  maxHeart?: number;                    // max hearts (both spellings accepted)
+  maxHearts?: number;
+  lastHeartChanged?: string;            // YYYY-MM-DD
+  dailyTalkCompleted?: boolean;
+  practiceTasksCompleted?: number;
+  reviewTasksCompleted?: number;
+  reviewRewardEarned?: boolean;         // true → add "seasonal" outfit if absent
+  currentOutfit?: string;              // maps to equippedOutfit
+  // Optional explicit collections — if absent, reconstructed from level
+  unlockedOutfits?: string[];
+  unlockedEmotes?: string[];            // maps to unlockedOutfitEmotes
+  unlockedBackgrounds?: string[];
+  unlockedReviewRewards?: string[];
+}
+
 interface GameContextValue {
   gs: GameState;
   dailyTalkDone: boolean;
@@ -140,6 +168,7 @@ interface GameContextValue {
     unlockLevelRewardOutfit: () => void;
     setImportedDailyCompleted: (val: boolean) => void;
     importSessionData: (data: SessionImportData) => ImportResult;
+    restoreFullProgress: (data: FullProgressRestoreData) => void;
     selectOutfit: (id: string) => void;
     selectEmote: (emote: string) => void;
     selectReviewReward: (rewardId: string | null) => void;
@@ -616,6 +645,91 @@ export function GameProvider({ children }: { children: ReactNode }) {
     update({ ...prev, selectedBackground: bgId });
   }, [update]);
 
+  // ─ restoreFullProgress ───────────────────────────────────────────────────────
+  // Silently overwrites game state from a recovery JSON.
+  // NO modals, NO emotes, NO animations. Wardrobe collections are reconstructed
+  // from the restored level when absent from the JSON.
+  const restoreFullProgress = useCallback((data: FullProgressRestoreData) => {
+    const level = Math.max(0, data.level ?? 0);
+
+    // XP within current level
+    let xp: number;
+    if (data.xpInCurrentLevel !== undefined) {
+      xp = data.xpInCurrentLevel;
+    } else if (data.totalXp !== undefined) {
+      xp = data.totalXp - level * XP_PER_LEVEL;
+    } else {
+      xp = 0;
+    }
+    xp = Math.max(0, Math.min(XP_PER_LEVEL - 1, xp));
+
+    const maxHearts = data.maxHearts ?? data.maxHeart ?? MAX_HEARTS;
+    const hearts = Math.max(0, Math.min(maxHearts, data.hearts ?? data.heart ?? 1));
+    const streakCount = Math.max(0, data.weeklyStreak ?? 0);
+    const practiceCount = Math.min(data.practiceTasksCompleted ?? 0, MAX_PRACTICE);
+    const reviewCount = Math.min(data.reviewTasksCompleted ?? 0, MAX_REVIEW);
+
+    // Heart timestamp — use provided date or fall back to now
+    let lastHeartChangedAt: string;
+    if (data.lastHeartChanged && /^\d{4}-\d{2}-\d{2}$/.test(data.lastHeartChanged)) {
+      lastHeartChangedAt = new Date(data.lastHeartChanged + "T00:00:00Z").toISOString();
+    } else {
+      lastHeartChangedAt = new Date().toISOString();
+    }
+
+    // Build wardrobe by replaying level-up unlocks from the restored level.
+    // This is the source-of-truth when the JSON omits explicit collections.
+    let wardrobeBase: GameState = { ...DEFAULT_STATE };
+    for (let lvl = 1; lvl <= level; lvl++) {
+      wardrobeBase = applyWardrobeUnlocksForLevel(wardrobeBase, lvl);
+    }
+
+    let unlockedOutfits = data.unlockedOutfits ?? wardrobeBase.unlockedOutfits;
+    const unlockedOutfitEmotes = data.unlockedEmotes ?? wardrobeBase.unlockedOutfitEmotes;
+    const unlockedBackgrounds = data.unlockedBackgrounds ?? wardrobeBase.unlockedBackgrounds;
+    const unlockedReviewRewards = data.unlockedReviewRewards ?? wardrobeBase.unlockedReviewRewards;
+
+    // Honor reviewRewardEarned → seasonal outfit
+    if (data.reviewRewardEarned && !unlockedOutfits.includes("seasonal")) {
+      unlockedOutfits = [...unlockedOutfits, "seasonal"];
+    }
+
+    const equippedOutfit = data.currentOutfit ?? wardrobeBase.equippedOutfit;
+    const dailyTalkCompleted = data.dailyTalkCompleted ?? false;
+
+    const restored: GameState = {
+      ...DEFAULT_STATE,
+      level,
+      xp,
+      hearts,
+      maxHearts,
+      lastHeartChangedAt,
+      streakCount,
+      lastDailyDate: dailyTalkCompleted ? data.date : null,
+      practiceCount,
+      reviewCount,
+      lastDailyRallies: 0,
+      lastPracticeRallies: 0,
+      lastReviewRallies: 0,
+      equippedOutfit,
+      importedDailyCompleted: dailyTalkCompleted,
+      lastImportDate: data.date,
+      unlockedOutfits,
+      unlockedOutfitEmotes,
+      unlockedBackgrounds,
+      unlockedReviewRewards,
+      selectedOutfit: wardrobeBase.selectedOutfit,
+      selectedEmote: wardrobeBase.selectedEmote,
+      selectedReviewReward: null,
+      selectedBackground: wardrobeBase.selectedBackground,
+    };
+
+    // Persist and update React state — fully silent (no modals, no emote)
+    update(restored);
+    saveDailyStatus(dailyTalkCompleted);
+    setImportedDailyCompletedState(dailyTalkCompleted);
+  }, [update]);
+
   // Write directly to its own localStorage key AND update the separate useState.
   // This bypasses gsRef/update entirely, eliminating any React batch-ordering risk.
   const setImportedDailyCompleted = useCallback((val: boolean) => {
@@ -815,6 +929,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       unlockLevelRewardOutfit,
       setImportedDailyCompleted,
       importSessionData,
+      restoreFullProgress,
       selectOutfit,
       selectEmote,
       selectReviewReward,

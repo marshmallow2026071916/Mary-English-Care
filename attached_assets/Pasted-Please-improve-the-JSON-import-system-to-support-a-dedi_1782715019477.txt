@@ -1,0 +1,170 @@
+Please improve the JSON import system to support a dedicated "Full Progress Restore Mode."
+
+Purpose
+-------
+When importing a recovery JSON, the application should restore the saved game state exactly as recorded in the JSON.
+
+If the JSON contains:
+
+"restoreMode": "full_progress_restore"
+
+the import should be treated as a complete restoration instead of a normal progress update.
+
+----------------------------------------
+1. Restore Game Progress
+----------------------------------------
+
+During Full Progress Restore Mode, overwrite the current game state with the values stored in JSON.
+
+Restore at least the following fields:
+
+- level
+- totalXp
+- lifetimeXp
+- levelXp
+- xpInCurrentLevel
+- weeklyStreak
+- heart / hearts
+- maxHeart / maxHearts
+- lastHeartChanged
+- dailyTalkCompleted
+- dailyTalkRallies
+- practiceTasksCompleted
+- practiceTasksMax
+- reviewTasksCompleted
+- reviewTasksMax
+- reviewRewardEarned
+- currentOutfit
+
+The imported values must replace the current values.
+
+Do NOT merge or accumulate them.
+
+For example, if the JSON contains:
+
+Level = 0
+XP = 138
+
+the application must display:
+
+Level 0
+XP 138 / 200
+
+even if the current save is already Level 1.
+
+----------------------------------------
+2. Disable Achievement Events
+----------------------------------------
+
+A restoration is NOT a newly earned achievement.
+
+Therefore, while restoreMode == "full_progress_restore",
+
+DO NOT trigger:
+
+- Level Up popups
+- Daily Talk completion popup
+- Practice Task completion popup
+- Review Task completion popup
+- Heart acquisition popup
+- Outfit Showcase popup
+- Review Reward popup
+- Cheer animations
+- Reward animations
+- Any achievement sound effects
+
+The restore should happen silently.
+
+----------------------------------------
+3. Synchronize Reward State
+----------------------------------------
+
+After restoration, synchronize every reward-related screen with the restored save.
+
+This includes:
+
+- Home screen
+- Tasks
+- Option
+- Wardrobe
+- Reward screen
+
+Examples:
+
+If
+
+currentOutfit = "black"
+
+then the current outfit should become Black.
+
+If
+
+reviewRewardEarned = false
+
+then no new Outfit Showcase should appear.
+
+If the JSON contains:
+
+- unlockedOutfits
+- unlockedEmotes
+- unlockedBackgrounds
+
+restore them exactly.
+
+If these collections are absent, safely reconstruct them from the restored progress.
+
+Never unlock rewards that are not present in the restored save.
+
+----------------------------------------
+4. Current Goal
+----------------------------------------
+
+At this stage, Review Log restoration is NOT the priority.
+
+Only restore the official game progress.
+
+Review Log recovery will be implemented later.
+
+----------------------------------------
+5. Expected Result
+----------------------------------------
+
+After importing:
+
+MaryEnglish_2026-06-28_ProgressRecovery_Corrected.json
+
+the application should display:
+
+Level: 0
+
+XP: 138 / 200
+
+Daily Talk:
+1 / 1
+
+Practice Tasks:
+3 / 3
+
+Weekly Streak:
+3 / 7
+
+Review Tasks:
+3 / 3
+
+Heart Gauge:
+2 / 2
+
+lastHeartChanged:
+2026-06-27
+
+without displaying any achievement popups.
+
+----------------------------------------
+6. Design Philosophy
+----------------------------------------
+
+A recovery JSON represents an existing saved state.
+
+Importing it should reproduce that state exactly.
+
+The import process should never create new achievements or new rewards.

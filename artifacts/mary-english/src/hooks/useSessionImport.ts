@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { useGame, type SessionImportData } from "@/context/GameContext";
+import { useGame, type SessionImportData, type FullProgressRestoreData } from "@/context/GameContext";
 import {
   useReviewLog,
   type TaskType,
@@ -34,6 +34,56 @@ interface DailyImportJSON {
   totalParts?: number; // optional — informational
   progress: ProgressData;
   reviewLog?: ReviewLogData;
+}
+
+// ─── Full Progress Restore parser ─────────────────────────────────────────────
+// Called when JSON 1 contains restoreMode: "full_progress_restore".
+// All fields except restoreMode are optional — missing values get sensible defaults.
+function parseRestoreJSON(
+  raw: unknown
+): { ok: true; data: FullProgressRestoreData } | { ok: false; error: string } {
+  if (!raw || typeof raw !== "object") return { ok: false, error: "JSON must be an object." };
+  const d = raw as Record<string, unknown>;
+
+  if (d.restoreMode !== "full_progress_restore")
+    return { ok: false, error: '"restoreMode" must be "full_progress_restore".' };
+
+  const date =
+    typeof d.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d.date)
+      ? d.date
+      : new Date().toISOString().slice(0, 10);
+
+  const num = (key: string) => (typeof d[key] === "number" ? (d[key] as number) : undefined);
+  const bool = (key: string) => (typeof d[key] === "boolean" ? (d[key] as boolean) : undefined);
+  const str = (key: string) => (typeof d[key] === "string" ? (d[key] as string) : undefined);
+  const arr = (key: string) =>
+    Array.isArray(d[key]) ? (d[key] as string[]) : undefined;
+
+  return {
+    ok: true,
+    data: {
+      date,
+      restoreMode: "full_progress_restore",
+      level: num("level"),
+      xpInCurrentLevel: num("xpInCurrentLevel"),
+      totalXp: num("totalXp"),
+      weeklyStreak: num("weeklyStreak"),
+      heart: num("heart"),
+      hearts: num("hearts"),
+      maxHeart: num("maxHeart"),
+      maxHearts: num("maxHearts"),
+      lastHeartChanged: str("lastHeartChanged"),
+      dailyTalkCompleted: bool("dailyTalkCompleted"),
+      practiceTasksCompleted: num("practiceTasksCompleted"),
+      reviewTasksCompleted: num("reviewTasksCompleted"),
+      reviewRewardEarned: bool("reviewRewardEarned"),
+      currentOutfit: str("currentOutfit"),
+      unlockedOutfits: arr("unlockedOutfits"),
+      unlockedEmotes: arr("unlockedEmotes"),
+      unlockedBackgrounds: arr("unlockedBackgrounds"),
+      unlockedReviewRewards: arr("unlockedReviewRewards"),
+    },
+  };
 }
 
 // ─── Duplicate tracking ───────────────────────────────────────────────────────
@@ -372,7 +422,25 @@ export function useSessionImport() {
         return;
       }
 
-      // 3. Validate JSON 1
+      // 3a. Full Progress Restore mode — bypass normal session import entirely
+      if (
+        parsed1 &&
+        typeof parsed1 === "object" &&
+        (parsed1 as Record<string, unknown>).restoreMode === "full_progress_restore"
+      ) {
+        const restoreResult = parseRestoreJSON(parsed1);
+        if (!restoreResult.ok) {
+          setStatus("error");
+          setStatusMsg(restoreResult.error);
+          return;
+        }
+        actions.restoreFullProgress(restoreResult.data);
+        setStatus("success");
+        setStatusMsg("Progress restored. No popups. Review Log is unchanged.");
+        return;
+      }
+
+      // 3b. Normal session — validate
       const v1 = validate(parsed1);
       if (!v1.ok) {
         setStatus("error");
