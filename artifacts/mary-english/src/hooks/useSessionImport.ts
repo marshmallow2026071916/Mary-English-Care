@@ -504,15 +504,15 @@ export function useSessionImport() {
     (data: DailyImportJSON): boolean => {
       const imported = loadImported();
       const alreadyImported = imported.has(data.date);
-      const levelAtImport = gs.level;
 
-      let levelForLog = levelAtImport;
-      if (!alreadyImported) {
-        const importResult = actions.importSessionData({ ...data.progress, date: data.date });
-        levelForLog = importResult.levelAfter;
-      }
-
-      actions.setImportedDailyCompleted(data.progress.dailyTalkCompleted);
+      // Session JSON is the official master save: restore state directly from
+      // the JSON fields with no XP recalculation, no popup queue, and no
+      // animations. restoreFullProgress handles dailyStatus / setImportedDailyCompleted.
+      const levelForLog = data.progress.level ?? gs.level;
+      actions.restoreFullProgress({
+        ...(data.progress as unknown as FullProgressRestoreData),
+        date: data.date,
+      });
 
       const rl = data.reviewLog;
       if (rl) {

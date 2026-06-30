@@ -1,0 +1,271 @@
+{
+  "version": "3.2",
+  "date": "2026-06-29",
+  "part": 1,
+  "progress": {
+    "dailyTalkCompleted": true,
+    "practiceTalkCompleted": false,
+    "reviewChallengeCompleted": false,
+    "dailyTalkRallies": 10,
+    "practiceTalkRallies": 0,
+    "reviewChallengeRallies": 0,
+    "informalReviewChallengeRallies": 0,
+    "dailyXp": 10,
+    "practiceXp": 0,
+    "reviewXp": 0,
+    "bonusXp": 0,
+    "totalXp": 148,
+    "level": 0,
+    "weeklyStreak": 4,
+    "heart": 2,
+    "lastHeartChanged": "2026-06-27",
+    "reviewRewardEarned": false,
+    "currentOutfit": "black",
+    "notes": [
+      "Imported the latest official state from 2026-06-28: Level 0, XP 138/200, Weekly Streak 3/7, Heart Gauge 2/2, Practice Tasks 3/3, Review Tasks 3/3.",
+      "Daily Talk was completed on 2026-06-29 with 10 learner rallies and awarded +10 XP.",
+      "Weekly Streak increased from 3 to 4 after today's Daily Talk completion.",
+      "No Practice Talk or official Review Challenge was completed today.",
+      "Heart Gauge remains 2/2 and lastHeartChanged remains 2026-06-27."
+    ],
+    "lifetimeXp": 148,
+    "levelXp": 148,
+    "xpInCurrentLevel": 148,
+    "xpToNextLevel": 200,
+    "hearts": 2,
+    "maxHeart": 2,
+    "maxHearts": 2,
+    "practiceTasksCompleted": 3,
+    "practiceTasksMax": 3,
+    "practiceTasksRemaining": 0,
+    "reviewTasksCompleted": 3,
+    "reviewTasksMax": 3,
+    "reviewTasksRemaining": 0,
+    "dailyTalkLimit": 1,
+    "dailyTalkCompletedCount": 1,
+    "officialGameProgress": true
+  },
+  "reviewLog": {
+    "talkType": "Daily Talk",
+    "level": 0,
+    "maryAvatarVariant": "bust",
+    "levelOutfit": "black",
+    "messages": [
+      {
+        "id": 1,
+        "speaker": "System",
+        "type": "system",
+        "text": "Daily Talk"
+      },
+      {
+        "id": 2,
+        "speaker": "Mary",
+        "type": "intro",
+        "text": "Hi, Eikichi! This morning I stopped by a small bakery before work and bought a warm cheese roll. It was simple, but it went perfectly with my medium roast coffee. It made me smile, and now I'm looking forward to talking with you again. Welcome to today's Daily Talk! Question 1 of 10: What are you going to do today?"
+      },
+      {
+        "id": 3,
+        "speaker": "Eikichi",
+        "type": "answer",
+        "text": "I'm going to almost finish my work now. And I want to talk about my routine from morning."
+      },
+      {
+        "id": 4,
+        "speaker": "Correction",
+        "type": "correction",
+        "grade": "excellent",
+        "corrected": "I'm almost finished with my work now, and I want to talk about my morning routine. / I'm going to finish my work soon, and I want to talk about my morning routine."
+      },
+      {
+        "id": 5,
+        "speaker": "Mary",
+        "type": "reply",
+        "text": "That sounds great! I'd love to hear about your morning routine. I remember you often take your sons to school and go for a walk afterward. Question 2 of 10: What did you do this morning after you woke up?"
+      },
+      {
+        "id": 6,
+        "speaker": "Eikichi",
+        "type": "answer",
+        "text": "I got up at six. After that, I woke my kids up at 6:20. It took 20 minutes to get them up after that."
+      },
+      {
+        "id": 7,
+        "speaker": "Correction",
+        "type": "correction",
+        "grade": "excellent",
+        "corrected": "I got up at six. After that, I woke my kids up at 6:20. It took about 20 minutes to wake them up. / I got up at six. Then I woke my kids up at 6:20. It took about 20 minutes to get them out of bed."
+      },
+      {
+        "id": 8,
+        "speaker": "Mary",
+        "type": "reply",
+        "text": "Wow, it sounds like your morning is quite busy! Getting children out of bed isn't always easy, so I can imagine it takes some patience. You do a great job taking care of your family every morning. Question 3 of 10: After your kids got up, what did your family do next?"
+      },
+      {
+        "id": 9,
+        "speaker": "Eikichi",
+        "type": "answer",
+        "text": "We had breakfast. We had rice and miso soup."
+      },
+      {
+        "id": 10,
+        "speaker": "Correction",
+        "type": "correction",
+        "grade": "excellent",
+        "corrected": "We had breakfast. We had rice and miso soup. / We had rice, miso soup, and some side dishes for breakfast."
+      },
+      {
+        "id": 11,
+        "speaker": "Mary",
+        "type": "reply",
+        "text": "That sounds like a healthy Japanese breakfast! I like learning about different breakfast traditions. In Canada, many people eat toast, cereal, or eggs in the morning, so rice and miso soup feel a little special to me. I'd love to try that someday. Question 4 of 10: Who made breakfast this morning, you or someone else?"
+      },
+      {
+        "id": 12,
+        "speaker": "Eikichi",
+        "type": "answer",
+        "text": "My wife cooked miso soup, and I made rice ball for my kids."
+      },
+      {
+        "id": 13,
+        "speaker": "Correction",
+        "type": "correction",
+        "grade": "excellent",
+        "corrected": "My wife made miso soup, and I made rice balls for my kids."
+      },
+      {
+        "id": 14,
+        "speaker": "Mary",
+        "type": "reply",
+        "text": "That's wonderful teamwork! Your wife made the miso soup, and you made rice balls for your kids. It sounds like you work together every morning to get your family ready for the day. I'm sure your kids appreciate the delicious breakfast. Question 5 of 10: After breakfast, what did you do before going to work?"
+      },
+      {
+        "id": 15,
+        "speaker": "Eikichi",
+        "type": "answer",
+        "text": "I took my kids to school, and I played Pokémon Go on the way. If we walk to school's spot, we clear a walking task."
+      },
+      {
+        "id": 16,
+        "speaker": "Correction",
+        "type": "correction",
+        "grade": "excellent",
+        "corrected": "I took my kids to school, and we played Pokémon GO on the way. When we walk to the school drop-off spot, we complete a walking task in the game. / I took my kids to school, and I played Pokémon GO on the way. When I walk to the school drop-off spot, I complete a walking task in the game."
+      },
+      {
+        "id": 17,
+        "speaker": "Mary",
+        "type": "reply",
+        "text": "That sounds like a fun way to make your daily routine more enjoyable! I like that you combine walking with Pokémon GO. It gives you a little extra motivation to stay active while taking your kids to school. Walking every morning is a healthy habit. Question 6 of 10: What did you do after you dropped your kids off at school?"
+      },
+      {
+        "id": 18,
+        "speaker": "Eikichi",
+        "type": "answer",
+        "text": "I waved goodbye to them. After that, I visited the park to put the Pokémon on the gym spot in the game."
+      },
+      {
+        "id": 19,
+        "speaker": "Correction",
+        "type": "correction",
+        "grade": "excellent",
+        "corrected": "I waved goodbye to them. After that, I went to the park to place a Pokémon in a Gym in the game. / After dropping them off, I went to the park to put one of my Pokémon in a Gym in Pokémon GO."
+      },
+      {
+        "id": 20,
+        "speaker": "Mary",
+        "type": "reply",
+        "text": "That sounds like a nice morning routine! After saying goodbye to your kids, you had a little time to enjoy Pokémon GO before starting work. I like how you combine family time, exercise, and a fun game. It sounds like a relaxing way to begin your day. Question 7 of 10: After visiting the park, what was the first thing you did when you got home?"
+      },
+      {
+        "id": 21,
+        "speaker": "Eikichi",
+        "type": "answer",
+        "text": "I got dressed, and I went to the government office for work."
+      },
+      {
+        "id": 22,
+        "speaker": "Correction",
+        "type": "correction",
+        "grade": "excellent",
+        "corrected": "I got dressed, and then I went to the government office for work. / After that, I got dressed and went to the government office for work."
+      },
+      {
+        "id": 23,
+        "speaker": "Mary",
+        "type": "reply",
+        "text": "It sounds like you had a productive morning. You spent time with your family, enjoyed a little Pokémon GO, and then headed to the government office. I know your work often involves visiting government offices, so every day is a little different. Thanks for telling me about your morning routine! Question 8 of 10: How did your work at the government office go today?"
+      },
+      {
+        "id": 24,
+        "speaker": "Eikichi",
+        "type": "answer",
+        "text": "It went well. Since government office is not very busy in the morning, I usually go in the morning."
+      },
+      {
+        "id": 25,
+        "speaker": "Correction",
+        "type": "correction",
+        "grade": "excellent",
+        "corrected": "It went well. Since the government office isn't very busy in the morning, I usually go there then. / It went well. I usually visit the government office in the morning because it isn't very busy then."
+      },
+      {
+        "id": 26,
+        "speaker": "Mary",
+        "type": "reply",
+        "text": "That makes a lot of sense. Going in the morning when it's less busy is a smart idea. It probably helps you finish your work more efficiently and gives you more time for other tasks later in the day. I'm glad everything went well today! Question 9 of 10: What are you planning to do after you finish work today?"
+      },
+      {
+        "id": 27,
+        "speaker": "Eikichi",
+        "type": "answer",
+        "text": "I'm planning to read English books aloud after work. Then, I'm going to go home."
+      },
+      {
+        "id": 28,
+        "speaker": "Correction",
+        "type": "correction",
+        "grade": "excellent",
+        "corrected": "I'm planning to read my English books aloud after work. Then, I'm going to go home. / After work, I'm going to read my English books aloud. Then I'll go home."
+      },
+      {
+        "id": 29,
+        "speaker": "Mary",
+        "type": "reply",
+        "text": "That sounds like a great plan! I really admire your consistency. You've been reading aloud every day, and I know you're making steady progress with My Father's Dragon and Charlie and the Chocolate Factory. Your daily practice is one of the reasons your English keeps improving. I hope you enjoy your reading session today! Question 10 of 10: What are you looking forward to the most this week?"
+      },
+      {
+        "id": 30,
+        "speaker": "Eikichi",
+        "type": "answer",
+        "text": "I'm looking forward to seeing my friend this weekend."
+      },
+      {
+        "id": 31,
+        "speaker": "Correction",
+        "type": "correction",
+        "grade": "perfect",
+        "corrected": "I'm looking forward to seeing my friend this weekend."
+      },
+      {
+        "id": 32,
+        "speaker": "Mary",
+        "type": "reply",
+        "text": "That sounds wonderful! I remember you mentioned that you're going to catch up with your friend this weekend. I hope you have a great time together. It's always nice to spend time with friends, especially after a busy week at work. I hope you can relax, enjoy your conversation, and make some happy memories. Congratulations! You completed today's Daily Talk! Rewards Earned: Daily Talk completed, +10 XP."
+      },
+      {
+        "id": 33,
+        "speaker": "System",
+        "type": "system",
+        "text": "End Talk"
+      },
+      {
+        "id": 34,
+        "speaker": "Mary",
+        "type": "reply",
+        "text": "Thank you for talking with me today, Eikichi! Daily Talk completed with 10 rallies. Current Progress: Level 0, Total XP 148/200, Weekly Streak 4/7, Heart Gauge 2/2. Practice Tasks 3/3 and Review Tasks 3/3 remain unchanged."
+      }
+    ]
+  },
+  "jsonType": "session"
+}
