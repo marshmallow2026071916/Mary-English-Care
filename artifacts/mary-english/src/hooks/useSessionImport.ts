@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useGame, type SessionImportData, type FullProgressRestoreData } from "@/context/GameContext";
 import {
   useReviewLog,
@@ -8,6 +8,7 @@ import {
   type ConversationItem,
   type ReviewLogReward,
   type ReviewLogEntry,
+  // upsertSessionEntry imported below via hook destructuring
 } from "@/hooks/useReviewLog";
 
 // Accepted import versions.
@@ -115,6 +116,44 @@ function parseRestoreJSON(
 }
 
 // ─── Review Log Recovery types & parser ───────────────────────────────────────
+
+// ─── Old-session warning ──────────────────────────────────────────────────────
+
+// Exported so TasksScreen can render the confirmation dialog.
+export interface PendingOldSession {
+  sessionDate: string; // date of the imported session (YYYY-MM-DD)
+  latestDate: string;  // date of the latest existing Review Log entry (YYYY-MM-DD)
+}
+
+// Return the latest date (YYYY-MM-DD) across all Review Log entries, or null if empty.
+function getLatestLogDate(entries: ReviewLogEntry[]): string | null {
+  if (entries.length === 0) return null;
+  return entries.reduce((max, e) => {
+    const d = e.date.slice(0, 10);
+    return d > max ? d : max;
+  }, "");
+}
+
+// Returns true when the session being imported is chronologically earlier than
+// the latest saved Review Log entry — meaning future entries would be removed.
+function isSessionOlderThanLog(
+  sessionDate: string,
+  sessionPart: number,
+  entries: ReviewLogEntry[]
+): boolean {
+  const latest = getLatestLogDate(entries);
+  if (!latest) return false;
+  if (sessionDate < latest) return true;
+  if (sessionDate === latest) {
+    const maxPart = entries
+      .filter((e) => e.date.startsWith(latest))
+      .reduce((m, e) => Math.max(m, e.part ?? 1), 0);
+    return sessionPart < maxPart;
+  }
+  return false;
+}
+
+// ─── Review Log duplicate conflict ───────────────────────────────────────────
 
 // Exported so TasksScreen can render the conflict resolution UI.
 export interface PendingConflict {
@@ -445,8 +484,10 @@ export function useSessionImport() {
   const [statusMsg, setStatusMsg] = useState("");
 
   const { gs, actions } = useGame();
-  const { upsertByDate, insertWithMode, entries } = useReviewLog();
+  const { upsertByDate, insertWithMode, upsertSessionEntry, entries } = useReviewLog();
   const [pendingConflict, setPendingConflict] = useState<PendingConflict | null>(null);
+  const [pendingOldSession, setPendingOldSession] = useState<PendingOldSession | null>(null);
+  const pendingOldSessionDataRef = useRef<DailyImportJSON | null>(null);
 
   const clearAll = useCallback(() => {
     setJson1Text("");
@@ -454,6 +495,8 @@ export function useSessionImport() {
     setStatus("idle");
     setStatusMsg("");
     setPendingConflict(null);
+    pendingOldSessionDataRef.current = null;
+    setPendingOldSession(null);
   }, []);
 
   // ── Execute the actual state / localStorage changes for a validated DailyImportJSON
@@ -474,10 +517,14 @@ export function useSessionImport() {
       const rl = data.reviewLog;
       if (rl) {
         const taskType = normalizeTaskType(rl.talkType ?? "");
-        upsertByDate(data.date, {
+        const sessionPart = data.part ?? 1;
+        // Atomic: keeps entries before this session, replaces/adds this entry,
+        // removes same-date later parts and all entries after this session date.
+        upsertSessionEntry(data.date, sessionPart, {
           date: new Date(data.date + "T00:00:00Z").toISOString(),
           level: levelForLog,
           taskType,
+          part: sessionPart,
           messages: rl.messages,
           levelOutfit: rl.levelOutfit,
           maryAvatarVariant: rl.maryAvatarVariant,
@@ -496,7 +543,7 @@ export function useSessionImport() {
 
       return alreadyImported;
     },
-    [gs.level, actions, upsertByDate]
+    [gs.level, actions, upsertSessionEntry]
   );
 
   // ── Core import logic — accepts text strings directly.
@@ -687,6 +734,22 @@ export function useSessionImport() {
         finalData = v1.data;
       }
 
+      // ── Old-session guard ──────────────────────────────────────────────────
+      // If the imported session is chronologically older than the current latest
+      // Review Log entry, pause and ask the user to confirm before wiping future data.
+      const sessionDate = finalData.date;
+      const sessionPart = finalData.part ?? 1;
+      if (isSessionOlderThanLog(sessionDate, sessionPart, entries)) {
+        const latestDate = getLatestLogDate(entries)!;
+        pendingOldSessionDataRef.current = finalData;
+        setPendingOldSession({ sessionDate, latestDate });
+        setStatus("duplicate");
+        setStatusMsg(
+          `This session (${sessionDate}) is older than your current state (${latestDate}).`
+        );
+        return;
+      }
+
       executeImport(finalData);
 
       setStatus("success");
@@ -728,6 +791,26 @@ export function useSessionImport() {
     [pendingConflict, insertWithMode]
   );
 
+  // Confirms importing a session JSON that is older than the current state,
+  // executing the import and clearing the pending confirmation.
+  const confirmOldSession = useCallback(() => {
+    const data = pendingOldSessionDataRef.current;
+    if (!data) return;
+    pendingOldSessionDataRef.current = null;
+    setPendingOldSession(null);
+    executeImport(data);
+    setStatus("success");
+    setStatusMsg("JSON file import completed.");
+  }, [executeImport]);
+
+  // Cancels the pending old-session confirmation, leaving state unchanged.
+  const cancelOldSession = useCallback(() => {
+    pendingOldSessionDataRef.current = null;
+    setPendingOldSession(null);
+    setStatus("idle");
+    setStatusMsg("");
+  }, []);
+
   const resetImportHistory = useCallback(() => {
     clearImported();
     setStatus("idle");
@@ -753,5 +836,8 @@ export function useSessionImport() {
     resetImportHistory,
     pendingConflict,
     resolveConflict,
+    pendingOldSession,
+    confirmOldSession,
+    cancelOldSession,
   };
 }

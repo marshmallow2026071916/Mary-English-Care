@@ -118,6 +118,18 @@ function makeId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
 
+// ─── Sort helper ──────────────────────────────────────────────────────────────
+// Canonical sort order for Review Log storage: date asc, then part asc.
+// Absent part is treated as 1 (backward compat with pre-part entries).
+function sortReviewLog(arr: ReviewLogEntry[]): ReviewLogEntry[] {
+  return [...arr].sort((a, b) => {
+    const da = new Date(a.date).getTime();
+    const db = new Date(b.date).getTime();
+    if (da !== db) return da - db;
+    return (a.part ?? 1) - (b.part ?? 1);
+  });
+}
+
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 export function useReviewLog() {
   const [entries, setEntriesRaw] = useState<ReviewLogEntry[]>(() => loadEntries());
@@ -176,7 +188,7 @@ export function useReviewLog() {
                 (e.part ?? 1) === entryPart
               )
           );
-          return [...filtered, { ...entry, id: makeId() }];
+          return sortReviewLog([...filtered, { ...entry, id: makeId() }]);
         }
         // append: assign the next available part for this date + level
         const existingParts = prev
@@ -184,7 +196,28 @@ export function useReviewLog() {
           .map((e) => e.part ?? 1);
         const nextPart =
           existingParts.length > 0 ? Math.max(...existingParts) + 1 : 2;
-        return [...prev, { ...entry, part: nextPart, id: makeId() }];
+        return sortReviewLog([...prev, { ...entry, part: nextPart, id: makeId() }]);
+      });
+    },
+    [setEntries]
+  );
+
+  // Atomic session-import upsert used by Session JSON import.
+  // Keeps entries strictly BEFORE dateKey (earlier dates), keeps same-date entries
+  // with part < sessionPart, replaces/adds the entry at dateKey+sessionPart, and
+  // removes all same-date entries with part > sessionPart and all entries after dateKey.
+  // Result is always in canonical sort order (date asc, part asc).
+  const upsertSessionEntry = useCallback(
+    (dateKey: string, sessionPart: number, entry: Omit<ReviewLogEntry, "id">) => {
+      setEntries((prev) => {
+        const kept = prev.filter((e) => {
+          const eDate = e.date.slice(0, 10);
+          if (eDate < dateKey) return true;   // before session date → keep
+          if (eDate > dateKey) return false;  // after session date → remove
+          // same date: keep only parts strictly before this session's part
+          return (e.part ?? 1) < sessionPart;
+        });
+        return sortReviewLog([...kept, { ...entry, id: makeId() }]);
       });
     },
     [setEntries]
@@ -307,5 +340,5 @@ export function useReviewLog() {
     [addEntry]
   );
 
-  return { entries, addEntry, upsertByDate, insertWithMode, addSampleEntry, clearLog };
+  return { entries, addEntry, upsertByDate, insertWithMode, upsertSessionEntry, addSampleEntry, clearLog };
 }

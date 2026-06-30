@@ -174,6 +174,7 @@ function ImportSection() {
     showError, status, statusMsg,
     resetImportHistory,
     pendingConflict, resolveConflict,
+    pendingOldSession, confirmOldSession, cancelOldSession,
   } = useSessionImport();
 
   // ── File import handler
@@ -378,9 +379,51 @@ function ImportSection() {
           )}
         </AnimatePresence>
 
+        {/* ── Old-session restore confirmation ── */}
+        <AnimatePresence>
+          {pendingOldSession && (
+            <motion.div
+              key="old-session"
+              initial={{ opacity: 0, height: 0, y: -4 }}
+              animate={{ opacity: 1, height: "auto", y: 0 }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="bg-amber-50 border border-amber-300 rounded-2xl p-4 space-y-3">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-bold text-amber-800">Restore to Earlier State?</p>
+                    <p className="text-xs text-amber-700 mt-1">
+                      This Session JSON is from <strong>{pendingOldSession.sessionDate}</strong>, which is
+                      older than your current state (<strong>{pendingOldSession.latestDate}</strong>).
+                      Importing it will restore the app to that point — later game progress and
+                      Review Logs will be removed.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={cancelOldSession}
+                    className="flex-1 px-3 py-2.5 rounded-xl bg-white border-2 border-amber-400 text-amber-900 text-sm font-bold hover:bg-amber-50 active:scale-[0.98] transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmOldSession}
+                    className="flex-1 px-3 py-2.5 rounded-xl bg-amber-500 text-white text-sm font-bold hover:bg-amber-600 active:scale-[0.98] transition-all"
+                  >
+                    Restore Anyway
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <button
           onClick={handleFileImport}
-          disabled={fileReading || !!pendingConflict}
+          disabled={fileReading || !!pendingConflict || !!pendingOldSession}
           className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-primary-foreground font-bold py-3 rounded-2xl shadow-sm border-b-4 border-primary-foreground/20"
           data-testid="import-btn"
         >

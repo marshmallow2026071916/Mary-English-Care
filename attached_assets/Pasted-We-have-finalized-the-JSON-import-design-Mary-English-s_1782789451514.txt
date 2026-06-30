@@ -1,0 +1,156 @@
+We have finalized the JSON import design.
+
+Mary English supports only three JSON types:
+
+1. jsonType: "session"
+2. jsonType: "game"
+3. jsonType: "review"
+
+==================================================
+1. Session JSON (Official Master Save)
+==================================================
+
+Session JSON is the official master save of Mary English.
+
+It represents the complete application state at the end of that conversation.
+
+When importing a Session JSON:
+
+• Overwrite the entire game progress with the JSON progress.
+• Restore the ReviewLog to exactly the state represented by the Session JSON.
+
+This means:
+
+- ReviewLogs before the imported session remain.
+- The ReviewLog with the same date and part is replaced.
+- Any ReviewLogs after the imported session are removed because they belong to a future application state.
+
+Example:
+
+Current:
+2026-06-28 Part1
+2026-06-29 Part1
+2026-06-30 Part1
+
+Import:
+2026-06-29 Part1 Session JSON
+
+Result:
+2026-06-28 Part1
+2026-06-29 Part1
+
+2026-06-30 Part1 is removed.
+
+Because Session JSON is the official master save.
+
+If the imported Session JSON is older than the latest application state, show a confirmation dialog before importing.
+
+Example:
+
+"This Session JSON is older than your current application state.
+Importing it will restore the application to 2026-06-29.
+Later game progress and ReviewLogs will be removed.
+
+Do you want to continue?"
+
+Buttons:
+
+• Cancel
+• Restore Anyway
+
+==================================================
+2. Game Restore JSON
+==================================================
+
+Game Restore restores only game progress.
+
+It overwrites the current game progress.
+
+It never changes ReviewLog.
+
+It never triggers:
+
+• Level Up
+• Reward popup
+• Heart animation
+• Outfit Showcase
+• Gameplay animations
+
+==================================================
+3. Review Restore JSON
+==================================================
+
+Review Restore restores only ReviewLog.
+
+It never changes game progress.
+
+ReviewLogs must always be inserted in chronological order.
+
+Sorting:
+
+1. Date
+2. Part
+3. createdAt (if available)
+
+Example:
+
+Current:
+2026-06-28 Part1
+2026-06-30 Part1
+
+Import:
+2026-06-29 Part1
+
+Result:
+2026-06-28 Part1
+2026-06-29 Part1
+2026-06-30 Part1
+
+Example:
+
+Current:
+2026-06-29 Part1
+2026-06-29 Part3
+
+Import:
+2026-06-29 Part2
+
+Result:
+2026-06-29 Part1
+2026-06-29 Part2
+2026-06-29 Part3
+
+If the same Date + Part already exists:
+
+Show:
+
+• Skip
+• Overwrite
+• Append as next Part
+
+Append automatically creates the next available Part.
+
+This duplicate handling applies ONLY to Review Restore.
+
+Review Restore must never remove later ReviewLogs.
+
+==================================================
+Architecture
+==================================================
+
+Session JSON is the official master save.
+
+Game Restore and Review Restore are recovery formats.
+
+Session:
+- Overwrite game progress
+- Restore ReviewLog to the imported point in time
+- Gameplay events/popups are allowed
+
+Game:
+- Overwrite game progress only
+- Silent restore
+
+Review:
+- Restore ReviewLog only
+- Never modify game progress
