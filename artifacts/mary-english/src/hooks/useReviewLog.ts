@@ -340,5 +340,14 @@ export function useReviewLog() {
     [addEntry]
   );
 
-  return { entries, addEntry, upsertByDate, insertWithMode, upsertSessionEntry, addSampleEntry, clearLog };
+  // Remove all Review Log entries whose level matches the given level number.
+  // Does not touch game progress (XP, streak, hearts, wardrobe, etc.).
+  const clearByLevel = useCallback(
+    (level: number) => {
+      setEntries((prev) => prev.filter((e) => e.level !== level));
+    },
+    [setEntries]
+  );
+
+  return { entries, addEntry, upsertByDate, insertWithMode, upsertSessionEntry, addSampleEntry, clearLog, clearByLevel };
 }

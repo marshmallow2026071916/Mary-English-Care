@@ -2,13 +2,14 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Copy, CheckCircle2, Upload, X,
-  ChevronDown, ChevronUp, AlertCircle, CheckCircle, Gift, RefreshCw,
+  ChevronDown, ChevronUp, AlertCircle, CheckCircle, Gift, RefreshCw, Trash2,
 } from "lucide-react";
 import { getActiveIconImage } from "@/lib/maryAssets";
 import { BottomNav } from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { useGame } from "@/context/GameContext";
 import { useSessionImport, SAMPLE_JSON } from "@/hooks/useSessionImport";
+import { useReviewLog } from "@/hooks/useReviewLog";
 import { usePwaUpdate } from "@/hooks/usePwaUpdate";
 import { APP_VERSION, APP_BUILD } from "@/lib/version";
 
@@ -593,6 +594,9 @@ function ImportSection() {
 export default function TasksScreen() {
   const { toast } = useToast();
   const [showStartMessage, setShowStartMessage] = useState(false);
+  const [clearLevel, setClearLevel] = useState("");
+  const [confirmClearLevel, setConfirmClearLevel] = useState(false);
+  const { clearByLevel } = useReviewLog();
   const { gs, dailyTalkDone, emote } = useGame();
   const {
     streakCount, equippedOutfit, practiceCount, reviewCount,
@@ -820,6 +824,95 @@ export default function TasksScreen() {
 
         {/* Import Session Data */}
         <ImportSection />
+
+        {/* ── Review Log Maintenance ─────────────────────────────────────────── */}
+        <div className="mb-8">
+          <h2 className="text-lg font-bold text-foreground mb-4 pl-2 border-l-4 border-primary">
+            Review Log Maintenance
+          </h2>
+
+          <div className="bg-card border border-border rounded-2xl p-4 space-y-4">
+            <div>
+              <label
+                htmlFor="clear-level-input"
+                className="block text-xs font-bold text-foreground mb-1.5 pl-1"
+              >
+                Target Level
+              </label>
+              <input
+                id="clear-level-input"
+                type="number"
+                min="0"
+                step="1"
+                value={clearLevel}
+                onChange={(e) => {
+                  setClearLevel(e.target.value);
+                  setConfirmClearLevel(false);
+                }}
+                placeholder="0"
+                className="w-full px-3 py-2.5 rounded-xl border border-border bg-background text-sm font-mono text-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                data-testid="clear-level-input"
+              />
+            </div>
+
+            <button
+              onClick={() => setConfirmClearLevel(true)}
+              disabled={clearLevel === "" || isNaN(parseInt(clearLevel, 10)) || confirmClearLevel}
+              className="w-full flex items-center justify-center gap-2 bg-destructive/10 hover:bg-destructive/20 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-destructive font-bold py-3 rounded-2xl border border-destructive/30"
+              data-testid="clear-level-btn"
+            >
+              <Trash2 className="w-4 h-4" />
+              Clear Review Logs for This Level
+            </button>
+
+            <AnimatePresence>
+              {confirmClearLevel && (
+                <motion.div
+                  key="confirm-clear"
+                  initial={{ opacity: 0, height: 0, y: -4 }}
+                  animate={{ opacity: 1, height: "auto", y: 0 }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="bg-destructive/5 border border-destructive/30 rounded-2xl p-4 space-y-3">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-bold text-destructive">Delete Review Logs?</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          All Review Logs for <strong>Level {parseInt(clearLevel, 10)}</strong> will
+                          be permanently deleted. XP, level, hearts, streak, and wardrobe will not
+                          be affected.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setConfirmClearLevel(false)}
+                        className="flex-1 px-3 py-2.5 rounded-xl bg-card border-2 border-border text-foreground text-sm font-bold hover:bg-secondary/50 active:scale-[0.98] transition-all"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => {
+                          const lvl = parseInt(clearLevel, 10);
+                          clearByLevel(lvl);
+                          setConfirmClearLevel(false);
+                          setClearLevel("");
+                          toast({ description: `Review Logs for Level ${lvl} deleted.`, duration: 2500 });
+                        }}
+                        className="flex-1 px-3 py-2.5 rounded-xl bg-destructive text-white text-sm font-bold hover:bg-destructive/90 active:scale-[0.98] transition-all"
+                        data-testid="confirm-clear-level-btn"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
 
       </div>
       <BottomNav />
