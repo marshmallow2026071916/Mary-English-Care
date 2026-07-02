@@ -37,6 +37,7 @@ export interface PopupCtx {
   reviewMax: number;
   heartRecovered: boolean;
   seasonalUnlocked: boolean;
+  newReviewRewardId: string | null; // review reward image ID just earned (e.g. "review_reward_002")
 }
 
 export interface GameState {
@@ -110,6 +111,7 @@ export interface ImportResult {
   reviewJustCompleted: boolean;      // reviewCount just reached MAX_REVIEW
   heartRecovered: boolean;           // review completed + hearts below max
   seasonalOutfitUnlocked: boolean;   // review completed + hearts already full
+  newReviewRewardId: string | null;  // review reward image ID just unlocked (non-seasonal case)
 }
 
 // ─── Full Progress Restore ────────────────────────────────────────────────────
@@ -230,6 +232,7 @@ const DEFAULT_POPUP_CTX: PopupCtx = {
   reviewMax: MAX_REVIEW,
   heartRecovered: false,
   seasonalUnlocked: false,
+  newReviewRewardId: null,
 };
 
 // ─── Pure helpers ─────────────────────────────────────────────────────────────
@@ -759,6 +762,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       reviewJustCompleted: false,
       heartRecovered: false,
       seasonalOutfitUnlocked: false,
+      newReviewRewardId: null,
     };
 
     let state = { ...prev };
@@ -826,6 +830,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         // Do NOT auto-switch selectedReviewReward — user chooses if/when to equip it.
         if (!state.unlockedReviewRewards.includes("review_reward_002")) {
           state = { ...state, unlockedReviewRewards: [...state.unlockedReviewRewards, "review_reward_002"] };
+          result.newReviewRewardId = "review_reward_002";
         }
       }
     }
@@ -876,6 +881,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       reviewMax: MAX_REVIEW,
       heartRecovered: result.heartRecovered,
       seasonalUnlocked: result.seasonalOutfitUnlocked,
+      newReviewRewardId: result.newReviewRewardId,
     });
 
     // 11. Set main avatar emote for the session

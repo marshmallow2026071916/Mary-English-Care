@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Zap, Star, Sparkles, Heart, BookOpen } from "lucide-react";
 import { useGame, type ModalType } from "@/context/GameContext";
 import { MaryAvatar } from "@/components/MaryAvatar";
-import { OUTFIT_IMAGES, getMaryPortraitPng, OUTFIT_META } from "@/lib/maryAssets";
+import { OUTFIT_IMAGES, getMaryPortraitPng, OUTFIT_META, getReviewRewardImage } from "@/lib/maryAssets";
 
 // ─── Reward Small image picker ────────────────────────────────────────────────
 // Weighted random: 001–004 = 22.5% each, 005 = 10% (intentionally rare).
@@ -458,7 +458,47 @@ function ReviewRewardModal({ onClose, isLast }: { onClose: () => void; isLast: b
     );
   }
 
-  // Fallback (neither flag — shouldn't happen in normal flow)
+  // Review Reward image variant — a new review reward outfit was just unlocked
+  if (popupCtx.newReviewRewardId) {
+    const rewardId = popupCtx.newReviewRewardId;
+    const imgSrc = getReviewRewardImage(rewardId);
+    return (
+      <>
+        <Backdrop onClick={onClose} />
+        <ModalCard big>
+          <div className="bg-gradient-to-br from-teal-300 to-emerald-400 px-6 pt-7 pb-5 text-center relative overflow-hidden">
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/30 to-white/0"
+              animate={{ x: ["-200%", "200%"] }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
+            />
+            <Sparkles className="w-10 h-10 text-teal-900 mx-auto mb-2" />
+            <h2 className="text-xl font-bold text-teal-900">Outfit Showcase Obtained!</h2>
+          </div>
+          <div className="px-6 py-6 flex flex-col items-center gap-5">
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-24 h-28 rounded-2xl overflow-hidden shadow-md bg-gradient-to-br from-teal-100 to-emerald-100">
+                <img
+                  src={imgSrc}
+                  alt="Outfit Showcase"
+                  className="w-full h-full object-contain"
+                  draggable={false}
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).style.display = "none";
+                  }}
+                />
+              </div>
+              <span className="text-sm font-bold text-foreground">Outfit Showcase</span>
+              <span className="text-xs text-muted-foreground">Added to your wardrobe.</span>
+            </div>
+            <NavButton onClose={onClose} isLast={isLast} />
+          </div>
+        </ModalCard>
+      </>
+    );
+  }
+
+  // Fallback (no recognized reward flag — should not occur in normal flow)
   return null;
 }
 
