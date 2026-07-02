@@ -398,8 +398,8 @@ function ImportSection() {
                     <p className="text-xs text-amber-700 mt-1">
                       This Session JSON is from <strong>{pendingOldSession.sessionDate}</strong>, which is
                       older than your current state (<strong>{pendingOldSession.latestDate}</strong>).
-                      Importing it will restore the app to that point — later game progress and
-                      Review Logs will be removed.
+                      Importing it will restore game progress (XP, level, hearts, streak) to that
+                      point. Review Log entries are kept.
                     </p>
                   </div>
                 </div>

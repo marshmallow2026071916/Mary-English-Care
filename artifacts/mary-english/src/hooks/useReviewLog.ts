@@ -340,6 +340,55 @@ export function useReviewLog() {
     [addEntry]
   );
 
+  // Session-import upsert: replaces an existing entry with the same date + part + taskType
+  // (idempotent re-import of the same session), or appends as a new entry otherwise.
+  //
+  // Conflict resolution:
+  //   exact match (date + part + taskType) → overwrite in place
+  //   same date + part but different taskType → assign next available part, append
+  //   no conflict → append directly
+  //
+  // This function is intentionally additive — it never removes entries from other dates.
+  // The old `upsertSessionEntry` would wipe all same-date entries, which caused later
+  // imports of different task types on the same day to silently destroy earlier entries.
+  const appendOrReplaceEntry = useCallback(
+    (entry: Omit<ReviewLogEntry, "id">): void => {
+      const dateKey = entry.date.slice(0, 10);
+      const sessionPart = entry.part ?? 1;
+
+      setEntries((prev) => {
+        // 1. Exact match: same date + part + taskType → idempotent overwrite
+        const exactIdx = prev.findIndex(
+          (e) =>
+            e.date.slice(0, 10) === dateKey &&
+            (e.part ?? 1) === sessionPart &&
+            e.taskType === entry.taskType
+        );
+        if (exactIdx >= 0) {
+          const next = [...prev];
+          next[exactIdx] = { ...entry, id: makeId() };
+          return sortReviewLog(next);
+        }
+
+        // 2. Same date + part but different taskType → assign next available part
+        const slotTaken = prev.some(
+          (e) => e.date.slice(0, 10) === dateKey && (e.part ?? 1) === sessionPart
+        );
+        if (slotTaken) {
+          const existingParts = prev
+            .filter((e) => e.date.slice(0, 10) === dateKey)
+            .map((e) => e.part ?? 1);
+          const nextPart = Math.max(...existingParts) + 1;
+          return sortReviewLog([...prev, { ...entry, part: nextPart, id: makeId() }]);
+        }
+
+        // 3. No conflict → append directly
+        return sortReviewLog([...prev, { ...entry, id: makeId() }]);
+      });
+    },
+    [setEntries]
+  );
+
   // Remove all Review Log entries whose level matches the given level number.
   // Does not touch game progress (XP, streak, hearts, wardrobe, etc.).
   const clearByLevel = useCallback(
@@ -349,5 +398,5 @@ export function useReviewLog() {
     [setEntries]
   );
 
-  return { entries, addEntry, upsertByDate, insertWithMode, upsertSessionEntry, addSampleEntry, clearLog, clearByLevel };
+  return { entries, addEntry, upsertByDate, insertWithMode, upsertSessionEntry, appendOrReplaceEntry, addSampleEntry, clearLog, clearByLevel };
 }

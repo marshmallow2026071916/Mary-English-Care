@@ -484,7 +484,7 @@ export function useSessionImport() {
   const [statusMsg, setStatusMsg] = useState("");
 
   const { gs, actions } = useGame();
-  const { upsertByDate, insertWithMode, upsertSessionEntry, entries } = useReviewLog();
+  const { upsertByDate, insertWithMode, appendOrReplaceEntry, entries } = useReviewLog();
   const [pendingConflict, setPendingConflict] = useState<PendingConflict | null>(null);
   const [pendingOldSession, setPendingOldSession] = useState<PendingOldSession | null>(null);
   const pendingOldSessionDataRef = useRef<DailyImportJSON | null>(null);
@@ -518,9 +518,11 @@ export function useSessionImport() {
       if (rl) {
         const taskType = normalizeTaskType(rl.talkType ?? "");
         const sessionPart = data.part ?? 1;
-        // Atomic: keeps entries before this session, replaces/adds this entry,
-        // removes same-date later parts and all entries after this session date.
-        upsertSessionEntry(data.date, sessionPart, {
+        // Additive: overwrites only if exact same date + part + taskType already exists
+        // (idempotent re-import). Otherwise appends as a new entry, assigning a new part
+        // number if the date+part slot is already occupied by a different task type.
+        // Never removes entries from other dates.
+        appendOrReplaceEntry({
           date: new Date(data.date + "T00:00:00Z").toISOString(),
           level: levelForLog,
           taskType,
@@ -543,7 +545,7 @@ export function useSessionImport() {
 
       return alreadyImported;
     },
-    [gs.level, actions, upsertSessionEntry]
+    [gs.level, actions, appendOrReplaceEntry]
   );
 
   // ── Core import logic — accepts text strings directly.
