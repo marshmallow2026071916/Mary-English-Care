@@ -107,7 +107,7 @@ export interface ImportResult {
   xpGained: number;
   levelBefore: number;
   levelAfter: number;
-  levelOutfitNewlyUnlocked: boolean; // level-up AND outfit wasn't already in wardrobe
+  levelOutfitNewlyUnlocked: boolean; // level-up AND outfit wasn't already in wardrobe (informational only — see note at queue build)
   emoteRewardUnlocked: boolean;      // level-up AND new level % 5 === 0
   reviewCountAfter: number;
   reviewJustCompleted: boolean;      // reviewCount just reached MAX_REVIEW
@@ -835,6 +835,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
     // level is already the authoritative replaced value from step 1; this only
     // decides which popups/rewards to grant for the levels that were crossed.
     if (state.level > prevLevel) {
+      // Silently grant the generic "level" reward outfit, same as every other
+      // in-app level-up path (addXP/completeDailyTalk/completePracticeTalk/
+      // completeReviewTalk) — none of them show a dedicated "New Outfit!" popup
+      // for it, only the Level Up modal. Import replays the same behavior.
       state = addOutfit(state, "level");
       result.leveledUp = true;
       result.levelOutfitNewlyUnlocked = !prev.unlockedOutfits.includes("level");
@@ -907,7 +911,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (result.dailyNewlyCompleted || result.practiceNewlyCompleted)   queue.push("small-reward");
     if (bonusAwarded)                                                  queue.push("weekly-bonus");
     if (result.leveledUp)                                              queue.push("level-up");
-    if (result.levelOutfitNewlyUnlocked)                               queue.push("level-outfit");
+    // Note: the generic "level" reward outfit is granted silently (step 3 above),
+    // matching every other in-app level-up path — none of them show a dedicated
+    // "New Outfit!" popup for it, so import must not invent one here either.
     if (result.emoteRewardUnlocked)                                    queue.push("emote-reward");
     if (result.reviewNewlyCompleted)                                   queue.push("review-progress");
     if (result.reviewJustCompleted)                                    queue.push("review-reward");

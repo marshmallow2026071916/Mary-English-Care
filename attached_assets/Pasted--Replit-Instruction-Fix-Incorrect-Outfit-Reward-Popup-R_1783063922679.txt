@@ -1,0 +1,114 @@
+# Replit Instruction: Fix Incorrect Outfit/Reward Popup Replay
+
+The imported 2026-07-02 Session JSON itself is correct.
+
+This issue appears to be in the popup replay logic only.
+
+Please do not change the JSON format.
+
+Please do not change the saved Progress restoration logic.
+
+Please keep the existing ReviewLog import behavior unchanged.
+
+---
+
+## Observed issue
+
+When importing the 2026-07-02 Session JSON, a popup appeared:
+
+"New Outfit! Level Reward Outfit"
+
+However, this popup is incorrect.
+
+The JSON is not a Review Reward case.
+
+In the imported JSON:
+
+reviewChallengeCompleted = false
+reviewXp = 0
+reviewRewardEarned = false
+
+Therefore, Review Reward / Outfit Showcase popup must not be shown.
+
+Also, the displayed "New Outfit!" popup showed a broken/missing image.
+
+---
+
+## Important distinction
+
+Please separate these concepts:
+
+1. Level Up popup
+2. Level Reward Outfit popup
+3. Review Reward / Outfit Showcase popup
+
+They are not the same event.
+
+---
+
+## Progress is already correct
+
+The actual saved state appears to be restored correctly.
+
+The Wardrobe state follows the imported Progress.
+
+The problem is only the popup presentation layer.
+
+Please do not let popups create, add, unlock, or modify rewards.
+
+Popups are presentation only.
+
+The imported Progress snapshot is the source of truth.
+
+---
+
+## Required behavior
+
+For Session JSON import:
+
+- Restore Progress by replacement.
+- Restore ReviewLog using the existing logic.
+- Replay only the popups that are actually represented by the imported Session JSON.
+- Do not infer or create a reward popup unless the imported Progress explicitly represents that reward event.
+
+For the 2026-07-02 JSON:
+
+Allowed popups:
+
+- Daily XP / Daily Talk completion
+- Weekly Streak Bonus
+- Level Up from Level 0 to Level 1
+
+Not allowed:
+
+- Review Reward popup
+- Outfit Showcase popup
+- New Outfit popup for a reward that was not actually newly earned
+- Any popup that unlocks or modifies rewards again
+
+---
+
+## Level Reward Outfit popup
+
+If the app wants to show a Level Reward Outfit popup when Level 1 is reached, please verify that:
+
+- it is a Level Reward popup, not a Review Reward popup
+- it is based on the imported session result
+- it is presentation only
+- it does not unlock the outfit again
+- it uses the correct valid image asset
+- it is not shown if that outfit/reward already existed before the import
+
+If the app cannot reliably determine that a Level Reward Outfit was newly earned from the imported Session JSON, it is safer to show only the Level Up popup and not show the outfit popup.
+
+---
+
+## Final rule
+
+The 2026-07-02 JSON should restore the correct Level 1 state.
+
+Popup replay should not change Progress.
+
+Please fix only the popup replay logic.
+
+Do not modify the JSON structure, Progress replacement logic, or existing ReviewLog import behavior.
