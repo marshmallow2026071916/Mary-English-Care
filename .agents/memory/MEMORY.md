@@ -1,0 +1,1 @@
+- [Mary English: "Current Appearance Icon" convention](mary-english-appearance-icon.md) — small icon_outfit/icon_review_reward assets vs full-body display images, and which screens use which.
