@@ -13,6 +13,7 @@ export type EmoteState = "idle" | "smile" | "cheer" | "celebration" | "shy";
 export type ModalType =
   | "xp-gained"
   | "small-reward"
+  | "weekly-bonus"
   | "level-up"
   | "level-outfit"
   | "emote-reward"
@@ -38,6 +39,7 @@ export interface PopupCtx {
   heartRecovered: boolean;
   seasonalUnlocked: boolean;
   newReviewRewardId: string | null; // review reward image ID just earned (e.g. "review_reward_002")
+  bonusXpGained: number;       // weeklyStreak bonus XP replayed from imported Session JSON
 }
 
 export interface GameState {
@@ -240,6 +242,7 @@ const DEFAULT_POPUP_CTX: PopupCtx = {
   heartRecovered: false,
   seasonalUnlocked: false,
   newReviewRewardId: null,
+  bonusXpGained: 0,
 };
 
 // ─── Pure helpers ─────────────────────────────────────────────────────────────
@@ -753,16 +756,22 @@ export function GameProvider({ children }: { children: ReactNode }) {
   // XP/level/count formulas are unchanged — only adds review reward logic.
   const importSessionData = useCallback((data: SessionImportData): ImportResult => {
     const prev = gsRef.current;
+    const prevLevel = prev.level;
     const importDate = data.date;
+
+    // Session XP gained THIS session — a breakdown replayed for popups. This is
+    // distinct from data.totalXp, which (like FullProgressRestoreData) is the
+    // absolute cumulative snapshot value, not a delta to add.
+    const sessionXpGained = data.dailyXp + data.practiceXp + data.reviewXp + data.bonusXp;
 
     const result: ImportResult = {
       dailyNewlyCompleted: false,
       practiceNewlyCompleted: false,
       reviewNewlyCompleted: false,
       leveledUp: false,
-      xpGained: data.totalXp,
-      levelBefore: prev.level,
-      levelAfter: prev.level,
+      xpGained: sessionXpGained,
+      levelBefore: prevLevel,
+      levelAfter: prevLevel,
       levelOutfitNewlyUnlocked: false,
       emoteRewardUnlocked: false,
       reviewCountAfter: prev.reviewCount,
@@ -774,47 +783,65 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     let state = { ...prev };
 
-    // 1. Add totalXp (may level-up, resetting practiceCount/reviewCount)
-    state = applyXP(state, data.totalXp);
-
-    // 2. dailyTalkCompleted
-    if (data.dailyTalkCompleted && state.lastDailyDate !== importDate) {
-      const dayBefore = getDayBefore(importDate);
-      if (prev.hearts > 0) {
-        const newStreak = state.lastDailyDate === dayBefore ? state.streakCount + 1 : 1;
-        state = { ...state, lastDailyDate: importDate, streakCount: newStreak };
-        if (newStreak >= 7) {
-          state = applyXP(state, 100);
-          state = { ...state, streakCount: 0 };
+    // ── 1. Restore the progress SNAPSHOT by REPLACEMENT ──────────────────────
+    // level / totalXp / weeklyStreak / heart describe the resulting game state
+    // after the session, not deltas to add on top of the current state — mirrors
+    // restoreFullProgress's xp = totalXp - level*XP_PER_LEVEL formula. Wardrobe
+    // unlocks + practice/review count resets still apply for every level actually
+    // crossed, same as a normal in-app level-up.
+    if (data.level !== undefined) {
+      const newLevel = data.level;
+      const newXp = Math.max(0, Math.min(XP_PER_LEVEL - 1, data.totalXp - newLevel * XP_PER_LEVEL));
+      state = { ...state, level: newLevel, xp: newXp };
+      if (newLevel > prevLevel) {
+        state = { ...state, practiceCount: 0, reviewCount: 0 };
+        for (let lvl = prevLevel + 1; lvl <= newLevel; lvl++) {
+          state = applyWardrobeUnlocksForLevel(state, lvl);
         }
-      } else {
-        // hearts = 0: streak counter stays at 0, no bonus
-        state = { ...state, lastDailyDate: importDate, streakCount: 0 };
       }
-      result.dailyNewlyCompleted = true;
+    } else {
+      // Backward compat only: older Session JSONs without a "level" field can't be
+      // replaced, so fall back to additive XP application.
+      state = applyXP(state, data.totalXp);
     }
 
-    // 3. practiceTalkCompleted
+    if (data.weeklyStreak !== undefined) {
+      state = { ...state, streakCount: Math.max(0, data.weeklyStreak) };
+    }
+
+    if (data.heart !== undefined) {
+      state = setHeartCount(state, data.heart);
+    }
+
+    // ── 2. Replay session-result flags (presentation only) ───────────────────
+    // These flags describe what happened during the session — they do not
+    // recompute progress values, which were already replaced above.
+    if (data.dailyTalkCompleted) {
+      state = { ...state, lastDailyDate: importDate };
+      result.dailyNewlyCompleted = data.dailyXp > 0;
+    }
+
     if (data.practiceTalkCompleted && state.practiceCount < MAX_PRACTICE) {
       state = { ...state, practiceCount: state.practiceCount + 1 };
-      result.practiceNewlyCompleted = true;
     }
+    result.practiceNewlyCompleted = data.practiceTalkCompleted && data.practiceXp > 0;
 
-    // 4. reviewChallengeCompleted
     if (data.reviewChallengeCompleted && state.reviewCount < MAX_REVIEW) {
       state = { ...state, reviewCount: state.reviewCount + 1 };
-      result.reviewNewlyCompleted = true;
     }
+    result.reviewNewlyCompleted = data.reviewChallengeCompleted && data.reviewXp > 0;
 
-    // 5. Level-up detection
-    if (state.level > prev.level) {
+    // ── 3. Level-up popup/reward flags ────────────────────────────────────────
+    // level is already the authoritative replaced value from step 1; this only
+    // decides which popups/rewards to grant for the levels that were crossed.
+    if (state.level > prevLevel) {
       state = addOutfit(state, "level");
       result.leveledUp = true;
       result.levelOutfitNewlyUnlocked = !prev.unlockedOutfits.includes("level");
       result.emoteRewardUnlocked = state.level % 5 === 0;
     }
 
-    // 6. Review reward: when all 3 review tasks complete, recover a heart or
+    // ── 4. Review reward: when all 3 review tasks complete, recover a heart or
     //    unlock the seasonal outfit (whichever applies first).
     //    When hearts are already full and the outfit is granted, hearts drop from 2→1.
     //    Once the seasonal outfit is already earned and hearts are full, unlock the
@@ -840,13 +867,21 @@ export function GameProvider({ children }: { children: ReactNode }) {
           result.newReviewRewardId = "review_reward_002";
         }
       }
+      // Re-assert the imported hearts snapshot as authoritative now that the
+      // reward-driven heart change above has been accounted for in the popup flags.
+      if (data.heart !== undefined) {
+        state = setHeartCount(state, data.heart);
+      }
     }
 
-    // 7. Populate remaining result fields from final state
+    // Weekly Streak Bonus replay — presentation only, driven directly by bonusXp.
+    const bonusAwarded = data.bonusXp > 0;
+
+    // ── 5. Populate remaining result fields from final state ─────────────────
     result.levelAfter = state.level;
     result.reviewCountAfter = state.reviewCount;
 
-    // 8. Apply final state to storage + React
+    // ── 6. Apply final state to storage + React ───────────────────────────────
     //    Note: importedDailyCompleted is managed by the separate DAILY_STATUS_KEY
     //    mechanism (set by setImportedDailyCompleted in useSessionImport) rather
     //    than here, to avoid React batch-update ordering issues.
@@ -865,22 +900,24 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     update(state);
 
-    // 9. Build ordered popup queue — skip types whose event did not occur
+    // ── 7. Build ordered popup queue — driven by the imported session-result
+    //    flags (what happened), not by diffing before/after state.
     const queue: ModalType[] = [];
-    if (data.totalXp > 0)                                              queue.push("xp-gained");
+    if (sessionXpGained > 0)                                           queue.push("xp-gained");
     if (result.dailyNewlyCompleted || result.practiceNewlyCompleted)   queue.push("small-reward");
+    if (bonusAwarded)                                                  queue.push("weekly-bonus");
     if (result.leveledUp)                                              queue.push("level-up");
     if (result.levelOutfitNewlyUnlocked)                               queue.push("level-outfit");
     if (result.emoteRewardUnlocked)                                    queue.push("emote-reward");
     if (result.reviewNewlyCompleted)                                   queue.push("review-progress");
     if (result.reviewJustCompleted)                                    queue.push("review-reward");
 
-    // 10. Set popup context so each modal component can read session-specific data
+    // ── 8. Set popup context so each modal component can read session-specific data
     setPopupCtx({
-      xpGained: data.totalXp,
+      xpGained: sessionXpGained,
       xpBefore: prev.xp,
       xpAfterMod: state.xp,
-      levelBefore: prev.level,
+      levelBefore: prevLevel,
       levelAfter: state.level,
       smallRewardLabel: result.dailyNewlyCompleted ? "Daily Talk Complete" : "Practice Complete",
       emoteReward: result.emoteRewardUnlocked ? getEmoteReward(state.level) : "smile",
@@ -889,9 +926,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       heartRecovered: result.heartRecovered,
       seasonalUnlocked: result.seasonalOutfitUnlocked,
       newReviewRewardId: result.newReviewRewardId,
+      bonusXpGained: data.bonusXp,
     });
 
-    // 11. Set main avatar emote for the session
+    // ── 9. Set main avatar emote for the session
     if (result.leveledUp) {
       setEmote("celebration", false);
     } else if (result.dailyNewlyCompleted || result.practiceNewlyCompleted) {
@@ -900,7 +938,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       setEmote("smile");
     }
 
-    // 12. Activate the popup queue
+    // ── 10. Activate the popup queue
     setModalQueue(queue);
 
     return result;

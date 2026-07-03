@@ -191,6 +191,49 @@ function SmallRewardModal({ onClose, isLast }: { onClose: () => void; isLast: bo
   );
 }
 
+// ─── 2b. Weekly Streak Bonus ────────────────────────────────────────────────────
+// Shown when the imported Session JSON reports bonusXp > 0 (a 7-day streak bonus).
+function WeeklyBonusModal({ onClose, isLast }: { onClose: () => void; isLast: boolean }) {
+  const { popupCtx } = useGame();
+  const { bonusXpGained } = popupCtx;
+
+  return (
+    <>
+      <Backdrop onClick={onClose} />
+      <ModalCard big>
+        <div className="bg-gradient-to-br from-amber-300 to-orange-400 px-6 pt-8 pb-6 text-center relative overflow-hidden">
+          <motion.div
+            className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/30 to-white/0"
+            animate={{ x: ["-200%", "200%"] }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+          />
+          <motion.div
+            animate={{ scale: [1, 1.15, 1] }}
+            transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <Star className="w-12 h-12 text-amber-900 mx-auto fill-amber-900" />
+          </motion.div>
+          <h2 className="text-2xl font-bold text-amber-900 drop-shadow-sm mt-3">
+            Weekly Streak Bonus!
+          </h2>
+          <p className="text-amber-800 font-semibold mt-1 text-sm">+{bonusXpGained} XP</p>
+        </div>
+
+        <div className="px-6 py-6 flex flex-col items-center gap-5">
+          <p className="text-foreground font-semibold text-center leading-relaxed">
+            Amazing consistency, Eikichi!
+            <br />
+            <span className="text-sm font-normal text-muted-foreground">
+              A full week of practice earned you a bonus.
+            </span>
+          </p>
+          <NavButton onClose={onClose} isLast={isLast} />
+        </div>
+      </ModalCard>
+    </>
+  );
+}
+
 // ─── 3. Level Up ──────────────────────────────────────────────────────────────
 // Shows level milestone only. Outfit is celebrated in popup #4 separately.
 function LevelUpModal({ onClose, isLast }: { onClose: () => void; isLast: boolean }) {
@@ -610,6 +653,7 @@ const MODAL_MAP: Record<
 > = {
   "xp-gained":        XpGainedModal,
   "small-reward":     SmallRewardModal,
+  "weekly-bonus":     WeeklyBonusModal,
   "level-up":         LevelUpModal,
   "level-outfit":     LevelOutfitModal,
   "emote-reward":     EmoteRewardModal,

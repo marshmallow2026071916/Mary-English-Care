@@ -1,0 +1,153 @@
+# Replit Instruction: Clarify Session JSON Popups Without Changing JSON Format
+
+Please do not change the JSON format at this stage.
+
+Please keep the existing JSON fields and the existing ReviewLog import behavior.
+
+This instruction is only to clarify how Session JSON popups should be handled.
+
+---
+
+## Existing working behavior must be preserved
+
+The following features are already working and should not be removed or rewritten:
+
+- ReviewLog insertion
+- ReviewLog overwrite
+- ReviewLog skip detection
+- Legacy ReviewLog compatibility
+
+Please preserve these behaviors.
+
+---
+
+## Core concept
+
+A Session JSON has two independent layers.
+
+Layer 1:
+Saved game state snapshot
+
+Layer 2:
+Session result information
+
+These two layers must be handled separately.
+
+---
+
+## 1. Game progress is always restored by replacement
+
+The imported progress values are the saved state after the session.
+
+They must replace the current values.
+
+They must never be added to the current values.
+
+Correct:
+
+totalXp = imported.totalXp
+level = imported.level
+weeklyStreak = imported.weeklyStreak
+
+Incorrect:
+
+totalXp += imported.totalXp
+level += imported.level
+weeklyStreak += imported.weeklyStreak
+
+This applies to XP, level, hearts, tasks, rewards, streaks, and all progress values.
+
+---
+
+## 2. Popups are presentation only
+
+Popups must not be the source of truth for XP, level, rewards, tasks, or unlocks.
+
+The imported JSON progress values are the source of truth.
+
+For example:
+
+- If imported level is 1, the game state should become Level 1.
+- If imported totalXp is 278, totalXp should become 278.
+- If imported rewards are unlocked, the reward state should follow the imported data.
+
+The popup is only an animation/message shown to the user.
+
+A popup must not add XP again.
+A popup must not increase level again.
+A popup must not unlock rewards again if they are already represented in the imported progress.
+
+---
+
+## 3. Session JSON popups should replay session results
+
+For restoreMode = "session", after restoring the snapshot by replacement, the importer should replay the session results represented by the imported JSON.
+
+Do not rely only on before/after state comparison.
+
+The Session JSON is not asking the importer to detect what changed.
+
+The Session JSON represents what happened during that session.
+
+For example, if the imported Session JSON contains:
+
+dailyTalkCompleted = true
+dailyXp > 0
+
+then the Daily Talk Reward popup may be shown.
+
+If:
+
+bonusXp > 0
+
+then the Weekly Streak Bonus popup may be shown.
+
+If the imported data indicates that a level up occurred, then the Level Up popup may be shown.
+
+However, these popups are presentation only and must not modify the already restored progress values.
+
+---
+
+## 4. restoreMode behavior
+
+Use the existing JSON format.
+
+Do not add new sessionEvents fields at this stage.
+
+restoreMode = "session"
+
+- Restore progress by replacement.
+- Restore ReviewLog using existing logic.
+- Replay session result popups.
+- Popups are presentation only.
+
+restoreMode = "full_progress_restore"
+
+- Restore progress by replacement.
+- Do not replay events.
+- Do not show popups.
+
+restoreMode = "legacy_reviewlog_restore"
+
+- Restore ReviewLog only.
+- Do not modify game progress.
+- Do not replay events.
+- Do not show popups.
+
+---
+
+## Final rule
+
+Please do not change the JSON structure now.
+
+Use the existing fields to replay Session JSON popups.
+
+The important rule is:
+
+Progress restoration = replacement.
+
+Popup replay = presentation only.
+
+Popups must never add XP, level, rewards, or tasks again.
+
+Please adjust only the post-import popup flow and keep the existing working ReviewLog import behavior.

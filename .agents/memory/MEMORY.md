@@ -1,1 +1,2 @@
 - [Mary English: "Current Appearance Icon" convention](mary-english-appearance-icon.md) — small icon_outfit/icon_review_reward assets vs full-body display images, and which screens use which.
+- [Mary English: Session JSON import semantics](mary-english-session-import-semantics.md) — progress snapshot fields (level/totalXp/streak/heart) are replaced not added; popups replay from session-result flags.
