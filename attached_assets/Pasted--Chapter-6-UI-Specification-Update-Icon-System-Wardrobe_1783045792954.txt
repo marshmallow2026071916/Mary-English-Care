@@ -1,0 +1,188 @@
+# Chapter 6 UI Specification Update
+## Icon System & Wardrobe Naming Revision
+
+After testing the application, we refined the Chapter 6 UI specification.
+
+Please update the implementation according to the following rules.
+
+---
+
+# 1. Current Appearance Icons
+
+The following screens must always display the Current Appearance Icon instead of the Mary Display Image.
+
+Screens
+
+- Tasks
+- Review Log Header
+- Mary Says
+- Mary Profile
+
+Display
+
+When no Review Reward is selected:
+
+icon_outfit_xxx.png
+
+When a Review Reward is selected:
+
+icon_review_reward_xxx.png
+
+Never display
+
+- outfit_xxx.png
+- outfit_idle_xxx.png
+- bust images
+- full-body images
+
+Even when viewing another Review Log level (Level 0, Level 5, etc.), the Review Log Header must always display the player's current appearance.
+
+---
+
+# 1.5 Mary Display Areas (No Change)
+
+The following screens should continue displaying Mary's full-body image.
+
+Screens
+
+- Home Screen
+- Options Screen (Wardrobe Preview)
+
+Display
+
+Normally:
+
+outfit_xxx.png
+
+When a Review Reward is selected:
+
+review_reward_xxx.png
+
+These screens are NOT Current Appearance Icons.
+
+The current implementation is correct.
+Please do not change this behavior.
+
+---
+
+# 2. Outfit Tab
+
+Each Outfit card must always display
+
+icon_outfit_xxx.png
+
+Do NOT display full-body outfit images inside Outfit cards.
+
+The large preview above the cards should continue displaying the full-body Mary image.
+
+## Outfit Card Titles
+
+Instead of outfit names, display the level at which the outfit is unlocked.
+
+Examples
+
+Level 0
+Level 1
+Level 6
+Level 11
+Level 16
+...
+
+Do NOT use names such as
+
+Black Outfit
+Outfit 001
+
+---
+
+# 3. Rewards Tab
+
+Reward cards should continue displaying
+
+review_reward_xxx.png
+
+This behavior is already correct.
+
+Do NOT replace Reward cards with
+
+icon_review_reward_xxx.png
+
+The icon version is reserved exclusively for Current Appearance Icons.
+
+## Reward Card Titles
+
+Display simple sequential numbering.
+
+Examples
+
+Reward 1
+Reward 2
+Reward 3
+Reward 4
+...
+
+Do NOT generate names from acquisition dates, seasons, or events.
+
+The numbering simply represents the reward order.
+
+---
+
+# 4. Review Log Conversation Cards
+
+Conversation cards inside the Review Log must always display
+
+icon_outfit_xxx.png
+
+Never use
+
+icon_review_reward_xxx.png
+
+The icon must be determined only by the value stored in reviewLog.level.
+
+It must NOT be affected by
+
+- the player's current level
+- the currently equipped outfit
+- the selected Review Log tab
+
+Use the following mapping.
+
+reviewLog.level = 0
+→ icon_outfit_000.png
+
+reviewLog.level = 1–5
+→ icon_outfit_001.png
+
+reviewLog.level = 6–10
+→ icon_outfit_002.png
+
+reviewLog.level = 11–15
+→ icon_outfit_003.png
+
+...
+
+Continue this five-level pattern indefinitely.
+
+Review Reward icons are never used inside Review Log conversation cards.
+
+---
+
+# Final Asset Rules
+
+Please clearly separate these four asset types.
+
+Mary Display Area
+→ outfit_xxx.png
+→ review_reward_xxx.png
+
+Outfit Cards
+→ icon_outfit_xxx.png
+
+Reward Cards
+→ review_reward_xxx.png
+
+Current Appearance Icons
+→ icon_outfit_xxx.png
+→ icon_review_reward_xxx.png
+
+This specification replaces the previous UI behavior and becomes the new Chapter 6 implementation.

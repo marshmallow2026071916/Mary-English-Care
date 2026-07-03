@@ -44,8 +44,12 @@ const EMOTE_LABELS: Record<string, string> = {
   cheer: "Cheer",
 };
 
+// Outfit cards show the unlock level, not a name.
+// outfit_000 → Level 0, outfit_001 → Level 1, outfit_002 → Level 6, outfit_003 → Level 11, ...
 function outfitLabel(outfitId: string): string {
-  return outfitId === "outfit_000" ? "Black Outfit" : `Outfit ${outfitId.split("_")[1]}`;
+  const num = parseInt(outfitId.split("_")[1] ?? "0", 10);
+  const level = num === 0 ? 0 : (num - 1) * 5 + 1;
+  return `Level ${level}`;
 }
 
 const fadePanel = {
@@ -174,8 +178,9 @@ function WardrobeSection() {
               </p>
             ) : (
               <div className="grid grid-cols-2 gap-4">
-                {unlockedReviewRewards.map((rewardId) => {
+                {unlockedReviewRewards.map((rewardId, index) => {
                   const isSelected = selectedReviewReward === rewardId;
+                  const rewardLabel = `Reward ${index + 1}`;
                   return (
                     <motion.div
                       key={rewardId}
@@ -191,13 +196,13 @@ function WardrobeSection() {
                       <div className="w-16 h-20 rounded-xl overflow-hidden bg-secondary/30">
                         <img
                           src={getReviewRewardImage(rewardId)}
-                          alt="Outfit Showcase"
+                          alt={rewardLabel}
                           className="w-full h-full object-contain object-top"
                           draggable={false}
                         />
                       </div>
                       <span className="text-xs font-bold text-center text-foreground leading-tight">
-                        Outfit Showcase
+                        {rewardLabel}
                       </span>
                       {isSelected && (
                         <div className="absolute -top-2 -right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center shadow-sm">
