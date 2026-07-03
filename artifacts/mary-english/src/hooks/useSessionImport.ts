@@ -557,14 +557,21 @@ export function useSessionImport() {
       const imported = loadImported();
       const alreadyImported = imported.has(data.date);
 
-      // Session JSON is the official master save: restore state directly from
-      // the JSON fields with no XP recalculation, no popup queue, and no
-      // animations. restoreFullProgress handles dailyStatus / setImportedDailyCompleted.
+      // Session JSON (restoreMode: "session") represents a normal completed
+      // conversation, so it must run the exact same event evaluation as finishing
+      // a session in-app: XP application, Daily/Practice/Review completion checks,
+      // weekly streak bonus, level-up, and the resulting popup sequence.
+      // (Game Restore / ReviewLog Restore JSON continue to use restoreFullProgress,
+      // which stays fully silent — no popups, no XP recalculation.)
       const levelForLog = data.progress.level ?? gs.level;
-      actions.restoreFullProgress({
-        ...(data.progress as unknown as FullProgressRestoreData),
+      actions.importSessionData({
+        ...data.progress,
         date: data.date,
       });
+      // importSessionData does not touch the separate DAILY_STATUS_KEY-backed
+      // "importedDailyCompleted" flag (see its comment in GameContext.tsx) — set
+      // it explicitly here, same as restoreFullProgress does for Game Restore.
+      actions.setImportedDailyCompleted(data.progress.dailyTalkCompleted);
 
       const rl = data.reviewLog;
       if (rl) {
