@@ -172,6 +172,40 @@ interface ReviewLogRecoveryData {
   maryAvatarVariant?: string;
 }
 
+// ─── restoreMode spec ──────────────────────────────────────────────────────────
+// Exactly three values are official:
+//   "session"                 → Session JSON (normal play session; may trigger popups)
+//   "full_progress_restore"   → Game Restore JSON (progress only; never triggers popups)
+//   "legacy_reviewlog_restore"→ ReviewLog Restore JSON (log only; never triggers popups)
+//
+// Historically some Session JSON exports were mistakenly tagged
+// "full_progress_restore". That value is NOT honored as Session JSON behavior —
+// shape detection (looksLikeSessionShape) always takes priority over a restoreMode
+// flag, so a mistagged file still imports as a normal Session (with popups) rather
+// than silently as a progress-only restore.
+const VALID_RESTORE_MODES = new Set(["session", "full_progress_restore", "legacy_reviewlog_restore"]);
+
+// True when the JSON has the full shape of a normal Session JSON (version +
+// progress with the required numeric/boolean fields), regardless of any
+// restoreMode value it may carry.
+function looksLikeSessionShape(raw: unknown): boolean {
+  if (!raw || typeof raw !== "object") return false;
+  const d = raw as Record<string, unknown>;
+  if (!SUPPORTED_VERSIONS.has(String(d.version))) return false;
+  const p =
+    d.progress && typeof d.progress === "object"
+      ? (d.progress as Record<string, unknown>)
+      : d;
+  return (
+    typeof p.dailyTalkCompleted === "boolean" &&
+    typeof p.totalXp === "number" &&
+    typeof p.dailyXp === "number" &&
+    typeof p.practiceXp === "number" &&
+    typeof p.reviewXp === "number" &&
+    typeof p.bonusXp === "number"
+  );
+}
+
 // A JSON is a Review Log Recovery if it has `date` + `reviewLog` but no `progress`
 // and no `restoreMode` (those two are reserved for the other import modes).
 function isReviewLogRecovery(raw: unknown): boolean {
@@ -275,6 +309,21 @@ function validateProgress(
   if (typeof d.bonusXp !== "number")
     return { ok: false, error: '"progress.bonusXp" must be a number.' };
 
+  // restoreMode is optional on Session JSON. "session" is the only officially
+  // correct value. "full_progress_restore" is tolerated here as a legacy mistake
+  // from old exports (the file still imports as a normal Session — shape wins over
+  // the flag), but any other/unknown value is rejected outright.
+  if (
+    d.restoreMode !== undefined &&
+    d.restoreMode !== "session" &&
+    d.restoreMode !== "full_progress_restore"
+  ) {
+    return {
+      ok: false,
+      error: `Invalid "restoreMode" for a Session JSON. Expected "session", got "${String(d.restoreMode)}".`,
+    };
+  }
+
   // Return normalized progress so GameContext always receives practiceTalkCompleted.
   return {
     ok: true,
@@ -356,6 +405,7 @@ export const SAMPLE_JSON = {
     JSON.stringify(
       {
         version: "3.2",
+        restoreMode: "session",
         date: todayStr(),
         part: 1,
         progress: {
@@ -398,6 +448,7 @@ export const SAMPLE_JSON = {
     JSON.stringify(
       {
         version: "3.2",
+        restoreMode: "session",
         date: todayStr(),
         part: 1,
         progress: {
@@ -438,6 +489,7 @@ export const SAMPLE_JSON = {
     JSON.stringify(
       {
         version: "3.2",
+        restoreMode: "session",
         date: todayStr(),
         part: 1,
         progress: {
@@ -569,22 +621,38 @@ export function useSessionImport() {
         return;
       }
 
-      // ── Extract jsonType (new standard identifier).
-      // When present it takes priority over all legacy shape-based detection.
+      // ── Extract jsonType (new standard identifier) and restoreMode.
+      // jsonType takes priority over all legacy shape-based detection.
       const jsonType =
         parsed1 && typeof parsed1 === "object"
           ? ((parsed1 as Record<string, unknown>).jsonType as string | undefined)
           : undefined;
+      const restoreModeValue =
+        parsed1 && typeof parsed1 === "object"
+          ? ((parsed1 as Record<string, unknown>).restoreMode as string | undefined)
+          : undefined;
+
+      if (restoreModeValue !== undefined && !VALID_RESTORE_MODES.has(restoreModeValue)) {
+        setStatus("error");
+        setStatusMsg(
+          `Invalid "restoreMode": "${restoreModeValue}". Expected "session", "full_progress_restore", or "legacy_reviewlog_restore".`
+        );
+        return;
+      }
+
+      // Session shape always wins: a JSON with the full normal-session shape is
+      // imported as a Session JSON even if it carries a stale/incorrect
+      // restoreMode (e.g. the old "full_progress_restore" mistake).
+      const isSessionShape = looksLikeSessionShape(parsed1);
 
       // 3a. Full Game Progress Restore
       //   Primary:  jsonType === "game"
       //   Fallback: restoreMode === "full_progress_restore" (legacy, kept for compat)
+      //   Never triggered on Session-shaped JSON — see looksLikeSessionShape above.
       const isGameRestore =
-        jsonType === "game" ||
-        (jsonType === undefined &&
-          parsed1 &&
-          typeof parsed1 === "object" &&
-          (parsed1 as Record<string, unknown>).restoreMode === "full_progress_restore");
+        !isSessionShape &&
+        (jsonType === "game" ||
+          (jsonType === undefined && restoreModeValue === "full_progress_restore"));
 
       if (isGameRestore) {
         const restoreResult = parseRestoreJSON(parsed1);
@@ -600,11 +668,13 @@ export function useSessionImport() {
       }
 
       // 3b. Review Log Recovery — restores conversation history only, never touches game progress
-      //   Primary:  jsonType === "review"
+      //   Primary:  jsonType === "review" OR restoreMode === "legacy_reviewlog_restore"
       //   Fallback: auto-detect by shape (date + reviewLog, no progress/restoreMode/jsonType)
       const isReviewRestore =
-        jsonType === "review" ||
-        (jsonType === undefined && isReviewLogRecovery(parsed1));
+        !isSessionShape &&
+        (jsonType === "review" ||
+          restoreModeValue === "legacy_reviewlog_restore" ||
+          (jsonType === undefined && isReviewLogRecovery(parsed1)));
 
       if (isReviewRestore) {
         const r = parseReviewLogRecovery(parsed1);

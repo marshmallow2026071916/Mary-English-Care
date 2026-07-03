@@ -118,6 +118,13 @@ export interface ImportResult {
 // Sent to restoreFullProgress() when the JSON contains restoreMode: "full_progress_restore".
 // All fields except date and restoreMode are optional; missing values fall back to defaults
 // or are reconstructed from the restored level.
+//
+// restoreMode spec (three official values, see useSessionImport.ts):
+//   "session"                  → normal Session JSON, may trigger popups
+//   "full_progress_restore"    → Game Restore JSON (this type), never triggers popups
+//   "legacy_reviewlog_restore" → ReviewLog Restore JSON, never touches progress
+// A Session JSON mistagged with "full_progress_restore" is NOT treated as a Game
+// Restore — shape detection in useSessionImport.ts takes priority over this flag.
 export interface FullProgressRestoreData {
   date: string;                         // YYYY-MM-DD (used as lastImportDate / lastDailyDate)
   // Kept optional for backward compat; superseded by jsonType: "game" going forward.
