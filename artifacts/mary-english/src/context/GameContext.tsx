@@ -19,6 +19,8 @@ export type ModalType =
   | "emote-reward"
   | "review-progress"
   | "review-reward"
+  | "outfit-popup"
+  | "background-popup"
   // Legacy — kept for actions called outside the import flow:
   | "heart"
   | "seasonal"
@@ -40,6 +42,8 @@ export interface PopupCtx {
   seasonalUnlocked: boolean;
   newReviewRewardId: string | null; // review reward image ID just earned (e.g. "review_reward_002")
   bonusXpGained: number;       // weeklyStreak bonus XP replayed from imported Session JSON
+  newOutfitEmoteKey: string | null;  // outfit-emote key to showcase in the Outfit popup (presentation only)
+  newBackgroundId: string | null;    // background id to showcase in the Background popup (presentation only)
 }
 
 export interface GameState {
@@ -90,11 +94,28 @@ export interface SessionImportData {
   bonusXp: number;
   totalXp: number;
   weeklyStreak?: number;
+  // Legacy singular spelling; "hearts" (below) is the preferred field name going
+  // forward. When both are present, "hearts" wins.
   heart?: number;
   level?: number;
   notes?: string[];
   // v3.2: date of last Heart change, as YYYY-MM-DD. Optional for backward compat with v3.1.
   lastHeartChanged?: string;
+
+  // ─── v3.3: Current State fields (source of truth — restored directly, never
+  // inferred from hearts/level/review events). See reconstructOutfitsForLevel /
+  // reconstructBackgroundsForLevel / reconstructReviewRewardsForCount below. ───
+  hearts?: number;                    // current heart count (0..MAX_HEARTS) — preferred over "heart"
+  outfitUnlockedLevel?: number;       // highest outfit/emote unlock level reached
+  backgroundUnlockedLevel?: number;   // highest background unlock level reached (multiple of 5)
+  reviewRewardUnlockedCount?: number; // review rewards earned AFTER the default review_reward_001
+
+  // ─── v3.3: Popup / Presentation flags — presentation ONLY. Showing a popup
+  // must never modify XP/level/hearts/counts/unlocks/selections. ───
+  showOutfitPopup?: boolean;
+  showBackgroundPopup?: boolean;
+  showReviewRewardPopup?: boolean;
+  showHeartPopup?: boolean;
 }
 
 export interface ImportResult {
@@ -243,6 +264,8 @@ const DEFAULT_POPUP_CTX: PopupCtx = {
   seasonalUnlocked: false,
   newReviewRewardId: null,
   bonusXpGained: 0,
+  newOutfitEmoteKey: null,
+  newBackgroundId: null,
 };
 
 // ─── Pure helpers ─────────────────────────────────────────────────────────────
@@ -366,6 +389,63 @@ function applyWardrobeUnlocksForLevel(state: GameState, level: number): GameStat
   }
 
   return next;
+}
+
+// ─── Unlock-state reconstruction (Current State, source of truth) ────────────
+// These fully rebuild the unlocked collections from an explicit snapshot value
+// (outfitUnlockedLevel / backgroundUnlockedLevel / reviewRewardUnlockedCount).
+// They never infer unlocks from hearts, level diffs, or review completions —
+// the imported JSON value is the only input. Reuses getWardrobeRewardsForLevel
+// so the outfit/emote/background pattern itself never changes, only how the
+// resulting set is restored (reconstruction vs incremental per-level diffing).
+
+// Level 0 already unlocks all five outfit_000 emotes (see DEFAULT_STATE).
+function reconstructOutfitsForLevel(outfitUnlockedLevel: number): {
+  outfitIds: string[];
+  emoteKeys: string[];
+} {
+  const outfitIds = new Set<string>(["outfit_000"]);
+  const emoteKeys = new Set<string>(EMOTE_ORDER.map((e) => `outfit_000_${e}`));
+  const clamped = Math.max(0, outfitUnlockedLevel);
+  for (let lvl = 1; lvl <= clamped; lvl++) {
+    const { outfitEmoteKey } = getWardrobeRewardsForLevel(lvl);
+    if (!outfitEmoteKey) continue;
+    emoteKeys.add(outfitEmoteKey);
+    const parts = outfitEmoteKey.split("_");
+    outfitIds.add(parts.slice(0, -1).join("_"));
+  }
+  return { outfitIds: [...outfitIds], emoteKeys: [...emoteKeys] };
+}
+
+// background_001 and background_002 are unlocked from the start (Level 0).
+// Every 5 levels thereafter unlocks the next background in sequence.
+function reconstructBackgroundsForLevel(backgroundUnlockedLevel: number): string[] {
+  const backgrounds = new Set<string>(["background_001", "background_002"]);
+  const clamped = Math.max(0, backgroundUnlockedLevel);
+  const steps = Math.floor(clamped / 5);
+  for (let i = 1; i <= steps; i++) {
+    backgrounds.add(`background_${String(i + 2).padStart(3, "0")}`);
+  }
+  return [...backgrounds];
+}
+
+// review_reward_001 is unlocked by default (count 0). Each additional count
+// unlocks the next sequential reward id.
+function reconstructReviewRewardsForCount(reviewRewardUnlockedCount: number): string[] {
+  const clamped = Math.max(0, reviewRewardUnlockedCount);
+  const rewards = ["review_reward_001"];
+  for (let i = 1; i <= clamped; i++) {
+    rewards.push(`review_reward_${String(i + 1).padStart(3, "0")}`);
+  }
+  return rewards;
+}
+
+// Returns the background id newly reached at a given backgroundUnlockedLevel
+// snapshot value, for popup display only (null at level 0 — nothing "new").
+function getBackgroundIdForLevel(backgroundUnlockedLevel: number): string | null {
+  if (backgroundUnlockedLevel <= 0) return null;
+  const bgNum = Math.floor(backgroundUnlockedLevel / 5) + 2;
+  return `background_${String(bgNum).padStart(3, "0")}`;
 }
 
 // Applies XP and auto-resets practiceCount/reviewCount on level-up.
@@ -809,8 +889,33 @@ export function GameProvider({ children }: { children: ReactNode }) {
       state = { ...state, streakCount: Math.max(0, data.weeklyStreak) };
     }
 
-    if (data.heart !== undefined) {
-      state = setHeartCount(state, data.heart);
+    // "hearts" is the preferred v3.3 field name; "heart" is kept for backward compat.
+    const heartsValue = data.hearts !== undefined ? data.hearts : data.heart;
+    if (heartsValue !== undefined) {
+      state = setHeartCount(state, heartsValue);
+    }
+
+    // ── 1b. Unlock-state fields (Current State, source of truth) ─────────────
+    // These fully RECONSTRUCT the unlocked collections from the imported
+    // snapshot value, overriding whatever the per-level-diff loop above
+    // produced. They are never inferred from hearts, level diffs, or review
+    // completions — the imported JSON value is the only input.
+    if (data.outfitUnlockedLevel !== undefined) {
+      const { outfitIds, emoteKeys } = reconstructOutfitsForLevel(data.outfitUnlockedLevel);
+      // Preserve any specially-earned outfits (e.g. "black", "level", "seasonal")
+      // that fall outside the outfit_NNN level pattern this field governs.
+      const nonPatternOutfits = state.unlockedOutfits.filter((id) => !/^outfit_\d{3}$/.test(id));
+      state = {
+        ...state,
+        unlockedOutfits: [...new Set([...nonPatternOutfits, ...outfitIds])],
+        unlockedOutfitEmotes: emoteKeys,
+      };
+    }
+    if (data.backgroundUnlockedLevel !== undefined) {
+      state = { ...state, unlockedBackgrounds: reconstructBackgroundsForLevel(data.backgroundUnlockedLevel) };
+    }
+    if (data.reviewRewardUnlockedCount !== undefined) {
+      state = { ...state, unlockedReviewRewards: reconstructReviewRewardsForCount(data.reviewRewardUnlockedCount) };
     }
 
     // ── 2. Replay session-result flags (presentation only) ───────────────────
@@ -845,37 +950,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
       result.emoteRewardUnlocked = state.level % 5 === 0;
     }
 
-    // ── 4. Review reward: when all 3 review tasks complete, recover a heart or
-    //    unlock the seasonal outfit (whichever applies first).
-    //    When hearts are already full and the outfit is granted, hearts drop from 2→1.
-    //    Once the seasonal outfit is already earned and hearts are full, unlock the
-    //    next review reward (review_reward_002), without auto-switching the display.
+    // ── 4. Review completion bookkeeping ──────────────────────────────────────
+    // NOTE: Hearts, the seasonal outfit, and Review Reward unlocks are NEVER
+    // inferred from review-task completion counts. They are restored directly
+    // from the Current State fields (hearts / reviewRewardUnlockedCount) in
+    // steps 1/1b above. This step only tracks that the 3rd review task of the
+    // level was reached, for the (unlock-independent) "review-progress" popup.
     if (result.reviewNewlyCompleted && state.reviewCount === MAX_REVIEW) {
       result.reviewJustCompleted = true;
-      if (state.hearts < MAX_HEARTS) {
-        state = setHeartCount(state, state.hearts + 1);
-        result.heartRecovered = true;
-      } else if (!state.unlockedOutfits.includes("seasonal")) {
-        state = addOutfit(state, "seasonal");
-        state = setHeartCount(state, state.hearts - 1); // hearts 2→1 after outfit reward
-        // Also add to review rewards tab so user can select it in the wardrobe
-        if (!state.unlockedReviewRewards.includes("review_reward_001")) {
-          state = { ...state, unlockedReviewRewards: [...state.unlockedReviewRewards, "review_reward_001"] };
-        }
-        result.seasonalOutfitUnlocked = true;
-      } else {
-        // Seasonal outfit already earned and hearts are full: unlock review_reward_002.
-        // Do NOT auto-switch selectedReviewReward — user chooses if/when to equip it.
-        if (!state.unlockedReviewRewards.includes("review_reward_002")) {
-          state = { ...state, unlockedReviewRewards: [...state.unlockedReviewRewards, "review_reward_002"] };
-          result.newReviewRewardId = "review_reward_002";
-        }
-      }
-      // Re-assert the imported hearts snapshot as authoritative now that the
-      // reward-driven heart change above has been accounted for in the popup flags.
-      if (data.heart !== undefined) {
-        state = setHeartCount(state, data.heart);
-      }
     }
 
     // Weekly Streak Bonus replay — presentation only, driven directly by bonusXp.
@@ -906,6 +988,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     // ── 7. Build ordered popup queue — driven by the imported session-result
     //    flags (what happened), not by diffing before/after state.
+    // Popup / Presentation flags (showOutfitPopup / showBackgroundPopup /
+    // showReviewRewardPopup / showHeartPopup) are presentation ONLY — they were
+    // never used above to decide what to unlock, only here to decide what to show.
     const queue: ModalType[] = [];
     if (sessionXpGained > 0)                                           queue.push("xp-gained");
     if (result.dailyNewlyCompleted || result.practiceNewlyCompleted)   queue.push("small-reward");
@@ -916,9 +1001,25 @@ export function GameProvider({ children }: { children: ReactNode }) {
     // "New Outfit!" popup for it, so import must not invent one here either.
     if (result.emoteRewardUnlocked)                                    queue.push("emote-reward");
     if (result.reviewNewlyCompleted)                                   queue.push("review-progress");
-    if (result.reviewJustCompleted)                                    queue.push("review-reward");
+    if (data.showOutfitPopup)                                          queue.push("outfit-popup");
+    if (data.showBackgroundPopup)                                      queue.push("background-popup");
+    if (data.showReviewRewardPopup)                                    queue.push("review-reward");
+    if (data.showHeartPopup)                                           queue.push("heart");
 
     // ── 8. Set popup context so each modal component can read session-specific data
+    const newReviewRewardId =
+      data.showReviewRewardPopup && data.reviewRewardUnlockedCount !== undefined
+        ? `review_reward_${String(data.reviewRewardUnlockedCount + 1).padStart(3, "0")}`
+        : null;
+    const newOutfitEmoteKey =
+      data.showOutfitPopup && data.outfitUnlockedLevel !== undefined
+        ? getWardrobeRewardsForLevel(data.outfitUnlockedLevel).outfitEmoteKey ?? "outfit_000_idle"
+        : null;
+    const newBackgroundId =
+      data.showBackgroundPopup && data.backgroundUnlockedLevel !== undefined
+        ? getBackgroundIdForLevel(data.backgroundUnlockedLevel)
+        : null;
+
     setPopupCtx({
       xpGained: sessionXpGained,
       xpBefore: prev.xp,
@@ -929,10 +1030,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
       emoteReward: result.emoteRewardUnlocked ? getEmoteReward(state.level) : "smile",
       reviewCountAfter: state.reviewCount,
       reviewMax: MAX_REVIEW,
-      heartRecovered: result.heartRecovered,
-      seasonalUnlocked: result.seasonalOutfitUnlocked,
-      newReviewRewardId: result.newReviewRewardId,
+      heartRecovered: false,
+      seasonalUnlocked: false,
+      newReviewRewardId,
       bonusXpGained: data.bonusXp,
+      newOutfitEmoteKey,
+      newBackgroundId,
     });
 
     // ── 9. Set main avatar emote for the session

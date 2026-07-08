@@ -4,7 +4,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Zap, Star, Sparkles, Heart, BookOpen } from "lucide-react";
 import { useGame, type ModalType } from "@/context/GameContext";
 import { MaryAvatar } from "@/components/MaryAvatar";
-import { OUTFIT_IMAGES, getMaryPortraitPng, OUTFIT_META, getReviewRewardImage } from "@/lib/maryAssets";
+import {
+  OUTFIT_IMAGES,
+  getMaryPortraitPng,
+  OUTFIT_META,
+  getReviewRewardImage,
+  getOutfitEmoteImage,
+  getBackgroundImage,
+} from "@/lib/maryAssets";
 
 // ─── Reward Small image picker ────────────────────────────────────────────────
 // Weighted random: 001–004 = 22.5% each, 005 = 10% (intentionally rare).
@@ -545,6 +552,95 @@ function ReviewRewardModal({ onClose, isLast }: { onClose: () => void; isLast: b
   return null;
 }
 
+// ─── Outfit Popup (presentation only — never mutates unlocks/selection) ───────
+function OutfitPopupModal({ onClose, isLast }: { onClose: () => void; isLast: boolean }) {
+  const { popupCtx } = useGame();
+  const emoteKey = popupCtx.newOutfitEmoteKey;
+  if (!emoteKey) return null;
+  const parts = emoteKey.split("_");
+  const outfitId = parts.slice(0, -1).join("_"); // "outfit_003"
+  const emote = parts[parts.length - 1];
+  const imgSrc = getOutfitEmoteImage(outfitId, emote);
+
+  return (
+    <>
+      <Backdrop onClick={onClose} />
+      <ModalCard big>
+        <div className="bg-gradient-to-br from-amber-300 to-orange-400 px-6 pt-7 pb-5 text-center relative overflow-hidden">
+          <motion.div
+            className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/30 to-white/0"
+            animate={{ x: ["-200%", "200%"] }}
+            transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
+          />
+          <Sparkles className="w-10 h-10 text-amber-900 mx-auto mb-2" />
+          <h2 className="text-xl font-bold text-amber-900">New Outfit Unlocked!</h2>
+        </div>
+        <div className="px-6 py-6 flex flex-col items-center gap-5">
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-24 h-28 rounded-2xl overflow-hidden shadow-md bg-gradient-to-br from-amber-100 to-orange-100">
+              <img
+                src={imgSrc}
+                alt="New Outfit"
+                className="w-full h-full object-contain"
+                draggable={false}
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                }}
+              />
+            </div>
+            <span className="text-sm font-bold text-foreground">New Outfit</span>
+            <span className="text-xs text-muted-foreground">Added to your wardrobe.</span>
+          </div>
+          <NavButton onClose={onClose} isLast={isLast} />
+        </div>
+      </ModalCard>
+    </>
+  );
+}
+
+// ─── Background Popup (presentation only — never mutates unlocks/selection) ───
+function BackgroundPopupModal({ onClose, isLast }: { onClose: () => void; isLast: boolean }) {
+  const { popupCtx } = useGame();
+  const bgId = popupCtx.newBackgroundId;
+  if (!bgId) return null;
+  const imgSrc = getBackgroundImage(bgId);
+
+  return (
+    <>
+      <Backdrop onClick={onClose} />
+      <ModalCard big>
+        <div className="bg-gradient-to-br from-sky-300 to-indigo-400 px-6 pt-7 pb-5 text-center relative overflow-hidden">
+          <motion.div
+            className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/30 to-white/0"
+            animate={{ x: ["-200%", "200%"] }}
+            transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
+          />
+          <Sparkles className="w-10 h-10 text-indigo-900 mx-auto mb-2" />
+          <h2 className="text-xl font-bold text-indigo-900">New Background Unlocked!</h2>
+        </div>
+        <div className="px-6 py-6 flex flex-col items-center gap-5">
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-32 h-20 rounded-2xl overflow-hidden shadow-md bg-gradient-to-br from-sky-100 to-indigo-100">
+              <img
+                src={imgSrc}
+                alt="New Background"
+                className="w-full h-full object-cover"
+                draggable={false}
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                }}
+              />
+            </div>
+            <span className="text-sm font-bold text-foreground">New Background</span>
+            <span className="text-xs text-muted-foreground">Added to your wardrobe.</span>
+          </div>
+          <NavButton onClose={onClose} isLast={isLast} />
+        </div>
+      </ModalCard>
+    </>
+  );
+}
+
 // ─── Legacy modals (kept for actions triggered outside import flow) ────────────
 
 function HeartModal({ onClose, isLast }: { onClose: () => void; isLast: boolean }) {
@@ -659,6 +755,8 @@ const MODAL_MAP: Record<
   "emote-reward":     EmoteRewardModal,
   "review-progress":  ReviewProgressModal,
   "review-reward":    ReviewRewardModal,
+  "outfit-popup":     OutfitPopupModal,
+  "background-popup": BackgroundPopupModal,
   // Legacy:
   heart:              HeartModal,
   seasonal:           SeasonalModal,

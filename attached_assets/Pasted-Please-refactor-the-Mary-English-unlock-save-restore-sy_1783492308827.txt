@@ -1,0 +1,293 @@
+Please refactor the Mary English unlock/save/restore system.
+
+This is NOT a Review Reward-only fix.
+
+The goal is to redesign how unlockable content is stored and restored.
+
+The following four systems are included in this change:
+
+- Outfits
+- Backgrounds
+- Review Rewards
+- Heart Gauge
+
+Please do NOT modify the existing behavior of:
+
+- Daily Talk 10-rally popup
+- Weekly 7-day streak popup
+
+They are already working correctly.
+
+--------------------------------------------------
+1. Core Design
+--------------------------------------------------
+
+Separate the following two concepts in the JSON.
+
+1. Current State
+2. Popup / Presentation for this session
+
+The application must restore the current game state directly from the imported JSON.
+
+Do NOT infer unlocks from:
+
+- Heart changes
+- Level differences
+- Review Challenge completion
+- Any other gameplay events
+
+The imported JSON is the source of truth.
+
+Popup flags are presentation only.
+
+Showing a popup must NEVER modify:
+
+- XP
+- Level
+- Hearts
+- Task counts
+- Unlock states
+- Selected wardrobe items
+
+--------------------------------------------------
+2. JSON Structure
+--------------------------------------------------
+
+Please store the new fields directly under the existing "progress" object whenever possible.
+
+Example:
+
+"progress": {
+
+  "outfitUnlockedLevel": 1,
+  "backgroundUnlockedLevel": 0,
+  "reviewRewardUnlockedCount": 1,
+  "hearts": 1,
+
+  "showOutfitPopup": false,
+  "showBackgroundPopup": false,
+  "showReviewRewardPopup": true,
+  "showHeartPopup": true
+
+}
+
+--------------------------------------------------
+3. Outfit Unlock Value
+--------------------------------------------------
+
+outfitUnlockedLevel represents how many outfit/emote images are unlocked.
+
+Special case:
+
+Level 0 already unlocks:
+
+- outfit_idle_000.png
+- outfit_shy_000.png
+- outfit_smile_000.png
+- outfit_wave_000.png
+- outfit_cheer_000.png
+
+Then:
+
+Level 1
+→ unlock outfit_idle_001.png
+
+Level 2
+→ unlock outfit_shy_001.png
+
+Level 3
+→ unlock outfit_smile_001.png
+
+Level 4
+→ unlock outfit_wave_001.png
+
+Level 5
+→ unlock outfit_cheer_001.png
+
+Level 6
+→ unlock outfit_idle_002.png
+
+Continue using the same repeating pattern.
+
+The current outfit unlock behavior, automatic equipment behavior, and displayed result are already correct.
+
+Only the save/restore method changes.
+
+--------------------------------------------------
+4. Background Unlock Value
+--------------------------------------------------
+
+backgroundUnlockedLevel represents the highest unlocked background level.
+
+Level 0:
+
+- background_001.png
+- background_002.png
+
+Level 5:
+
+- background_003.png
+
+Level 10:
+
+- background_004.png
+
+Level 15:
+
+- background_005.png
+
+Continue using the same 5-level pattern.
+
+The current background behavior is already correct.
+
+Only the save/restore method changes.
+
+--------------------------------------------------
+5. Review Reward Unlock Value
+--------------------------------------------------
+
+reviewRewardUnlockedCount means:
+
+How many additional Review Rewards have been earned AFTER the default reward.
+
+Important:
+
+review_reward_001.png is already unlocked by default.
+
+It exists only to verify Review Reward rendering and selection at Level 0.
+
+Mapping:
+
+reviewRewardUnlockedCount = 0
+
+- review_reward_001.png
+
+reviewRewardUnlockedCount = 1
+
+- review_reward_001.png
+- review_reward_002.png
+
+reviewRewardUnlockedCount = 2
+
+- review_reward_001.png
+- review_reward_002.png
+- review_reward_003.png
+
+reviewRewardUnlockedCount = 3
+
+- review_reward_001.png
+- review_reward_002.png
+- review_reward_003.png
+- review_reward_004.png
+
+Continue using the same pattern.
+
+The missing reward in the 2026-07-05 Session JSON is:
+
+review_reward_002.png
+
+Do NOT infer Review Reward ownership from Heart changes.
+
+--------------------------------------------------
+6. Heart Gauge
+--------------------------------------------------
+
+hearts is the current heart count.
+
+0
+→ Heart Gauge 0/2
+
+1
+→ Heart Gauge 1/2
+
+2
+→ Heart Gauge 2/2
+
+Restore the Heart Gauge directly from JSON.
+
+Do NOT infer Hearts from Review Rewards.
+
+Do NOT infer Review Rewards from Hearts.
+
+--------------------------------------------------
+7. Icons
+--------------------------------------------------
+
+Do NOT change the existing Current Appearance Icon logic.
+
+Icons are NOT unlockable content.
+
+Keep the current behavior.
+
+When displaying:
+
+outfit_xxx
+
+automatically use:
+
+icon_outfit_xxx
+
+When displaying:
+
+review_reward_xxx
+
+automatically use:
+
+icon_review_reward_xxx
+
+This logic is already correct.
+
+--------------------------------------------------
+8. Popup Flags
+--------------------------------------------------
+
+Use:
+
+- showOutfitPopup
+- showBackgroundPopup
+- showReviewRewardPopup
+- showHeartPopup
+
+These flags control presentation only.
+
+They must NEVER change game progress.
+
+--------------------------------------------------
+9. Expected Result
+--------------------------------------------------
+
+For the 2026-07-05 Session JSON:
+
+Current State:
+
+- Heart Gauge = 1/2
+- Outfit Unlock Level = 1
+- Background Unlock Level = 0
+- Review Reward Unlock Count = 1
+
+Unlocked Review Rewards:
+
+- review_reward_001.png
+- review_reward_002.png
+
+Popup:
+
+Display:
+
+review_reward_002.png
+
+The popup must NOT unlock anything.
+
+It only presents what has already been restored.
+
+--------------------------------------------------
+10. After Implementation
+--------------------------------------------------
+
+After completing this refactor,
+
+please provide an example of the official Session JSON structure.
+
+Include every newly added field exactly as it is saved.
+
+This JSON example will become the official Session JSON format used by ChatGPT when generating future Mary English Session JSON files.

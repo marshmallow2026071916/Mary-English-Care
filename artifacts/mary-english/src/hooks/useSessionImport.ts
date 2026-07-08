@@ -12,7 +12,7 @@ import {
 } from "@/hooks/useReviewLog";
 
 // Accepted import versions.
-const SUPPORTED_VERSIONS = new Set(["3.0", "3.1", "3.2"]);
+const SUPPORTED_VERSIONS = new Set(["3.0", "3.1", "3.2", "3.3"]);
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type ProgressData = Omit<SessionImportData, "date">;
@@ -485,10 +485,17 @@ export const SAMPLE_JSON = {
       2
     ),
 
+  // Canonical v3.3 example — demonstrates every "Current State" and
+  // "Popup/Presentation" field a future ChatGPT-generated Session JSON should use.
+  //
+  // Current State fields (restored directly, NEVER inferred from hearts/level/review count):
+  //   hearts, outfitUnlockedLevel, backgroundUnlockedLevel, reviewRewardUnlockedCount
+  // Popup/Presentation flags (control which popups show, NEVER affect XP/level/hearts/unlocks):
+  //   showOutfitPopup, showBackgroundPopup, showReviewRewardPopup, showHeartPopup
   reviewTask: () =>
     JSON.stringify(
       {
-        version: "3.2",
+        version: "3.3",
         restoreMode: "session",
         date: todayStr(),
         part: 1,
@@ -502,9 +509,21 @@ export const SAMPLE_JSON = {
           bonusXp: 0,
           totalXp: 210,
           weeklyStreak: 1,
-          heart: 2,
+          hearts: 2,
           level: 1,
           lastHeartChanged: todayStr(),
+          // Current State (source of truth) — set these to the CURRENT snapshot
+          // value, never a delta. They fully replace the corresponding unlock sets.
+          outfitUnlockedLevel: 1,
+          backgroundUnlockedLevel: 0,
+          reviewRewardUnlockedCount: 0,
+          // Popup/Presentation flags — purely cosmetic. Set to true only on the
+          // JSON part where that popup should be shown to the player; they never
+          // change XP, level, hearts, counts, unlocks, or selections themselves.
+          showOutfitPopup: false,
+          showBackgroundPopup: false,
+          showReviewRewardPopup: false,
+          showHeartPopup: false,
           notes: ["Review Challenge completed."],
         },
         reviewLog: {
