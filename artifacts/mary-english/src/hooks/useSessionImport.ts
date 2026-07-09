@@ -236,12 +236,19 @@ function parseReviewLogRecovery(
   if (!Array.isArray(rlObj.messages))
     return { ok: false, error: '"reviewLog.messages" must be an array.' };
 
+  // Review Restore JSON intentionally omits "progress", so reviewLog.level is
+  // the ONLY source of truth for the destination level. Never fall back to a
+  // top-level "level", "progress.level", the current selected tab, the current
+  // progress level, or a default of 0 — a missing value is a validation error.
+  if (typeof rlObj.level !== "number")
+    return { ok: false, error: 'Missing or invalid "reviewLog.level" (must be a number).' };
+
   return {
     ok: true,
     data: {
       date: d.date,
       part: typeof d.part === "number" ? d.part : 1,
-      level: typeof d.level === "number" ? d.level : 0,
+      level: rlObj.level,
       conversationType:
         typeof d.conversationType === "string" ? d.conversationType : "",
       messages: rlObj.messages as Message[],
