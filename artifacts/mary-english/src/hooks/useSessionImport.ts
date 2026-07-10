@@ -160,6 +160,7 @@ export interface PendingConflict {
   newEntry: Omit<ReviewLogEntry, "id">;
   existingEntry: ReviewLogEntry;
   nextPartIfAppend: number;       // pre-computed for display in Append button
+  partsCount: number;             // 1 for a normal single-file restore; >1 for a merged multipart restore
 }
 
 interface ReviewLogRecoveryData {
@@ -219,12 +220,33 @@ function isReviewLogRecovery(raw: unknown): boolean {
   );
 }
 
-function parseReviewLogRecovery(
+// A single parsed-and-shape-checked Review Restore file, before cross-part
+// (multipart) validation. Kept separate from ReviewLogRecoveryData so the
+// merge step can tell "part omitted" apart from "part: 1 explicitly set".
+interface ReviewLogRestorePart {
+  date: string;
+  part: number;
+  hasExplicitPart: boolean;
+  level: number;
+  talkType: string;
+  messages: Message[];
+  levelOutfit?: string;
+  maryAvatarVariant?: string;
+}
+
+function parseReviewLogRestorePart(
   raw: unknown
-): { ok: true; data: ReviewLogRecoveryData } | { ok: false; error: string } {
+): { ok: true; data: ReviewLogRestorePart } | { ok: false; error: string } {
   if (!raw || typeof raw !== "object")
     return { ok: false, error: "JSON must be an object." };
   const d = raw as Record<string, unknown>;
+
+  if (d.restoreMode !== undefined && d.restoreMode !== "legacy_reviewlog_restore") {
+    return {
+      ok: false,
+      error: `Invalid "restoreMode" for a Review Restore JSON. Expected "legacy_reviewlog_restore", got "${String(d.restoreMode)}".`,
+    };
+  }
 
   if (typeof d.date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(d.date))
     return { ok: false, error: 'Missing or invalid "date" field (expected YYYY-MM-DD).' };
@@ -233,8 +255,8 @@ function parseReviewLogRecovery(
   if (!rl || typeof rl !== "object")
     return { ok: false, error: 'Missing "reviewLog" object.' };
   const rlObj = rl as Record<string, unknown>;
-  if (!Array.isArray(rlObj.messages))
-    return { ok: false, error: '"reviewLog.messages" must be an array.' };
+  if (!Array.isArray(rlObj.messages) || rlObj.messages.length === 0)
+    return { ok: false, error: '"reviewLog.messages" must be a non-empty array.' };
 
   // Review Restore JSON intentionally omits "progress", so reviewLog.level is
   // the ONLY source of truth for the destination level. Never fall back to a
@@ -243,14 +265,23 @@ function parseReviewLogRecovery(
   if (typeof rlObj.level !== "number")
     return { ok: false, error: 'Missing or invalid "reviewLog.level" (must be a number).' };
 
+  const talkType =
+    typeof rlObj.talkType === "string"
+      ? rlObj.talkType
+      : typeof d.conversationType === "string"
+      ? d.conversationType
+      : typeof d.talkType === "string"
+      ? d.talkType
+      : "";
+
   return {
     ok: true,
     data: {
       date: d.date,
       part: typeof d.part === "number" ? d.part : 1,
+      hasExplicitPart: typeof d.part === "number",
       level: rlObj.level,
-      conversationType:
-        typeof d.conversationType === "string" ? d.conversationType : "",
+      talkType,
       messages: rlObj.messages as Message[],
       levelOutfit:
         typeof rlObj.levelOutfit === "string" ? rlObj.levelOutfit : undefined,
@@ -258,6 +289,103 @@ function parseReviewLogRecovery(
         typeof rlObj.maryAvatarVariant === "string"
           ? rlObj.maryAvatarVariant
           : undefined,
+    },
+  };
+}
+
+// Validates and merges 1..N Review Restore parts into a single ReviewLogRecoveryData.
+//
+// Single part: behaves exactly like the old single-file import (passthrough).
+// Multiple parts: all parts must share the same date + reviewLog.level, every
+// part must declare an explicit numeric "part", part numbers must be unique
+// and form a complete 1..N sequence, and every part's messages array must be
+// valid. Messages are concatenated in part order and their ids are then
+// renumbered as one continuous 1..N sequence (no gaps, no duplicates) —
+// System messages (e.g. "Practice Talk" / "Daily Talk" section headers) are
+// preserved exactly like any other message, so every conversation section
+// from every part remains visible in the merged log.
+function parseAndMergeReviewLogParts(
+  rawParts: unknown[]
+): { ok: true; data: ReviewLogRecoveryData & { partsCount: number } } | { ok: false; error: string } {
+  const parsedParts: ReviewLogRestorePart[] = [];
+  for (const raw of rawParts) {
+    const r = parseReviewLogRestorePart(raw);
+    if (!r.ok) return r;
+    parsedParts.push(r.data);
+  }
+
+  if (parsedParts.length === 1) {
+    const only = parsedParts[0];
+    return {
+      ok: true,
+      data: {
+        date: only.date,
+        part: only.part,
+        level: only.level,
+        conversationType: only.talkType,
+        messages: only.messages,
+        levelOutfit: only.levelOutfit,
+        maryAvatarVariant: only.maryAvatarVariant,
+        partsCount: 1,
+      },
+    };
+  }
+
+  // ── Multipart validation — check everything before merging/overwriting ────
+  const date0 = parsedParts[0].date;
+  if (!parsedParts.every((p) => p.date === date0)) {
+    return { ok: false, error: "All Review Restore parts must have the same date." };
+  }
+
+  const level0 = parsedParts[0].level;
+  if (!parsedParts.every((p) => p.level === level0)) {
+    return { ok: false, error: "All Review Restore parts must have the same reviewLog.level." };
+  }
+
+  if (!parsedParts.every((p) => p.hasExplicitPart)) {
+    return {
+      ok: false,
+      error: 'Every Review Restore part must include a numeric "part" field to be merged.',
+    };
+  }
+
+  const partNumbers = parsedParts.map((p) => p.part).sort((a, b) => a - b);
+  if (new Set(partNumbers).size !== partNumbers.length) {
+    return { ok: false, error: "Duplicate part numbers found among the selected Review Restore files." };
+  }
+  for (let i = 0; i < partNumbers.length; i++) {
+    if (partNumbers[i] !== i + 1) {
+      return {
+        ok: false,
+        error: `Review Restore parts must form a complete sequence starting from 1 (got: ${partNumbers.join(", ")}).`,
+      };
+    }
+  }
+
+  // ── Sort by part, merge messages in order, then renumber ids 1..N ─────────
+  const sorted = [...parsedParts].sort((a, b) => a.part - b.part);
+  const mergedMessages: Message[] = [];
+  let nextId = 1;
+  for (const p of sorted) {
+    for (const m of p.messages) {
+      mergedMessages.push({ ...m, id: nextId++ });
+    }
+  }
+
+  const first = sorted[0];
+  return {
+    ok: true,
+    data: {
+      date: date0,
+      // Merged parts collapse into a single logical Review Log entry — no
+      // "part" field, matching a normal single-file restore.
+      part: 1,
+      level: level0,
+      conversationType: first.talkType,
+      messages: mergedMessages,
+      levelOutfit: first.levelOutfit,
+      maryAvatarVariant: first.maryAvatarVariant,
+      partsCount: sorted.length,
     },
   };
 }
@@ -710,14 +838,49 @@ export function useSessionImport() {
           (jsonType === undefined && isReviewLogRecovery(parsed1)));
 
       if (isReviewRestore) {
-        const r = parseReviewLogRecovery(parsed1);
-        if (!r.ok) {
+        // If a second file was also selected and it is itself a Review Restore
+        // JSON (same restoreMode/shape), treat both as parts of one multipart
+        // Review Log restoration — validate + merge before touching any data.
+        // If file 2 is absent or isn't Review-Restore-shaped, fall back to the
+        // normal single-file path (unchanged behavior).
+        const rawParts: unknown[] = [parsed1];
+        if (text2.trim()) {
+          let parsed2: unknown;
+          try {
+            parsed2 = JSON.parse(text2);
+          } catch {
+            setStatus("error");
+            setStatusMsg("JSON could not be parsed. Please check the file.");
+            return;
+          }
+          const jsonType2 =
+            parsed2 && typeof parsed2 === "object"
+              ? ((parsed2 as Record<string, unknown>).jsonType as string | undefined)
+              : undefined;
+          const restoreMode2 =
+            parsed2 && typeof parsed2 === "object"
+              ? ((parsed2 as Record<string, unknown>).restoreMode as string | undefined)
+              : undefined;
+          const isSessionShape2 = looksLikeSessionShape(parsed2);
+          const isReviewRestore2 =
+            !isSessionShape2 &&
+            (jsonType2 === "review" ||
+              restoreMode2 === "legacy_reviewlog_restore" ||
+              (jsonType2 === undefined && isReviewLogRecovery(parsed2)));
+          if (isReviewRestore2) {
+            rawParts.push(parsed2);
+          }
+        }
+
+        const merged = parseAndMergeReviewLogParts(rawParts);
+        if (!merged.ok) {
           setStatus("error");
-          setStatusMsg(r.error);
+          setStatusMsg(merged.error);
           return;
         }
-        const data = r.data;
+        const data = merged.data;
         const dateKey = data.date;
+        const isMultipart = data.partsCount > 1;
 
         const newEntry: Omit<ReviewLogEntry, "id"> = {
           date: new Date(dateKey + "T00:00:00Z").toISOString(),
@@ -743,18 +906,29 @@ export function useSessionImport() {
             .map((e) => e.part ?? 1);
           const nextPartIfAppend =
             existingParts.length > 0 ? Math.max(...existingParts) + 1 : 2;
-          setPendingConflict({ newEntry, existingEntry: conflict, nextPartIfAppend });
+          setPendingConflict({
+            newEntry,
+            existingEntry: conflict,
+            nextPartIfAppend,
+            partsCount: data.partsCount,
+          });
           setStatus("duplicate");
           setStatusMsg(
-            `A Review Log already exists for ${dateKey} · Part ${data.part} · Level ${data.level}. Choose an action below.`
+            isMultipart
+              ? `A Review Log already exists for ${dateKey} · Level ${data.level}. Choose an action below.`
+              : `A Review Log already exists for ${dateKey} · Part ${data.part} · Level ${data.level}. Choose an action below.`
           );
           return;
         }
 
-        // No conflict — insert directly
+        // No conflict — insert directly (single overwrite for the whole merged log)
         insertWithMode(newEntry, "overwrite");
         setStatus("success");
-        setStatusMsg(`Review Log imported: ${dateKey} · Part ${data.part}.`);
+        setStatusMsg(
+          isMultipart
+            ? `Review Log overwritten: ${dateKey} · ${data.partsCount} parts merged.`
+            : `Review Log imported: ${dateKey} · Part ${data.part}.`
+        );
         return;
       }
 
@@ -881,12 +1055,17 @@ export function useSessionImport() {
         insertWithMode(pendingConflict.newEntry, mode);
       }
 
+      const partsCount = pendingConflict.partsCount;
       setPendingConflict(null);
       setStatus("success");
       if (mode === "skip") {
         setStatusMsg("Review Log skipped. Existing entry kept.");
       } else if (mode === "overwrite") {
-        setStatusMsg(`Review Log overwritten: ${dateStr} · Part ${part}.`);
+        setStatusMsg(
+          partsCount > 1
+            ? `Review Log overwritten: ${dateStr} · ${partsCount} parts merged.`
+            : `Review Log overwritten: ${dateStr} · Part ${part}.`
+        );
       } else {
         setStatusMsg(
           `Review Log imported as Part ${pendingConflict.nextPartIfAppend}: ${dateStr}.`

@@ -1,0 +1,186 @@
+Please update the Review Restore JSON importer so that multipart Review Restore JSON files work correctly.
+
+Current problem:
+- Multipart import already works for normal Session JSON.
+- However, for Review Restore JSON files using:
+  "restoreMode": "legacy_reviewlog_restore"
+  only Part 1 is restored.
+- Part 2 is ignored or not merged.
+- The UI currently shows:
+  "Review Log overwritten: YYYY-MM-DD · Part 1"
+  even when both Part 1 and Part 2 are selected.
+
+Required behavior:
+
+1. Detect multipart Review Restore JSON files
+
+When multiple selected files have:
+
+- the same "date"
+- the same "restoreMode": "legacy_reviewlog_restore"
+- the same "reviewLog.level"
+- valid numeric "part" values
+
+treat them as parts of one Review Log restoration.
+
+2. Validate all parts before modifying data
+
+Before overwriting any Review Log, verify that:
+
+- every file is valid JSON
+- every file uses:
+  "restoreMode": "legacy_reviewlog_restore"
+- all files have the same date
+- all files have the same reviewLog.level
+- part numbers are unique
+- part numbers form a complete sequence starting from 1
+  for example: 1, 2, 3
+- every file contains a valid reviewLog.messages array
+
+If validation fails:
+
+- do not modify the existing Review Log
+- show a clear error message explaining the problem
+
+3. Sort and merge the parts
+
+Sort the files by the top-level "part" value in ascending order.
+
+Then merge:
+
+- Part 1 reviewLog.messages
+- Part 2 reviewLog.messages
+- Part 3 reviewLog.messages
+- and so on
+
+The final message order must follow the part order.
+
+4. Normalize message IDs
+
+After merging all messages:
+
+- regenerate message IDs as one continuous sequence
+- start from 1
+- preserve the original message order
+
+Example:
+
+Part 1:
+1, 2, 3, ... 11
+
+Part 2:
+1, 2, 3, ... 24
+
+Merged result:
+1, 2, 3, ... 35
+
+Do not leave duplicate message IDs.
+
+5. Preserve every conversation section
+
+Different parts may contain different talk types.
+
+For example:
+
+- Part 1 may begin with a System message whose text is "Practice Talk"
+- Part 2 may begin with a System message whose text is "Daily Talk"
+
+Preserve these System messages and all other conversation messages exactly.
+
+Do not discard Part 2 because its reviewLog.talkType differs from Part 1.
+
+The displayed Review Log should use the preserved System messages to separate the conversation sections.
+
+6. Overwrite only once
+
+After all parts have been validated and merged:
+
+- overwrite the Review Log for the specified date only once
+- use reviewLog.level as the single source of truth for the destination level
+- do not use the current selected tab
+- do not use the current game level
+- do not use progress.level
+- do not recalculate or modify game progress
+
+Review Restore JSON must continue to restore Review Log data only.
+
+It must not modify:
+
+- Progress
+- XP
+- Level
+- Hearts
+- Weekly Streak
+- Tasks
+- Unlock states
+- Rewards
+- Popup flags
+
+7. Keep single-file compatibility
+
+A Review Restore JSON without a "part" field must continue to work as a normal single-file Review Restore import.
+
+A single Review Restore JSON with:
+
+"part": 1
+
+must also continue to work normally.
+
+8. Success message
+
+For a multipart Review Restore import, show a success message such as:
+
+"Review Log overwritten: 2026-07-07 · 2 parts merged."
+
+Do not show only:
+
+"Review Log overwritten: 2026-07-07 · Part 1."
+
+9. Important atomic-import rule
+
+Do not overwrite the Review Log immediately after reading Part 1.
+
+First:
+
+- read every selected Review Restore file
+- validate every part
+- sort all parts
+- merge all messages
+- normalize message IDs
+
+Only then overwrite the destination Review Log.
+
+This prevents Part 1 from being restored while Part 2 is ignored or fails.
+
+10. Do not change normal Session JSON behavior
+
+This update must apply specifically to multipart Review Restore JSON imports.
+
+Do not break or change the existing multipart behavior for normal Session JSON files.
+
+Test case:
+
+File 1:
+- date: 2026-07-07
+- part: 1
+- restoreMode: legacy_reviewlog_restore
+- reviewLog.level: 1
+- talkType: Practice Talk
+- messages: 11 entries
+
+File 2:
+- date: 2026-07-07
+- part: 2
+- restoreMode: legacy_reviewlog_restore
+- reviewLog.level: 1
+- talkType: Daily Talk
+- messages: 24 entries
+
+Expected result:
+
+- one Review Log entry for 2026-07-07 at Level 1
+- both Practice Talk and Daily Talk sections are displayed
+- all 35 messages are preserved in the correct order
+- message IDs are normalized from 1 through 35
+- no game progress is modified
+- the success message confirms that 2 parts were merged
