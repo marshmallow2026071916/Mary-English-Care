@@ -109,6 +109,14 @@ export interface SessionImportData {
   outfitUnlockedLevel?: number;       // highest outfit/emote unlock level reached
   backgroundUnlockedLevel?: number;   // highest background unlock level reached (multiple of 5)
   reviewRewardUnlockedCount?: number; // review rewards earned AFTER the default review_reward_001
+  // Exact current task-progress snapshot for the level, restored verbatim — never
+  // recalculated or incremented from practiceTalkCompleted/reviewChallengeCompleted.
+  // "Remaining" counterparts are accepted for authoring convenience but are not
+  // stored separately; MAX_PRACTICE/MAX_REVIEW are fixed, so remaining = MAX - completed.
+  practiceTasksCompleted?: number;
+  practiceTasksRemaining?: number;
+  reviewTasksCompleted?: number;
+  reviewTasksRemaining?: number;
 
   // ─── v3.3: Popup / Presentation flags — presentation ONLY. Showing a popup
   // must never modify XP/level/hearts/counts/unlocks/selections. ───
@@ -918,20 +926,42 @@ export function GameProvider({ children }: { children: ReactNode }) {
       state = { ...state, unlockedReviewRewards: reconstructReviewRewardsForCount(data.reviewRewardUnlockedCount) };
     }
 
+    // ── 1c. Practice/Review task-progress (Current State, source of truth) ───
+    // When the JSON supplies an exact count, restore it VERBATIM (clamped only
+    // to the valid 0..MAX range) — never recalculated or incremented from the
+    // practiceTalkCompleted/reviewChallengeCompleted presentation flags below.
+    const hasExplicitPracticeCount = data.practiceTasksCompleted !== undefined;
+    const hasExplicitReviewCount = data.reviewTasksCompleted !== undefined;
+    if (hasExplicitPracticeCount) {
+      state = {
+        ...state,
+        practiceCount: Math.max(0, Math.min(MAX_PRACTICE, data.practiceTasksCompleted!)),
+      };
+    }
+    if (hasExplicitReviewCount) {
+      state = {
+        ...state,
+        reviewCount: Math.max(0, Math.min(MAX_REVIEW, data.reviewTasksCompleted!)),
+      };
+    }
+
     // ── 2. Replay session-result flags (presentation only) ───────────────────
-    // These flags describe what happened during the session — they do not
-    // recompute progress values, which were already replaced above.
+    // These flags describe what happened during the session for popup/label
+    // purposes (e.g. "Practice Talk Complete", "+10 XP") — they must NEVER
+    // modify practiceCount/reviewCount when an explicit count was already
+    // restored above. The increment fallback below only fires for older
+    // Session JSONs that omit practiceTasksCompleted/reviewTasksCompleted.
     if (data.dailyTalkCompleted) {
       state = { ...state, lastDailyDate: importDate };
       result.dailyNewlyCompleted = data.dailyXp > 0;
     }
 
-    if (data.practiceTalkCompleted && state.practiceCount < MAX_PRACTICE) {
+    if (!hasExplicitPracticeCount && data.practiceTalkCompleted && state.practiceCount < MAX_PRACTICE) {
       state = { ...state, practiceCount: state.practiceCount + 1 };
     }
     result.practiceNewlyCompleted = data.practiceTalkCompleted && data.practiceXp > 0;
 
-    if (data.reviewChallengeCompleted && state.reviewCount < MAX_REVIEW) {
+    if (!hasExplicitReviewCount && data.reviewChallengeCompleted && state.reviewCount < MAX_REVIEW) {
       state = { ...state, reviewCount: state.reviewCount + 1 };
     }
     result.reviewNewlyCompleted = data.reviewChallengeCompleted && data.reviewXp > 0;
