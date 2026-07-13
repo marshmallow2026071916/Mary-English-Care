@@ -730,8 +730,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const selectEmote = useCallback((emote: string) => {
     const prev = gsRef.current;
-    const key = `${prev.selectedOutfit}_${emote}`;
-    if (!prev.unlockedOutfitEmotes.includes(key)) return;
+    // An emote may be selected if it is unlocked for ANY outfit — availability
+    // is determined solely by the unlock state, not by the currently selected outfit.
+    const isUnlocked = prev.unlockedOutfitEmotes.some((k) => k.split("_").pop() === emote);
+    if (!isUnlocked) return;
     update({ ...prev, selectedEmote: emote, selectedReviewReward: null });
   }, [update]);
 

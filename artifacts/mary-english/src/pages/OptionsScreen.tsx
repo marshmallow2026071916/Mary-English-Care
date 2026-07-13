@@ -80,10 +80,13 @@ function WardrobeSection() {
     if (!unlockedOutfitIds.includes(id)) unlockedOutfitIds.push(id);
   }
 
-  // Emotes available for the currently selected outfit
-  const availableEmotes = unlockedOutfitEmotes
-    .filter((k) => k.startsWith(selectedOutfit + "_"))
-    .map((k) => k.split("_").pop()!);
+  // An emote type is available if it is unlocked for ANY outfit — not just the
+  // currently selected one. Availability (enabled/disabled) must be determined
+  // solely by the unlock state; currentOutfit / selectedOutfit only determines
+  // which item is highlighted as selected, never whether items are enabled.
+  const availableEmotes = new Set(
+    unlockedOutfitEmotes.map((k) => k.split("_").pop()!)
+  );
 
   return (
     <div className="mb-8">
@@ -146,7 +149,7 @@ function WardrobeSection() {
         {tab === "emotes" && (
           <motion.div key="emotes" {...fadePanel} className="flex flex-col gap-2">
             {ALL_EMOTES.map((emote) => {
-              const available = availableEmotes.includes(emote);
+              const available = availableEmotes.has(emote);
               const isSelected = selectedEmote === emote && !selectedReviewReward;
               return (
                 <button
