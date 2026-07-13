@@ -80,12 +80,15 @@ function WardrobeSection() {
     if (!unlockedOutfitIds.includes(id)) unlockedOutfitIds.push(id);
   }
 
-  // An emote type is available if it is unlocked for ANY outfit — not just the
-  // currently selected one. Availability (enabled/disabled) must be determined
-  // solely by the unlock state; currentOutfit / selectedOutfit only determines
-  // which item is highlighted as selected, never whether items are enabled.
+  // Emotes available for the outfit currently selected in the wardrobe.
+  // Availability (enabled/disabled) is determined by the unlock state for
+  // selectedOutfit — NOT by equippedOutfit / currentOutfit (what Mary is wearing).
+  // equippedOutfit only affects what is shown on the main screen; it must
+  // never influence which emotes are enabled or disabled here.
   const availableEmotes = new Set(
-    unlockedOutfitEmotes.map((k) => k.split("_").pop()!)
+    unlockedOutfitEmotes
+      .filter((k) => k.startsWith(selectedOutfit + "_"))
+      .map((k) => k.split("_").pop()!)
   );
 
   return (
