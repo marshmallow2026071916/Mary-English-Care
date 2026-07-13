@@ -80,14 +80,21 @@ function WardrobeSection() {
     if (!unlockedOutfitIds.includes(id)) unlockedOutfitIds.push(id);
   }
 
-  // Emotes available for the outfit currently selected in the wardrobe.
-  // Availability (enabled/disabled) is determined by the unlock state for
-  // selectedOutfit — NOT by equippedOutfit / currentOutfit (what Mary is wearing).
-  // equippedOutfit only affects what is shown on the main screen; it must
-  // never influence which emotes are enabled or disabled here.
+  // The highest-numbered outfit in the progression (e.g. "outfit_001" at Level 2).
+  // Emote availability is anchored to this outfit — NOT to selectedOutfit.
+  // This means switching which outfit card is highlighted in the Outfits tab
+  // never changes which emotes appear enabled or disabled here.
+  // Unlock progression: Level 1 → outfit_001_idle, Level 2 → outfit_001_shy, etc.
+  // So outfit_001 being highest at Level 2 correctly enables only idle + shy.
+  const highestOutfitNum = Math.max(
+    0,
+    ...unlockedOutfitEmotes.map((k) => parseInt(k.split("_")[1] ?? "0", 10)).filter((n) => !isNaN(n))
+  );
+  const highestOutfitId = `outfit_${String(highestOutfitNum).padStart(3, "0")}`;
+
   const availableEmotes = new Set(
     unlockedOutfitEmotes
-      .filter((k) => k.startsWith(selectedOutfit + "_"))
+      .filter((k) => k.startsWith(highestOutfitId + "_"))
       .map((k) => k.split("_").pop()!)
   );
 

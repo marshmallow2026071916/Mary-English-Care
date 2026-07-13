@@ -730,10 +730,17 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const selectEmote = useCallback((emote: string) => {
     const prev = gsRef.current;
-    // Availability is determined by the unlock state for the currently selected
-    // outfit in the wardrobe (selectedOutfit) — never by equippedOutfit.
-    const key = `${prev.selectedOutfit}_${emote}`;
-    if (!prev.unlockedOutfitEmotes.includes(key)) return;
+    // Guard uses the highest-numbered unlocked outfit — matching the availability
+    // logic in WardrobeSection — so selectOutfit can never gate which emotes
+    // are clickable. Unlock state is never modified here; only selectedEmote changes.
+    const highestNum = Math.max(
+      0,
+      ...prev.unlockedOutfitEmotes
+        .map((k) => parseInt(k.split("_")[1] ?? "0", 10))
+        .filter((n) => !isNaN(n))
+    );
+    const highestOutfitId = `outfit_${String(highestNum).padStart(3, "0")}`;
+    if (!prev.unlockedOutfitEmotes.includes(`${highestOutfitId}_${emote}`)) return;
     update({ ...prev, selectedEmote: emote, selectedReviewReward: null });
   }, [update]);
 
