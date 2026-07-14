@@ -78,16 +78,6 @@ export interface GameState {
   selectedEmote: string;                // "idle" | "shy" | "smile" | "wave" | "cheer"
   selectedReviewReward: string | null;  // e.g. "review_reward_001" or null
   selectedBackground: string;           // e.g. "background_001"
-  // outfitUnlockedLevel is the authoritative source for which emotes are available.
-  // It is ONLY written by the unlock system (applyWardrobeUnlocksForLevel /
-  // importSessionData outfitUnlockedLevel block). Selection actions (selectOutfit /
-  // selectEmote) NEVER modify it. The UI derives availableEmotes purely from this
-  // field so that selecting an outfit or emote can never change which emotes appear
-  // enabled or disabled.
-  //   0       → outfit_000, all 5 emotes (from DEFAULT_STATE)
-  //   1–5     → outfit_001, first N emotes unlocked
-  //   6–10    → outfit_002, first (N−5) emotes unlocked, etc.
-  outfitUnlockedLevel: number;
   unlockedOutfitEmotes: string[];       // e.g. ["outfit_000_idle", "outfit_001_shy"]
   unlockedBackgrounds: string[];        // e.g. ["background_001"]
   unlockedReviewRewards: string[];      // e.g. ["review_reward_001"]
@@ -261,7 +251,6 @@ const DEFAULT_STATE: GameState = {
   selectedEmote: "idle",
   selectedReviewReward: null,
   selectedBackground: "background_001",
-  outfitUnlockedLevel: 0,
   unlockedOutfitEmotes: ["outfit_000_idle", "outfit_000_shy", "outfit_000_smile", "outfit_000_wave", "outfit_000_cheer"],
   // background_002 unlocked from the start for Level 0 testing
   unlockedBackgrounds: ["background_001", "background_002"],
@@ -308,21 +297,6 @@ function setHeartCount(state: GameState, newHearts: number): GameState {
 // Applies the 14-day inactivity decay rule on app load (called synchronously in loadState).
 // Each 14-day period without a heart change decreases hearts by 1, min 0.
 // If lastHeartChangedAt is absent (first load with new field), initialises it to now with no decay.
-// Derives outfitUnlockedLevel from unlockedOutfitEmotes for backward-compat when
-// loading stored state that pre-dates the outfitUnlockedLevel field.
-// Returns 0 if only outfit_000 emotes are present (DEFAULT_STATE baseline).
-function deriveOutfitUnlockedLevel(unlockedOutfitEmotes: string[]): number {
-  const nums = unlockedOutfitEmotes
-    .map((k) => parseInt(k.split("_")[1] ?? "-1", 10))
-    .filter((n) => n >= 0);
-  if (nums.length === 0) return 0;
-  const highestNum = Math.max(...nums);
-  if (highestNum === 0) return 0;
-  const highestId = `outfit_${String(highestNum).padStart(3, "0")}`;
-  const emoteCount = unlockedOutfitEmotes.filter((k) => k.startsWith(`${highestId}_`)).length;
-  return (highestNum - 1) * 5 + emoteCount;
-}
-
 function applyInactivityDecay(state: GameState): GameState {
   if (state.hearts === 0) return state;
   const now = new Date();
@@ -339,8 +313,7 @@ function loadState(): GameState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULT_STATE };
-    const storedParsed = JSON.parse(raw);
-    const loaded: GameState = { ...DEFAULT_STATE, ...storedParsed };
+    const loaded: GameState = { ...DEFAULT_STATE, ...JSON.parse(raw) };
 
     // Always ensure the Level-0 test assets are present, even for users whose
     // stored state pre-dates their addition to DEFAULT_STATE. Using Set merges
@@ -351,17 +324,8 @@ function loadState(): GameState {
     const rwSet = new Set(loaded.unlockedReviewRewards);
     DEFAULT_STATE.unlockedReviewRewards.forEach((id) => rwSet.add(id));
 
-    // Backward compat: derive outfitUnlockedLevel for stored states that
-    // pre-date this field. The '0' in DEFAULT_STATE is overwritten by the
-    // spread from parsed JSON, so we detect its absence via the raw object.
-    const outfitUnlockedLevelPatch: Partial<GameState> =
-      !("outfitUnlockedLevel" in storedParsed)
-        ? { outfitUnlockedLevel: deriveOutfitUnlockedLevel(loaded.unlockedOutfitEmotes) }
-        : {};
-
     const patched: GameState = {
       ...loaded,
-      ...outfitUnlockedLevelPatch,
       unlockedBackgrounds: [...bgSet],
       unlockedReviewRewards: [...rwSet],
     };
@@ -414,7 +378,6 @@ function applyWardrobeUnlocksForLevel(state: GameState, level: number): GameStat
     const outfitId = parts.slice(0, -1).join("_"); // "outfit_001"
     next = {
       ...next,
-      outfitUnlockedLevel: Math.max(next.outfitUnlockedLevel ?? 0, level),
       unlockedOutfitEmotes: [...next.unlockedOutfitEmotes, outfitEmoteKey],
       selectedOutfit: outfitId,
       selectedEmote: emote,
@@ -732,7 +695,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
       selectedEmote: "idle",
       selectedReviewReward: null,
       selectedBackground: "background_001",
-      outfitUnlockedLevel: 0,
       unlockedOutfitEmotes: ["outfit_000_idle", "outfit_000_shy", "outfit_000_smile", "outfit_000_wave", "outfit_000_cheer"],
       unlockedBackgrounds: ["background_001"],
       unlockedReviewRewards: [],
@@ -768,13 +730,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const selectEmote = useCallback((emote: string) => {
     const prev = gsRef.current;
-    // Guard uses outfitUnlockedLevel — the same source of truth as WardrobeSection —
-    // so selectOutfit/selectedOutfit can never influence which emotes are selectable.
-    // Unlock state is never modified here; only selectedEmote changes.
-    const outfitUnlockedLevel = prev.outfitUnlockedLevel ?? 0;
-    const emoteCountUnlocked = outfitUnlockedLevel === 0 ? 5 : ((outfitUnlockedLevel - 1) % 5) + 1;
-    const emoteIndex = EMOTE_ORDER.indexOf(emote as typeof EMOTE_ORDER[number]);
-    if (emoteIndex < 0 || emoteIndex >= emoteCountUnlocked) return;
+    // Guard: the emote must be unlocked for the currently selected outfit.
+    // unlockedOutfitEmotes is reconstructed from outfitUnlockedLevel (in the
+    // imported JSON) via reconstructOutfitsForLevel — it is the authoritative
+    // unlock list. Only selectedEmote changes here; unlock state is never modified.
+    if (!prev.unlockedOutfitEmotes.includes(`${prev.selectedOutfit}_${emote}`)) return;
     update({ ...prev, selectedEmote: emote, selectedReviewReward: null });
   }, [update]);
 
@@ -860,7 +820,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
       importedDailyCompleted: dailyTalkCompleted,
       lastImportDate: data.date,
       unlockedOutfits,
-      outfitUnlockedLevel: deriveOutfitUnlockedLevel(unlockedOutfitEmotes),
       unlockedOutfitEmotes,
       unlockedBackgrounds,
       unlockedReviewRewards,
@@ -961,9 +920,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
         ...state,
         unlockedOutfits: [...new Set([...nonPatternOutfits, ...outfitIds])],
         unlockedOutfitEmotes: emoteKeys,
-        // Store outfitUnlockedLevel as first-class state so the UI can derive
-        // availableEmotes purely from this field — independent of any selection.
-        outfitUnlockedLevel: data.outfitUnlockedLevel,
       };
     }
     if (data.backgroundUnlockedLevel !== undefined) {

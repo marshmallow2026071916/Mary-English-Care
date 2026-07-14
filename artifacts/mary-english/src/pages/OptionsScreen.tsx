@@ -80,17 +80,16 @@ function WardrobeSection() {
     if (!unlockedOutfitIds.includes(id)) unlockedOutfitIds.push(id);
   }
 
-  // availableEmotes is derived PURELY from outfitUnlockedLevel — the single
-  // authoritative field set only by the unlock system. Selecting an outfit or
-  // emote never modifies outfitUnlockedLevel, so this computation is stable
-  // across all selection actions.
-  //
-  // outfitUnlockedLevel 0       → outfit_000, all 5 emotes available
-  // outfitUnlockedLevel 1–5    → outfit_001, first N emotes (idle…cheer)
-  // outfitUnlockedLevel 6–10   → outfit_002, first (N−5) emotes, etc.
-  const outfitUnlockedLevel = gs.outfitUnlockedLevel ?? 0;
-  const emoteCountUnlocked = outfitUnlockedLevel === 0 ? 5 : ((outfitUnlockedLevel - 1) % 5) + 1;
-  const availableEmotes = new Set<string>(ALL_EMOTES.slice(0, emoteCountUnlocked));
+  // availableEmotes: which emotes are unlocked for the currently selected outfit.
+  // Derived from unlockedOutfitEmotes filtered by selectedOutfit — the same array
+  // that importSessionData reconstructs from outfitUnlockedLevel via
+  // reconstructOutfitsForLevel. Selecting a different outfit changes the view;
+  // selecting an emote never changes selectedOutfit so this is always stable.
+  const availableEmotes = new Set(
+    unlockedOutfitEmotes
+      .filter((k) => k.startsWith(selectedOutfit + "_"))
+      .map((k) => k.split("_").pop()!)
+  );
 
   return (
     <div className="mb-8">
