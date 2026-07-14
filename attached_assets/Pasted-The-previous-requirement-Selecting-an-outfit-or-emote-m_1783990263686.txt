@@ -1,0 +1,96 @@
+The previous requirement, "Selecting an outfit or emote must never modify the unlock state," is still not fully satisfied.
+
+Current behavior:
+
+At Level 2 (outfitUnlockedLevel = 2), the Wardrobe initially behaves correctly.
+
+The following emotes for outfit_001 are available:
+
+Unlocked:
+- outfit_idle_001.png
+- outfit_shy_001.png
+
+Locked:
+- outfit_smile_001.png
+- outfit_wave_001.png
+- outfit_cheer_001.png
+
+However, after selecting an outfit or an emote, outfit_shy_001.png is no longer selectable, and only outfit_idle_001.png remains selectable.
+
+This is not the expected behavior.
+
+--------------------------------------------------
+Official Unlock State
+--------------------------------------------------
+
+At Level 2 (outfitUnlockedLevel = 2), the official unlock state for outfit_001 must always remain:
+
+Unlocked:
+- outfit_idle_001.png
+- outfit_shy_001.png
+
+Locked:
+- outfit_smile_001.png
+- outfit_wave_001.png
+- outfit_cheer_001.png
+
+This unlock state must NEVER change because of outfit or emote selection.
+
+--------------------------------------------------
+Selection must NOT
+--------------------------------------------------
+
+Selecting an outfit or an emote must NEVER:
+
+- modify the unlock state
+- recalculate the unlock state
+- reset the unlock state
+- overwrite the unlock state
+- filter the unlocked list
+- rebuild the unlocked list based on the current selection
+
+Selection should only change the currently displayed outfit or emote.
+
+--------------------------------------------------
+Selectable state in the Wardrobe UI
+--------------------------------------------------
+
+It is NOT sufficient that outfitUnlockedLevel remains unchanged.
+
+After any selection operation, every unlocked outfit and emote must still remain selectable in the Wardrobe UI.
+
+Please verify that the selectable list is always derived from the official unlock state.
+
+At Level 2, after any of the following operations:
+
+- selecting another outfit
+- selecting another emote
+- switching to outfit_000
+- switching back to outfit_001
+- reopening the Wardrobe
+
+the following emotes must still be selectable:
+
+- outfit_idle_001.png
+- outfit_shy_001.png
+
+outfit_shy_001.png must never become unavailable or appear as locked.
+
+--------------------------------------------------
+Please inspect the selection logic
+--------------------------------------------------
+
+Please inspect the outfit/emote selection handler and identify why the selectable emote list changes after a selection.
+
+In particular, verify that the selection logic does NOT:
+
+- rebuild the unlocked list
+- filter the unlocked list based on selectedOutfit or selectedEmote
+- treat only the currently selected emote as unlocked
+- replace the unlocked list with the current selection
+
+The only source of truth for unlocked outfits and emotes must be outfitUnlockedLevel.
+
+selectedOutfit and selectedEmote must never be used to determine which outfits or emotes are unlocked or selectable.
+
+Please keep the existing unlock rules unchanged and ensure that both the official unlock state and the selectable state remain consistent after every selection.

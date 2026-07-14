@@ -80,23 +80,17 @@ function WardrobeSection() {
     if (!unlockedOutfitIds.includes(id)) unlockedOutfitIds.push(id);
   }
 
-  // The highest-numbered outfit in the progression (e.g. "outfit_001" at Level 2).
-  // Emote availability is anchored to this outfit — NOT to selectedOutfit.
-  // This means switching which outfit card is highlighted in the Outfits tab
-  // never changes which emotes appear enabled or disabled here.
-  // Unlock progression: Level 1 → outfit_001_idle, Level 2 → outfit_001_shy, etc.
-  // So outfit_001 being highest at Level 2 correctly enables only idle + shy.
-  const highestOutfitNum = Math.max(
-    0,
-    ...unlockedOutfitEmotes.map((k) => parseInt(k.split("_")[1] ?? "0", 10)).filter((n) => !isNaN(n))
-  );
-  const highestOutfitId = `outfit_${String(highestOutfitNum).padStart(3, "0")}`;
-
-  const availableEmotes = new Set(
-    unlockedOutfitEmotes
-      .filter((k) => k.startsWith(highestOutfitId + "_"))
-      .map((k) => k.split("_").pop()!)
-  );
+  // availableEmotes is derived PURELY from outfitUnlockedLevel — the single
+  // authoritative field set only by the unlock system. Selecting an outfit or
+  // emote never modifies outfitUnlockedLevel, so this computation is stable
+  // across all selection actions.
+  //
+  // outfitUnlockedLevel 0       → outfit_000, all 5 emotes available
+  // outfitUnlockedLevel 1–5    → outfit_001, first N emotes (idle…cheer)
+  // outfitUnlockedLevel 6–10   → outfit_002, first (N−5) emotes, etc.
+  const outfitUnlockedLevel = gs.outfitUnlockedLevel ?? 0;
+  const emoteCountUnlocked = outfitUnlockedLevel === 0 ? 5 : ((outfitUnlockedLevel - 1) % 5) + 1;
+  const availableEmotes = new Set<string>(ALL_EMOTES.slice(0, emoteCountUnlocked));
 
   return (
     <div className="mb-8">
