@@ -1,0 +1,155 @@
+Please restore the official image asset rendering rules according to the Wardrobe specification.
+
+This task is ONLY about which image assets are displayed in specific UI components.
+
+Do NOT modify:
+
+- Outfit unlock logic
+- Emote Enable/Disable logic
+- Outfit selection logic
+- Emote selection logic
+- Review Reward unlock logic
+- Background logic
+- JSON structure
+- Popup behavior
+- Save/Restore behavior
+
+The only purpose of this task is to restore the correct image assets.
+
+--------------------------------------------------
+1. Review Log conversation card icons
+--------------------------------------------------
+
+The small Mary icon displayed on the left side of each conversation card inside the Review Log represents the outfit that belongs to that Review Log level.
+
+It does NOT represent Mary's current appearance.
+
+It must NOT depend on:
+
+- selectedOutfit
+- selectedEmote
+- selectedReviewReward
+- Current Appearance
+
+Instead, determine the icon from the Review Log's own saved data.
+
+Use:
+
+- reviewLog.level
+or
+- reviewLog.levelOutfit
+
+Mapping:
+
+Level 0
+or
+reviewLog.levelOutfit = outfit_000
+
+→ icon_outfit_000.png
+
+
+Levels 1–5
+or
+reviewLog.levelOutfit = outfit_001
+
+→ icon_outfit_001.png
+
+
+Levels 6–10
+or
+reviewLog.levelOutfit = outfit_002
+
+→ icon_outfit_002.png
+
+Continue using the same five-level pattern.
+
+These icons must never change because of the player's currently selected outfit or Review Reward.
+
+Never display:
+
+- outfit_idle_xxx.png
+- outfit_shy_xxx.png
+- outfit_smile_xxx.png
+- outfit_wave_xxx.png
+- outfit_cheer_xxx.png
+- review_reward_xxx.png
+
+Only display:
+
+icon_outfit_xxx.png
+
+--------------------------------------------------
+2. Wardrobe / Outfits tab
+--------------------------------------------------
+
+Each Outfit card in the Outfits tab represents an Outfit.
+
+Always display the Outfit Icon.
+
+Examples:
+
+outfit_000
+→ icon_outfit_000.png
+
+outfit_001
+→ icon_outfit_001.png
+
+outfit_002
+→ icon_outfit_002.png
+
+Never display:
+
+- outfit_idle_xxx.png
+- outfit_shy_xxx.png
+- outfit_smile_xxx.png
+- outfit_wave_xxx.png
+- outfit_cheer_xxx.png
+
+Only display:
+
+icon_outfit_xxx.png
+
+--------------------------------------------------
+3. Wardrobe / Review Rewards tab
+--------------------------------------------------
+
+The Review Rewards tab is already correct.
+
+Each Reward card must display the full-body Review Reward image.
+
+Examples:
+
+Reward 1
+→ review_reward_001.png
+
+Reward 2
+→ review_reward_002.png
+
+Reward 3
+→ review_reward_003.png
+
+Do NOT replace these with:
+
+- icon_review_reward_001.png
+- icon_review_reward_002.png
+- icon_review_reward_003.png
+
+The Review Rewards tab must continue using the full-body Review Reward images.
+
+--------------------------------------------------
+Important
+--------------------------------------------------
+
+Do NOT modify:
+
+- the large Mary image at the top of the Review Log
+- the TOP Screen rendering
+- the Wardrobe Preview rendering
+
+Those components already have their own rendering rules and are not part of this task.
+
+This task only restores the correct image asset used in the following three locations:
+
+1. Review Log conversation card icons
+2. Wardrobe / Outfits tab
+3. Wardrobe / Review Rewards tab
