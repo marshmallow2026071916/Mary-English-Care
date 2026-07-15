@@ -1,0 +1,382 @@
+# Review Log UI Improvements
+
+Please implement the following two UI features for the Review Log screen.
+
+These features are UI-only improvements.
+
+Do NOT modify:
+
+- Session JSON
+- Review Restore JSON
+- Game Restore JSON
+- Import / Export logic
+- XP
+- Level
+- Hearts
+- Tasks
+- Rewards
+- Popup logic
+
+The existing JSON format must remain fully backward compatible.
+
+------------------------------------------------------------
+1. Mary Voice Playback
+------------------------------------------------------------
+
+Target Messages
+
+Display a voice playback button ONLY for messages where:
+
+message.speaker === "Mary"
+
+This includes:
+
+- intro
+- reply
+- Mary's questions
+- Mary's closing messages
+
+Do NOT display the button for:
+
+- Eikichi
+- Correction
+- System
+- XP
+- Rally
+- Game UI
+
+This feature must work not only for newly imported Review Logs but also for ALL existing Review Logs already stored in the app.
+
+No data migration or JSON changes should be required.
+
+------------------------------------------------------------
+
+UI
+
+Place a purple circular speaker button directly below Mary's avatar.
+
+Mary Avatar
+     ↓
+Speaker Button
+
+Requirements:
+
+- Purple circular button
+- White speaker icon
+- Do NOT use a play triangle icon
+- Keep the current chat bubble layout unchanged
+- Easy to tap on mobile
+- Match the existing Mary English design
+
+------------------------------------------------------------
+
+Speech Engine
+
+Use the browser Web Speech API.
+
+window.speechSynthesis
+SpeechSynthesisUtterance
+
+Do not use any external TTS service.
+
+Although Mary Collins is a Canadian character, the speech should use American English because this app is intended for learning American English.
+
+Default settings:
+
+utterance.lang = "en-US";
+utterance.rate = 0.9;
+utterance.pitch = 1.0;
+
+Prefer an available en-US voice.
+
+If multiple en-US voices exist, choose a natural voice.
+
+If en-US is unavailable, gracefully fall back to another English voice.
+
+------------------------------------------------------------
+
+Playback Behavior
+
+When the speaker button is pressed:
+
+- Read the corresponding Mary message from beginning to end.
+- No auto-play.
+- No stop button.
+- No pause.
+- No resume.
+- No replay while speaking.
+- No playback speed settings.
+- No voice selection UI.
+
+Playback begins ONLY when the user presses the button.
+
+------------------------------------------------------------
+
+Playback Lock
+
+While Mary is speaking:
+
+- Disable ALL Mary speaker buttons.
+- Ignore additional button presses.
+- Do not interrupt the current playback.
+- Do not restart playback.
+
+After playback finishes:
+
+- Re-enable every speaker button.
+
+During playback:
+
+- Slightly reduce button opacity.
+- Do not replace the icon with Stop or Pause.
+
+Use one shared playback state for the entire Review Log.
+
+Example:
+
+const [isSpeaking, setIsSpeaking] = useState(false);
+
+Always release the playback state in both:
+
+utterance.onend
+utterance.onerror
+
+Buttons must never remain disabled after an error.
+
+------------------------------------------------------------
+
+Text to Read
+
+Read the existing JSON field:
+
+{
+  "speaker": "Mary",
+  "text": "..."
+}
+
+Do not modify the displayed text.
+
+Before speaking:
+
+- Remove emojis from the speech text.
+- Keep emojis visible on screen.
+
+Do NOT read:
+
+- XP labels
+- Rally labels
+- Game UI
+- JSON information
+- Dates
+- Button labels
+
+Only Mary's natural English message should be spoken.
+
+------------------------------------------------------------
+
+JSON
+
+Do NOT add any new JSON fields.
+
+Playback state must exist only in the UI.
+
+------------------------------------------------------------
+2. Review Log Navigation Buttons
+------------------------------------------------------------
+
+The Review Log can become very long.
+
+Add navigation buttons between date sections.
+
+These buttons must be generated dynamically when the Review Log is rendered.
+
+They must work for:
+
+- newly imported logs
+- existing logs already stored inside the app
+
+------------------------------------------------------------
+
+Concept
+
+Each date section has:
+
+- Header (date + talk type)
+- Footer (after the last message)
+
+Navigation buttons should be placed BETWEEN date sections.
+
+Example:
+
+↓ Jump to July 9 Footer
+
+July 9 Conversation
+
+↓ Jump to July 10 Footer
+↑ Jump to July 9 Header
+
+July 10 Conversation
+
+↑ Jump to July 10 Header
+
+------------------------------------------------------------
+
+Down Button
+
+Each Down button should scroll to the FOOTER of the date section immediately below it.
+
+Examples
+
+Top of July 9
+
+↓
+
+→ scroll to July 9 Footer
+
+Between July 9 and July 10
+
+↓
+
+→ scroll to July 10 Footer
+
+Never jump to another date's footer.
+
+------------------------------------------------------------
+
+Up Button
+
+Each Up button should scroll to the HEADER of the date section immediately above it.
+
+Examples
+
+Between July 9 and July 10
+
+↑
+
+→ scroll to July 9 Header
+
+Bottom of July 10
+
+↑
+
+→ scroll to July 10 Header
+
+Never jump to another date's header.
+
+------------------------------------------------------------
+
+Display Rules
+
+At the very top of the Review Log:
+
+Do NOT display an Up button.
+
+At the very bottom of the Review Log:
+
+Do NOT display a Down button.
+
+If only ONE date section exists:
+
+Display:
+
+↓ Jump to Footer
+
+Conversation
+
+↑ Jump to Header
+
+------------------------------------------------------------
+
+Scrolling
+
+Use smooth scrolling.
+
+Each date section should have its own unique Header anchor and Footer anchor.
+
+If possible, use a unique session ID.
+
+Otherwise, generate a unique key from:
+
+- Date
+- Level
+- Talk Type
+- Array index
+
+If the app uses a fixed header, ensure that the Header remains visible after scrolling.
+
+Likewise, ensure the Footer is not hidden behind any bottom navigation.
+
+------------------------------------------------------------
+
+Button Design
+
+- Small circular button
+- White or light purple background
+- Purple arrows
+- Light shadow
+- Mobile friendly
+- Match the existing Mary English design
+
+Icons:
+
+↓
+↑
+
+When both buttons appear together:
+
+↓      ↑
+
+------------------------------------------------------------
+
+Accessibility
+
+Example:
+
+aria-label="Jump to the bottom of the July 10 conversation"
+
+aria-label="Jump to the top of the July 9 conversation"
+
+------------------------------------------------------------
+Backward Compatibility
+------------------------------------------------------------
+
+Everything must work with:
+
+- existing Review Logs
+- imported Review Logs
+- future Review Logs
+
+without changing any JSON structure.
+
+The UI should generate all voice buttons and navigation buttons dynamically every time the Review Log is rendered.
+
+------------------------------------------------------------
+Verification Checklist
+------------------------------------------------------------
+
+Voice Playback
+
+- Speaker button appears only on Mary's messages.
+- Existing Review Logs also display speaker buttons.
+- Button is below Mary's avatar.
+- Purple circular speaker icon.
+- Uses American English (en-US).
+- Playback starts only when pressed.
+- Reads the entire message.
+- No replay during playback.
+- All speaker buttons are disabled while speaking.
+- Buttons are re-enabled after playback.
+- Emojis remain visible but are not spoken.
+- JSON remains unchanged.
+
+Navigation Buttons
+
+- Existing Review Logs also display navigation buttons.
+- No Up button at the very top.
+- No Down button at the very bottom.
+- Down button jumps to the footer of the adjacent date section.
+- Up button jumps to the header of the adjacent date section.
+- Smooth scrolling.
+- Correct destination every time.
+- Works correctly on desktop and mobile.
+- JSON remains unchanged.

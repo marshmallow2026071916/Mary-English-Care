@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { BookOpen } from "lucide-react";
+import { useState, useEffect } from "react";
+import { BookOpen, Volume2, ChevronDown, ChevronUp } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 import {
   useReviewLog,
@@ -12,7 +12,6 @@ import { getActiveIconImage, getLogLevelIconImage, getOutfitIconImage } from "@/
 
 // ─── Task type helpers ────────────────────────────────────────────────────────
 
-// Task types that appear in Review Log (End Talk is excluded)
 const DISPLAYED_TASK_TYPES = new Set<TaskType>([
   "Daily Talk",
   "Practice Talk",
@@ -32,8 +31,8 @@ const TASK_TYPE_COLORS: Record<TaskType, string> = {
 };
 
 function displayTaskType(type: TaskType): string {
-  if (type === "Reading Talk")  return "Practice Talk";   // legacy alias
-  if (type === "Review Talk")   return "Review Challenge"; // legacy → new name
+  if (type === "Reading Talk")  return "Practice Talk";
+  if (type === "Review Talk")   return "Review Challenge";
   return type;
 }
 
@@ -45,14 +44,59 @@ function formatDate(iso: string): string {
   });
 }
 
+function formatDateLong(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+  });
+}
+
+// ─── Speech helpers ───────────────────────────────────────────────────────────
+
+// Remove emoji characters so they are not spoken aloud (they stay visible on screen).
+function stripEmojis(text: string): string {
+  return text
+    .replace(/\p{Emoji_Presentation}/gu, "")
+    .replace(/\p{Extended_Pictographic}/gu, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Pick the best available en-US voice; falls back to any English voice.
+function getPreferredVoice(): SpeechSynthesisVoice | null {
+  if (!window.speechSynthesis) return null;
+  const voices = window.speechSynthesis.getVoices();
+  if (!voices.length) return null;
+  const enUS = voices.filter((v) => v.lang === "en-US");
+  if (enUS.length === 0) {
+    return voices.find((v) => v.lang.startsWith("en")) ?? null;
+  }
+  return (
+    enUS.find((v) => /natural/i.test(v.name)) ??
+    enUS.find((v) => /samantha|zira|aria|microsoft/i.test(v.name)) ??
+    enUS[0]
+  );
+}
+
+function speakText(text: string, onEnd: () => void): void {
+  if (!window.speechSynthesis) { onEnd(); return; }
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(stripEmojis(text));
+  utterance.lang = "en-US";
+  utterance.rate = 0.9;
+  utterance.pitch = 1.0;
+  const voice = getPreferredVoice();
+  if (voice) utterance.voice = voice;
+  utterance.onend  = () => onEnd();
+  utterance.onerror = () => onEnd();
+  window.speechSynthesis.speak(utterance);
+}
+
 // ─── Small Mary avatar badge ──────────────────────────────────────────────────
-// Icon is derived from the entry's own saved data — never from selectedOutfit,
-// selectedReviewReward, or any current-appearance state.
-// Priority: levelOutfit (explicit stored outfit id) > level (formula fallback).
 function MaryBadge({ level, levelOutfit }: { level: number; levelOutfit?: string }) {
   const iconSrc = levelOutfit
-    ? getOutfitIconImage(levelOutfit)   // e.g. "outfit_001" → icon_outfit_001.png
-    : getLogLevelIconImage(level);      // formula: level 1-5 → icon_outfit_001.png
+    ? getOutfitIconImage(levelOutfit)
+    : getLogLevelIconImage(level);
   return (
     <div className="w-11 h-13 shrink-0 rounded-xl overflow-hidden shadow-sm bg-gradient-to-br from-primary/20 to-accent/20">
       <img
@@ -61,6 +105,78 @@ function MaryBadge({ level, levelOutfit }: { level: number; levelOutfit?: string
         className="w-full h-full object-contain object-top"
         draggable={false}
       />
+    </div>
+  );
+}
+
+// ─── Speaker button ───────────────────────────────────────────────────────────
+// Purple circular button — appears below Mary's avatar on each of her messages.
+// Shared isSpeaking state prevents overlapping playback.
+function SpeakerButton({
+  text,
+  isSpeaking,
+  onSpeak,
+}: {
+  text: string;
+  isSpeaking: boolean;
+  onSpeak: (text: string) => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label="Play Mary's message"
+      disabled={isSpeaking}
+      onClick={() => !isSpeaking && onSpeak(text)}
+      className={`w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-sm transition-opacity ${
+        isSpeaking ? "opacity-40 cursor-not-allowed" : "opacity-100 hover:opacity-85 active:scale-95"
+      }`}
+    >
+      <Volume2 className="w-4 h-4 text-primary-foreground" strokeWidth={2} />
+    </button>
+  );
+}
+
+// ─── Navigation buttons ───────────────────────────────────────────────────────
+// Smooth-scroll to a header (start) or footer (end) anchor by element id.
+function scrollToAnchor(id: string, block: ScrollLogicalPosition) {
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: "smooth", block });
+}
+
+function NavButtons({
+  downId,
+  downLabel,
+  upId,
+  upLabel,
+}: {
+  downId?: string;
+  downLabel?: string;
+  upId?: string;
+  upLabel?: string;
+}) {
+  if (!downId && !upId) return null;
+  return (
+    <div className="flex gap-2 justify-center py-1">
+      {downId && (
+        <button
+          type="button"
+          aria-label={downLabel}
+          onClick={() => scrollToAnchor(downId, "end")}
+          className="w-9 h-9 rounded-full bg-card border border-border shadow-sm flex items-center justify-center text-primary hover:bg-primary/8 transition-colors active:scale-95"
+        >
+          <ChevronDown className="w-5 h-5" strokeWidth={2.5} />
+        </button>
+      )}
+      {upId && (
+        <button
+          type="button"
+          aria-label={upLabel}
+          onClick={() => scrollToAnchor(upId, "start")}
+          className="w-9 h-9 rounded-full bg-card border border-border shadow-sm flex items-center justify-center text-primary hover:bg-primary/8 transition-colors active:scale-95"
+        >
+          <ChevronUp className="w-5 h-5" strokeWidth={2.5} />
+        </button>
+      )}
     </div>
   );
 }
@@ -77,19 +193,15 @@ type RenderElem =
 const VALID_SUBTYPES = new Set<string>(["excellent", "perfect", "suggestion", "correction"]);
 
 function detectSubtype(msg: Message): CorrectionSubtype {
-  // v3.1.1+: prefer explicit grade field
   if (msg.grade && VALID_SUBTYPES.has(msg.grade)) {
     return msg.grade as CorrectionSubtype;
   }
-  // Backward compat: legacy subtype field
   if (msg.subtype && VALID_SUBTYPES.has(msg.subtype)) {
     return msg.subtype as CorrectionSubtype;
   }
-  // Infer: compact correction format → correction card
   if (msg.original !== undefined || msg.corrected !== undefined) {
     return "correction";
   }
-  // Legacy free-form text → default to correction
   return "correction";
 }
 
@@ -97,16 +209,13 @@ function detectSubtype(msg: Message): CorrectionSubtype {
 function buildElements(entry: ReviewLogEntry): RenderElem[] {
   const elems: RenderElem[] = [];
 
-  // ── v3.0+ message format ──────────────────────────────────────────────────
   if (entry.messages && entry.messages.length > 0) {
     const sorted = [...entry.messages].sort((a, b) => a.id - b.id);
-
     for (const msg of sorted) {
       switch (msg.type) {
         case "intro":
         case "question":
         case "reply":
-          // Conversation speech — always shown
           elems.push({ kind: "mary", text: msg.text, showAvatar: true });
           break;
         case "answer":
@@ -120,9 +229,7 @@ function buildElements(entry: ReviewLogEntry): RenderElem[] {
             corrected: msg.corrected,
           });
           break;
-        // summary, reward, system → intentionally skipped (game/meta info)
         default:
-          // Unknown types: if speaker looks like Mary, show as a Mary bubble
           if (
             msg.speaker &&
             msg.speaker.toLowerCase() !== "eikichi" &&
@@ -138,7 +245,6 @@ function buildElements(entry: ReviewLogEntry): RenderElem[] {
     return elems;
   }
 
-  // ── v2.1 rally format ─────────────────────────────────────────────────────
   if (entry.rallies && entry.rallies.length > 0) {
     for (const rally of entry.rallies) {
       if (rally.user?.text) {
@@ -154,7 +260,6 @@ function buildElements(entry: ReviewLogEntry): RenderElem[] {
     return elems;
   }
 
-  // ── v2 flat format ────────────────────────────────────────────────────────
   if (entry.conversation && entry.conversation.length > 0) {
     for (const item of entry.conversation) {
       if (item.type === "user") {
@@ -168,7 +273,6 @@ function buildElements(entry: ReviewLogEntry): RenderElem[] {
     return elems;
   }
 
-  // ── Legacy rich format (turns) ────────────────────────────────────────────
   if (entry.turns && entry.turns.length > 0) {
     if (entry.openingText) {
       elems.push({ kind: "mary", text: entry.openingText, showAvatar: true });
@@ -185,7 +289,6 @@ function buildElements(entry: ReviewLogEntry): RenderElem[] {
     return elems;
   }
 
-  // ── Legacy plain format ───────────────────────────────────────────────────
   if (entry.maryText) {
     elems.push({ kind: "mary", text: entry.maryText, showAvatar: true });
   }
@@ -198,16 +301,26 @@ function MaryBubble({
   elem,
   level,
   levelOutfit,
+  isSpeaking,
+  onSpeak,
   testId,
 }: {
   elem: Extract<RenderElem, { kind: "mary" }>;
   level: number;
   levelOutfit?: string;
+  isSpeaking: boolean;
+  onSpeak: (text: string) => void;
   testId?: string;
 }) {
   return (
     <div className={`flex items-start gap-2.5 ${!elem.showAvatar ? "pl-[3.375rem]" : ""}`}>
-      {elem.showAvatar && <MaryBadge level={level} levelOutfit={levelOutfit} />}
+      {elem.showAvatar && (
+        // Column: avatar on top, speaker button directly below
+        <div className="flex flex-col items-center gap-1 shrink-0 w-11">
+          <MaryBadge level={level} levelOutfit={levelOutfit} />
+          <SpeakerButton text={elem.text} isSpeaking={isSpeaking} onSpeak={onSpeak} />
+        </div>
+      )}
       <div className="max-w-[82%] bg-card border border-border/60 rounded-2xl rounded-tl-sm px-4 py-2.5 shadow-sm">
         <p
           className="text-sm text-foreground leading-relaxed whitespace-pre-wrap"
@@ -241,11 +354,6 @@ function EikichiBubble({
   );
 }
 
-// Four review card types (v3.1.1):
-// 🌟 Excellent!        — praise
-// ✅ Perfect!          — sentence already natural
-// 💡 Mary's Suggestion — more natural alternative (show corrected only)
-// ✏️ Mary's Correction — error corrected (show corrected only)
 function ReviewCard({
   subtype,
   text,
@@ -259,13 +367,10 @@ function ReviewCard({
     return (
       <div className="rounded-2xl border border-yellow-200 bg-yellow-50 px-4 py-3">
         <p className="text-xs font-bold text-yellow-700 mb-1.5">🌟 Excellent!</p>
-        <p className="text-sm text-yellow-900 leading-relaxed whitespace-pre-wrap">
-          {text}
-        </p>
+        <p className="text-sm text-yellow-900 leading-relaxed whitespace-pre-wrap">{text}</p>
       </div>
     );
   }
-
   if (subtype === "perfect") {
     return (
       <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3">
@@ -274,7 +379,6 @@ function ReviewCard({
       </div>
     );
   }
-
   if (subtype === "suggestion") {
     return (
       <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3">
@@ -285,8 +389,6 @@ function ReviewCard({
       </div>
     );
   }
-
-  // Default: "correction"
   return (
     <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
       <p className="text-xs font-bold text-amber-700 mb-1.5">✏️ Mary's Correction</p>
@@ -300,11 +402,14 @@ function ReviewCard({
 // ─── Session card ─────────────────────────────────────────────────────────────
 function SessionCard({
   entry,
+  isSpeaking,
+  onSpeak,
 }: {
   entry: ReviewLogEntry;
+  isSpeaking: boolean;
+  onSpeak: (text: string) => void;
 }) {
   const displayElems = buildElements(entry);
-
   const colorClass = TASK_TYPE_COLORS[entry.taskType] ?? "bg-secondary text-secondary-foreground";
 
   return (
@@ -312,7 +417,7 @@ function SessionCard({
       className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden"
       data-testid={`entry-card-${entry.id}`}
     >
-      {/* Header: ✔ task badge + date */}
+      {/* Header: task badge + date */}
       <div className="flex items-center gap-2 px-4 pt-4 pb-3 flex-wrap">
         <span
           className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${colorClass}`}
@@ -340,6 +445,8 @@ function SessionCard({
                 elem={elem}
                 level={entry.level}
                 levelOutfit={entry.levelOutfit}
+                isSpeaking={isSpeaking}
+                onSpeak={onSpeak}
                 testId={i === 0 ? `entry-mary-${entry.id}` : undefined}
               />
             );
@@ -382,6 +489,27 @@ export default function ReviewLogScreen() {
   const { gs } = useGame();
   const [activeTab, setActiveTab] = useState<number | "current">("current");
 
+  // ── Speech state — one shared lock for the entire Review Log ──────────────
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  // Cancel ongoing speech when the user switches level tabs
+  useEffect(() => {
+    window.speechSynthesis?.cancel();
+    setIsSpeaking(false);
+  }, [activeTab]);
+
+  // Cancel speech on unmount
+  useEffect(() => {
+    return () => { window.speechSynthesis?.cancel(); };
+  }, []);
+
+  function handleSpeak(text: string) {
+    if (isSpeaking) return;
+    setIsSpeaking(true);
+    speakText(text, () => setIsSpeaking(false));
+  }
+
+  // ── Level / entry filtering ───────────────────────────────────────────────
   const currentLevel = gs.level;
   const resolvedLevel =
     activeTab === "current" ? currentLevel : (activeTab as number);
@@ -391,7 +519,6 @@ export default function ReviewLogScreen() {
     (_, i) => currentLevel - 1 - i
   );
 
-  // Oldest first; filter out any entry whose taskType is not in the display set
   const filtered = entries
     .filter(
       (e) =>
@@ -399,6 +526,17 @@ export default function ReviewLogScreen() {
         DISPLAYED_TASK_TYPES.has(e.taskType)
     )
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+  // ── Anchor helpers ────────────────────────────────────────────────────────
+  function headerId(entry: ReviewLogEntry) {
+    return `section-header-${entry.id}`;
+  }
+  function footerId(entry: ReviewLogEntry) {
+    return `section-footer-${entry.id}`;
+  }
+  function sectionLabel(entry: ReviewLogEntry) {
+    return `${formatDateLong(entry.date)} ${displayTaskType(entry.taskType)}`;
+  }
 
   return (
     <div className="min-h-[100dvh] w-full bg-background flex flex-col pb-24 items-center">
@@ -492,13 +630,57 @@ export default function ReviewLogScreen() {
             </div>
           </div>
         ) : (
-          <div className="space-y-5 pb-8" data-testid="entries-list">
-            {filtered.map((entry) => (
-              <SessionCard
-                key={entry.id}
-                entry={entry}
-              />
-            ))}
+          <div className="pb-8" data-testid="entries-list">
+
+            {filtered.map((entry, idx) => {
+              const isFirst = idx === 0;
+              const isLast  = idx === filtered.length - 1;
+              const prev    = isFirst ? null : filtered[idx - 1];
+              const next    = isLast  ? null : filtered[idx + 1];
+
+              return (
+                <div key={entry.id}>
+
+                  {/* ── Nav buttons ABOVE this section ─────────────────── */}
+                  <NavButtons
+                    // ↓ to THIS section's footer (never shown at very bottom)
+                    downId={footerId(entry)}
+                    downLabel={`Jump to the bottom of the ${sectionLabel(entry)} conversation`}
+                    // ↑ to PREVIOUS section's header (not at very top)
+                    upId={prev ? headerId(prev) : undefined}
+                    upLabel={prev ? `Jump to the top of the ${sectionLabel(prev)} conversation` : undefined}
+                  />
+
+                  {/* ── Header anchor ──────────────────────────────────── */}
+                  <div id={headerId(entry)} className="scroll-mt-4" />
+
+                  {/* ── Session card ───────────────────────────────────── */}
+                  <div className="mb-3">
+                    <SessionCard
+                      entry={entry}
+                      isSpeaking={isSpeaking}
+                      onSpeak={handleSpeak}
+                    />
+                  </div>
+
+                  {/* ── Footer anchor ──────────────────────────────────── */}
+                  <div id={footerId(entry)} className="scroll-mb-4" />
+
+                  {/* ── Bottom-of-list Up button (last entry only) ──────── */}
+                  {isLast && (
+                    <NavButtons
+                      upId={headerId(entry)}
+                      upLabel={`Jump to the top of the ${sectionLabel(entry)} conversation`}
+                      // no ↓ at the very bottom
+                      downId={next ? footerId(next) : undefined}
+                      downLabel={next ? `Jump to the bottom of the ${sectionLabel(next)} conversation` : undefined}
+                    />
+                  )}
+
+                </div>
+              );
+            })}
+
           </div>
         )}
 
