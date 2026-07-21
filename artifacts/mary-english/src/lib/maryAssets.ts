@@ -17,9 +17,11 @@
 
 import type { EmoteState } from "@/context/GameContext";
 
+const PUBLIC_BASE = import.meta.env.BASE_URL;
+
 export type OutfitId = "default" | "black" | "level" | "seasonal";
 
-const BASE = "/assets/mary";
+const BASE = `${PUBLIC_BASE}assets/mary`;
 
 // ─── Outfit images — <img src> fallback when no PNG source is available ───────
 export const OUTFIT_IMAGES: Record<OutfitId, string> = {
@@ -70,8 +72,8 @@ export const OUTFIT_META: Record<OutfitId, OutfitMeta> = {
     badgeLabel:     "Black Outfit",
     headerGradient: "from-slate-600 to-slate-900",
     cardBg:         "from-slate-700 to-slate-900",
-    fullFilename:   "/assets/mary/black_full.png",
-    bustFilename:   "/assets/mary/black_bust.png",
+    fullFilename: `${PUBLIC_BASE}assets/mary/black_full.png`,
+    bustFilename: `${PUBLIC_BASE}assets/mary/black_bust.png`,
   },
   level: {
     label:          "Level Reward Outfit",
@@ -135,26 +137,26 @@ export function getMaryImage(outfit: string, emote?: EmoteState): string {
 // outfitId: "outfit_000", emote: "idle" → /assets/outfits/outfit_idle_000.png
 export function getOutfitEmoteImage(outfitId: string, emote: string): string {
   const num = outfitId.split("_")[1] ?? "000";
-  return `/assets/outfits/outfit_${emote}_${num}.png`;
+  return `${PUBLIC_BASE}assets/outfits/outfit_${emote}_${num}.png`;
 }
 
 // Icon/thumbnail for a given outfit (used in the wardrobe grid).
 // outfitId: "outfit_000" → /assets/outfits/icon_outfit_000.png
 export function getOutfitIconImage(outfitId: string): string {
   const num = outfitId.split("_")[1] ?? "000";
-  return `/assets/outfits/icon_outfit_${num}.png`;
+  return `${PUBLIC_BASE}assets/outfits/icon_outfit_${num}.png`;
 }
 
 // Image for a review reward (outfit showcase).
 // rewardId: "review_reward_001" → /assets/outfits/review_reward_001.png
 export function getReviewRewardImage(rewardId: string): string {
-  return `/assets/outfits/${rewardId}.png`;
+  return `${PUBLIC_BASE}assets/outfits/${rewardId}.png`;
 }
 
 // Background image path.
 // bgId: "background_001" → /assets/backgrounds/background_001.png
 export function getBackgroundImage(bgId: string): string {
-  return `/assets/backgrounds/${bgId}.png`;
+  return `${PUBLIC_BASE}assets/backgrounds/${bgId}.png`;
 }
 
 // Returns the icon image that represents the current active display state.
@@ -174,7 +176,7 @@ export function getActiveIconImage(
   if (!selectedReviewReward) return getOutfitIconImage(selectedOutfit);
   // review_reward_NNN → icon_review_reward_NNN.png
   const num = selectedReviewReward.split("_")[2] ?? "001";
-  return `/assets/outfits/icon_review_reward_${num}.png`;
+  return `${PUBLIC_BASE}assets/outfits/icon_review_reward_${num}.png`;
 }
 
 // Returns the icon image for Review Log conversation badges.
@@ -185,5 +187,5 @@ export function getActiveIconImage(
 //   …and so on.
 export function getLogLevelIconImage(level: number): string {
   const outfitNum = level === 0 ? 0 : Math.ceil(level / 5);
-  return `/assets/outfits/icon_outfit_${String(outfitNum).padStart(3, "0")}.png`;
+  return `${PUBLIC_BASE}assets/outfits/icon_outfit_${String(outfitNum).padStart(3, "0")}.png`;
 }

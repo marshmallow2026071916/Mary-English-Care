@@ -43,7 +43,7 @@ function Screen1({ onNext }: { onNext: () => void }) {
         />
         {/* Layer 2: Mary — transparent PNG */}
         <img
-          src="/assets/outfits/outfit_idle_000.png"
+          src={`${import.meta.env.BASE_URL}assets/outfits/outfit_idle_000.png`}
           alt="Mary"
           className="absolute inset-0 w-full h-full object-contain object-bottom z-10"
           draggable={false}
