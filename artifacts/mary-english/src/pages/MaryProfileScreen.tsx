@@ -8,7 +8,7 @@ const PROFILE = {
   name:        "Mary Collins",
   age:         "27",
   nationality: "Canada",
-  drink:       "Light Roast Coffee",
+  drink:       "Medium Roast Coffee",  
   food:        "Fresh pastries",
   hobbies:     ["Reading books", "Walking with coffee", "Learning languages"],
   books:       ["Charlie and the Chocolate Factory", "My Father's Dragon"],
