@@ -78,10 +78,9 @@ export default function MaryProfileScreen() {
 
           {/* Name and outfit label */}
           <div className="text-center px-4">
-            <p className="text-base font-bold text-foreground">{PROFILE.name}</p>
-            {meta.badgeLabel && (
-              <p className="text-xs font-medium text-muted-foreground mt-0.5">{meta.badgeLabel}</p>
-            )}
+            <p className="text-base font-bold text-foreground">
+              {PROFILE.name}
+            </p>
           </div>
         </motion.div>
 
