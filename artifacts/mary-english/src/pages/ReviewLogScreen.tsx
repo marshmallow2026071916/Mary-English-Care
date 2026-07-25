@@ -84,12 +84,14 @@ function speakText(text: string, onEnd: () => void): void {
   const utterance = new SpeechSynthesisUtterance(stripEmojis(text));
   utterance.lang = "en-US";
   utterance.rate = 0.9;
-  utterance.pitch = 1.0;
+  utterance.pitch = 1.1;
   const voice = getPreferredVoice();
   if (voice) utterance.voice = voice;
   utterance.onend  = () => onEnd();
   utterance.onerror = () => onEnd();
+  setTimeout(() => {
   window.speechSynthesis.speak(utterance);
+  }, 150);
 }
 
 // ─── Small Mary avatar badge ──────────────────────────────────────────────────
