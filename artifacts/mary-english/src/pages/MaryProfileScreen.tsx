@@ -6,7 +6,7 @@ import { getActiveIconImage, OUTFIT_META, resolveOutfitId } from "@/lib/maryAsse
 // ─── Static profile data ──────────────────────────────────────────────────────
 const PROFILE = {
   name:        "Mary Collins",
-  age:         "27",
+  age:         "27(June 17)",
   nationality: "Canada",
   drink:       "Medium Roast Coffee",  
   food:        "Fresh pastries",
