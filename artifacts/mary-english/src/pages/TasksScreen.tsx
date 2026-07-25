@@ -824,77 +824,7 @@ export default function TasksScreen() {
     )}
   </AnimatePresence>
 </div>
-
-        {/* ── Start Talk ───────────────────────────────────────────────────── */}
-        <div className="mb-10">
-          <button
-            onClick={() => setShowStartMessage(true)}
-            className="w-full bg-primary hover:bg-primary/90 active:scale-95 transition-all text-center py-4 rounded-3xl shadow-sm border-b-4 border-primary-foreground/20 font-bold text-primary-foreground text-lg mb-4"
-            data-testid="btn-start-talk"
-          >
-            Start Talk
-          </button>
-
-          <AnimatePresence>
-            {showStartMessage && (
-              <motion.div
-                initial={{ opacity: 0, height: 0, y: -10 }}
-                animate={{ opacity: 1, height: "auto", y: 0 }}
-                exit={{ opacity: 0, height: 0 }}
-                className="overflow-hidden"
-                data-testid="msg-start-talk"
-              >
-                <div className="pt-1 pb-2 space-y-3">
-
-                  {/* Mary bust-up + speech bubble */}
-                  <div className="flex items-start gap-3">
-                    <div className="w-36 h-44 flex-shrink-0">
-                      <img
-                        src={getActiveIconImage(selectedOutfit, selectedReviewReward)}
-                        alt="Mary portrait"
-                        className="w-full h-full object-contain object-top"
-                        draggable={false}
-                      />
-                    </div>
-                    <motion.div
-                      className="bg-card px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm border border-border flex-1 mt-2"
-                      initial={{ opacity: 0, x: -8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ type: "spring", bounce: 0.4, delay: 0.1 }}
-                    >
-                      <p className="text-sm font-medium text-foreground leading-relaxed">
-                        Yay!<br />Let's talk today, Eikichi!
-                      </p>
-                    </motion.div>
-                  </div>
-
-                  {/* Conversation instruction */}
-                  <div className="bg-secondary/60 border border-border text-muted-foreground px-4 py-3 rounded-2xl text-center text-sm font-medium">
-                    Please open ChatGPT and start with one of the talk commands.
-                  </div>
-
-                  {/* Gentle note — shown when practice or review tasks already completed */}
-                  {anyTaskCompleted && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 4 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.25 }}
-                      className="bg-muted border border-border px-4 py-3 rounded-2xl"
-                    >
-                      <p className="text-xs text-muted-foreground text-center italic leading-relaxed">
-                        You've already completed this task.<br />
-                        There won't be any bonus this time,<br />
-                        but I'd still love to practice with you.
-                      </p>
-                    </motion.div>
-                  )}
-
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
+ 
         {/* Import Session Data */}
         <ImportSection />
 
