@@ -16,8 +16,9 @@ import { APP_VERSION, APP_BUILD } from "@/lib/version";
 const COMMANDS = [
   { id: "daily",    label: "Daily Talk",       text: "Let's have our daily English conversation." },
   { id: "practice", label: "Practice Talk",    text: "Let's do a practice talk session." },
-  { id: "review",   label: "Review Challenge", text: "Give me a review talk based on our conversations." },
+  { id: "review",   label: "Review Talk", text: "Give me a review talk based on our conversations." },
   { id: "continue", label: "Continue Talk",    text: "Let's continue our conversation from where we left off." },
+  { id: "redo",     label: "Redo My Last Answer", text: "Let me redo my last answer." },
   { id: "end",      label: "End Talk",         text: "Let's end today's session. Please give me a summary." },
 ];
 
@@ -661,9 +662,9 @@ export default function TasksScreen() {
               rallyMax={DAILY_RALLY_MAX}
             />
 
-            {/* Practice Tasks */}
+            {/* Practice Talk */}
             <ProgressRow
-              label="Practice Tasks"
+              label="Practice Talk"
               current={practiceCount}
               max={3}
               completed={practiceCompleted}
@@ -711,7 +712,7 @@ export default function TasksScreen() {
           </div>
 
           <ProgressRow
-            label="Review Tasks"
+            label="Review Talk"
             current={reviewCount}
             max={3}
             completed={reviewCompleted}
