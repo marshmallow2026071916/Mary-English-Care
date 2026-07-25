@@ -89,9 +89,7 @@ function speakText(text: string, onEnd: () => void): void {
   if (voice) utterance.voice = voice;
   utterance.onend  = () => onEnd();
   utterance.onerror = () => onEnd();
-  setTimeout(() => {
   window.speechSynthesis.speak(utterance);
-  }, 150);
 }
 
 // ─── Small Mary avatar badge ──────────────────────────────────────────────────
