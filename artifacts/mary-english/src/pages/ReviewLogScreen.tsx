@@ -31,8 +31,8 @@ const TASK_TYPE_COLORS: Record<TaskType, string> = {
 };
 
 function displayTaskType(type: TaskType): string {
-  if (type === "Reading Talk")  return "Practice Talk";
-  if (type === "Review Talk")   return "Review Challenge";
+  if (type === "Reading Talk") return "Practice Talk";
+  if (type === "Review Challenge") return "Review Talk";
   return type;
 }
 
