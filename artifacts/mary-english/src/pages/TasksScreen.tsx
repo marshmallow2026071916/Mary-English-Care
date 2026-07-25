@@ -722,36 +722,108 @@ export default function TasksScreen() {
         </div>
 
         {/* ── Talk Commands ─────────────────────────────────────────────────── */}
-        <div className="mb-8">
-          <h2 className="text-lg font-bold text-foreground mb-4 pl-2 border-l-4 border-primary">
-            Talk Commands
-          </h2>
-          <div className="space-y-3">
-            {COMMANDS.map((cmd, i) => (
-              <motion.div
-                key={cmd.id}
-                className="bg-card p-4 rounded-2xl shadow-sm border border-border"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.08 * i }}
-              >
-                <div className="text-sm font-bold text-muted-foreground mb-2">{cmd.label}</div>
-                <div className="flex items-center gap-2">
-                  <div className="bg-secondary/50 font-mono text-sm p-3 rounded-xl flex-1 text-foreground border border-border/50 break-words">
-                    {cmd.text}
-                  </div>
-                  <button
-                    onClick={() => handleCopy(cmd.label)}
-                    className="p-3 bg-secondary hover:bg-secondary/80 rounded-xl text-secondary-foreground transition-colors active:scale-95 shrink-0"
-                    data-testid={`btn-copy-${cmd.id}`}
-                  >
-                    <Copy className="w-5 h-5" />
-                  </button>
-                </div>
-              </motion.div>
-            ))}
+ <div className="mb-8">
+  <button
+    onClick={() => setShowStartMessage((v) => !v)}
+    className="w-full bg-primary hover:bg-primary/90 active:scale-95 transition-all text-center py-4 rounded-3xl shadow-sm border-b-4 border-primary-foreground/20 font-bold text-primary-foreground text-lg mb-4"
+    data-testid="btn-start-talk"
+  >
+    {showStartMessage ? "Close Talk Menu" : "Start Talk"}
+  </button>
+
+  <AnimatePresence>
+    {showStartMessage && (
+      <motion.div
+        initial={{ opacity: 0, height: 0, y: -10 }}
+        animate={{ opacity: 1, height: "auto", y: 0 }}
+        exit={{ opacity: 0, height: 0 }}
+        className="overflow-hidden"
+        data-testid="msg-start-talk"
+      >
+        <div className="pt-1 pb-2 space-y-5">
+
+          {/* Mary bust-up + speech bubble */}
+          <div className="flex items-start gap-3">
+            <div className="w-36 h-44 flex-shrink-0">
+              <img
+                src={getActiveIconImage(selectedOutfit, selectedReviewReward)}
+                alt="Mary portrait"
+                className="w-full h-full object-contain object-top"
+                draggable={false}
+              />
+            </div>
+
+            <motion.div
+              className="bg-card px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm border border-border flex-1 mt-2"
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ type: "spring", bounce: 0.4, delay: 0.1 }}
+            >
+              <p className="text-sm font-medium text-foreground leading-relaxed">
+                Yay!<br />
+                Let's talk today, Eikichi!
+              </p>
+            </motion.div>
           </div>
+
+          {/* Talk Commands */}
+          <div>
+            <h2 className="text-lg font-bold text-foreground mb-4 pl-2 border-l-4 border-primary">
+              Talk Commands
+            </h2>
+
+            <div className="space-y-3">
+              {COMMANDS.map((cmd, i) => (
+                <motion.div
+                  key={cmd.id}
+                  className="bg-card p-4 rounded-2xl shadow-sm border border-border"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.08 * i }}
+                >
+                  <div className="text-sm font-bold text-muted-foreground mb-2">
+                    {cmd.label}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="bg-secondary/50 font-mono text-sm p-3 rounded-xl flex-1 text-foreground border border-border/50 break-words">
+                      {cmd.text}
+                    </div>
+
+                    <button
+                      onClick={() => handleCopy(cmd.label)}
+                      className="p-3 bg-secondary hover:bg-secondary/80 rounded-xl text-secondary-foreground transition-colors active:scale-95 shrink-0"
+                      data-testid={`btn-copy-${cmd.id}`}
+                    >
+                      <Copy className="w-5 h-5" />
+                    </button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
+          {/* Gentle note */}
+          {anyTaskCompleted && (
+            <motion.div
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25 }}
+              className="bg-muted border border-border px-4 py-3 rounded-2xl"
+            >
+              <p className="text-xs text-muted-foreground text-center italic leading-relaxed">
+                You've already completed this task.<br />
+                There won't be any bonus this time,<br />
+                but I'd still love to practice with you.
+              </p>
+            </motion.div>
+          )}
+
         </div>
+      </motion.div>
+    )}
+  </AnimatePresence>
+</div>
 
         {/* ── Start Talk ───────────────────────────────────────────────────── */}
         <div className="mb-10">
