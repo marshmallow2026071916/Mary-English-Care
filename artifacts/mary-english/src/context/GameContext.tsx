@@ -179,6 +179,17 @@ export interface FullProgressRestoreData {
   unlockedEmotes?: string[];            // maps to unlockedOutfitEmotes
   unlockedBackgrounds?: string[];
   unlockedReviewRewards?: string[];
+  // Popup / Presentation flags
+  showOutfitPopup?: boolean;
+  showBackgroundPopup?: boolean;
+  showReviewRewardPopup?: boolean;
+  showHeartPopup?: boolean;
+
+  showXpPopup?: boolean;
+showWeeklyBonusPopup?: boolean;
+showLevelUpPopup?: boolean;
+showEmoteRewardPopup?: boolean;
+showReviewProgressPopup?: boolean;
 }
 
 interface GameContextValue {
@@ -833,6 +844,37 @@ export function GameProvider({ children }: { children: ReactNode }) {
     update(restored);
     saveDailyStatus(dailyTalkCompleted);
     setImportedDailyCompletedState(dailyTalkCompleted);
+
+    // Popup Queue
+const queue: ModalType[] = [];
+
+if (data.showXpPopup) queue.push("xp-gained");
+if (data.showWeeklyBonusPopup) queue.push("weekly-bonus");
+if (data.showLevelUpPopup) queue.push("level-up");
+if (data.showEmoteRewardPopup) queue.push("emote-reward");
+if (data.showReviewProgressPopup) queue.push("review-progress");
+if (data.showOutfitPopup) queue.push("outfit-popup");
+if (data.showBackgroundPopup) queue.push("background-popup");
+if (data.showReviewRewardPopup) queue.push("review-reward");
+if (data.showHeartPopup) queue.push("heart");
+
+setPopupCtx({
+  ...DEFAULT_POPUP_CTX,
+  newReviewRewardId:
+    data.showReviewRewardPopup && data.reviewRewardEarned
+      ? "review_reward_002"
+      : null,
+  newOutfitEmoteKey:
+    data.showOutfitPopup && data.level !== undefined
+      ? getWardrobeRewardsForLevel(data.level).outfitEmoteKey ?? null
+      : null,
+  newBackgroundId:
+    data.showBackgroundPopup && data.level !== undefined
+      ? getBackgroundIdForLevel(data.level)
+      : null,
+});
+
+setModalQueue(queue);
   }, [update]);
 
   // Write directly to its own localStorage key AND update the separate useState.
@@ -1034,6 +1076,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     // "New Outfit!" popup for it, so import must not invent one here either.
     if (result.emoteRewardUnlocked)                                    queue.push("emote-reward");
     if (result.reviewNewlyCompleted)                                   queue.push("review-progress");
+
     if (data.showOutfitPopup)                                          queue.push("outfit-popup");
     if (data.showBackgroundPopup)                                      queue.push("background-popup");
     if (data.showReviewRewardPopup)                                    queue.push("review-reward");
