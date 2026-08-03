@@ -22,6 +22,21 @@ const COMMANDS = [
   { id: "end",      label: "End Talk",         text: "Let's end today's session. Please give me a summary." },
 ];
 
+const JSON_COMMANDS = [
+  {
+    id: "review-json",
+    label: "ReviewJSON",
+    text:
+      "Please generate the ReviewJSON. Before generating it, review the four-level evaluation criteria in the Startup Protocol and re-evaluate today's conversation accordingly.",
+  },
+  {
+    id: "game-json",
+    label: "GameJSON",
+    text:
+      "Please generate the GameJSON. Before generating it, review today's rally counts according to the Game Protocol and verify that they are correct.",
+  },
+];
+
 const DAILY_RALLY_MAX = 10;
 const TASK_RALLY_MAX = 3;
 
@@ -791,7 +806,7 @@ export default function TasksScreen() {
                     </div>
 
                     <button
-                      onClick={() => handleCopy(cmd.label)}
+                      onClick={() => handleCopy(cmd.text)}
                       className="p-3 bg-secondary hover:bg-secondary/80 rounded-xl text-secondary-foreground transition-colors active:scale-95 shrink-0"
                       data-testid={`btn-copy-${cmd.id}`}
                     >
@@ -802,6 +817,44 @@ export default function TasksScreen() {
               ))}
             </div>
           </div>
+
+{/* JSON Commands */}
+<div>
+  <h2 className="text-lg font-bold text-foreground mb-4 pl-2 border-l-4 border-primary">
+    JSON Commands
+  </h2>
+
+  <div className="space-y-3">
+    {JSON_COMMANDS.map((cmd, i) => (
+      <motion.div
+        key={cmd.id}
+        className="bg-card p-4 rounded-2xl shadow-sm border border-border"
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.08 * (COMMANDS.length + i) }}
+      >
+        <div className="text-sm font-bold text-muted-foreground mb-2">
+          {cmd.label}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="bg-secondary/50 font-mono text-sm p-3 rounded-xl flex-1 text-foreground border border-border/50 break-words">
+            {cmd.text}
+          </div>
+
+          <button
+            onClick={() => handleCopy(cmd.text)}
+            className="p-3 bg-secondary hover:bg-secondary/80 rounded-xl text-secondary-foreground transition-colors active:scale-95 shrink-0"
+            data-testid={`btn-copy-${cmd.id}`}
+            aria-label={`Copy ${cmd.label} command`}
+          >
+            <Copy className="w-5 h-5" />
+          </button>
+        </div>
+      </motion.div>
+    ))}
+  </div>
+</div>
 
           {/* Gentle note */}
           {anyTaskCompleted && (
