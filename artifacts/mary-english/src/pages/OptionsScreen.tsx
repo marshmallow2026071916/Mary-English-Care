@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, ChevronRight, User, RefreshCw, Download } from "lucide-react";
+import { Check, ChevronRight, User, Download } from "lucide-react";
 import { Link } from "wouter";
 import { BottomNav } from "@/components/BottomNav";
 import { useGame } from "@/context/GameContext";
@@ -266,31 +266,30 @@ function WardrobeSection() {
 
 // ─── App updates section ──────────────────────────────────────────────────────
 function AppUpdatesSection() {
-  const { checkForUpdate, forceRefresh, resetAssetCache } = usePwaUpdate();
+  const { resetAssetCache } = usePwaUpdate();
   const { toast } = useToast();
-  const [busy, setBusy] = useState<"check" | "force" | "assets" | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const notify = (msg: string) => toast({ description: msg, duration: 2000 });
-
-  const run = (
-    key: "check" | "force" | "assets",
-    fn: () => Promise<void> | void,
-    msg?: string,
-  ) => async () => {
+  const handleResetAssets = async () => {
     if (busy) return;
-    setBusy(key);
+
+    setBusy(true);
+
     try {
-      await fn();
-      if (msg) notify(msg);
+      await resetAssetCache();
+      toast({
+        description: "Downloaded assets were reset.",
+        duration: 2000,
+      });
     } finally {
-      setBusy(null);
+      setBusy(false);
     }
   };
 
   return (
     <div className="mb-8">
       <h2 className="text-lg font-bold text-foreground mb-4 pl-2 border-l-4 border-primary">
-        App Updates
+        App Assets
       </h2>
 
       <div className="bg-card border border-border rounded-2xl px-4 py-3 mb-3 flex items-center justify-between">
@@ -302,47 +301,24 @@ function AppUpdatesSection() {
         </div>
       </div>
 
-      <div className="space-y-2">
-        <button
-          onClick={run("check", checkForUpdate, "Checking for update…")}
-          disabled={!!busy}
-          data-testid="options-check-update-btn"
-          className="w-full flex items-center gap-3 px-4 py-3.5 bg-card border border-border rounded-2xl text-sm font-medium text-foreground hover:border-primary/40 disabled:opacity-50 transition-colors active:scale-[0.98]"
-        >
-          <RefreshCw className={`w-4 h-4 text-primary shrink-0 ${busy === "check" ? "animate-spin" : ""}`} />
-          {busy === "check" ? "Checking…" : "Check for update"}
-        </button>
+      <button
+        onClick={handleResetAssets}
+        disabled={busy}
+        data-testid="options-reset-assets-btn"
+        className="w-full flex items-center gap-3 px-4 py-3.5 bg-card border border-border rounded-2xl text-sm font-medium text-foreground hover:border-amber-400/50 disabled:opacity-50 transition-colors active:scale-[0.98]"
+      >
+        <Download className="w-4 h-4 text-amber-600/70 shrink-0" />
 
-        <button
-          onClick={run("force", forceRefresh)}
-          disabled={!!busy}
-          data-testid="options-force-refresh-btn"
-          className="w-full flex items-center gap-3 px-4 py-3.5 bg-card border border-border rounded-2xl text-sm font-medium text-foreground hover:border-destructive/40 disabled:opacity-50 transition-colors active:scale-[0.98]"
-        >
-          <RefreshCw className={`w-4 h-4 text-destructive/70 shrink-0 ${busy === "force" ? "animate-spin" : ""}`} />
-          <div className="text-left">
-            <span className="block">{busy === "force" ? "Clearing…" : "Force refresh app"}</span>
-            <span className="block text-[10px] text-muted-foreground font-normal">
-              Clears app cache only. Progress is kept.
-            </span>
-          </div>
-        </button>
+        <div className="text-left">
+          <span className="block">
+            {busy ? "Clearing…" : "Reset downloaded assets"}
+          </span>
 
-        <button
-          onClick={run("assets", resetAssetCache)}
-          disabled={!!busy}
-          data-testid="options-reset-assets-btn"
-          className="w-full flex items-center gap-3 px-4 py-3.5 bg-card border border-border rounded-2xl text-sm font-medium text-foreground hover:border-amber-400/50 disabled:opacity-50 transition-colors active:scale-[0.98]"
-        >
-          <Download className={`w-4 h-4 text-amber-600/70 shrink-0 ${busy === "assets" ? "animate-spin" : ""}`} />
-          <div className="text-left">
-            <span className="block">{busy === "assets" ? "Clearing…" : "Reset downloaded assets"}</span>
-            <span className="block text-[10px] text-muted-foreground font-normal">
-              Re-downloads avatars &amp; sounds. Progress is kept.
-            </span>
-          </div>
-        </button>
-      </div>
+          <span className="block text-[10px] text-muted-foreground font-normal">
+            Re-downloads avatars &amp; sounds. Progress and Review Logs are kept.
+          </span>
+        </div>
+      </button>
     </div>
   );
 }

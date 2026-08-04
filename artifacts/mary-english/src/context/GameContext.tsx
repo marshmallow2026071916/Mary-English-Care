@@ -179,17 +179,23 @@ export interface FullProgressRestoreData {
   unlockedEmotes?: string[];            // maps to unlockedOutfitEmotes
   unlockedBackgrounds?: string[];
   unlockedReviewRewards?: string[];
-  // Popup / Presentation flags
-  showOutfitPopup?: boolean;
-  showBackgroundPopup?: boolean;
-  showReviewRewardPopup?: boolean;
-  showHeartPopup?: boolean;
+  // XP values (used for popup display)
+dailyXp?: number;
+practiceXp?: number;
+reviewXp?: number;
+bonusXp?: number;
 
-  showXpPopup?: boolean;
+// Popup / Presentation flags
+showXpPopup?: boolean;
+showSmallRewardPopup?: boolean;
 showWeeklyBonusPopup?: boolean;
 showLevelUpPopup?: boolean;
 showEmoteRewardPopup?: boolean;
 showReviewProgressPopup?: boolean;
+showOutfitPopup?: boolean;
+showBackgroundPopup?: boolean;
+showReviewRewardPopup?: boolean;
+showHeartPopup?: boolean;
 }
 
 interface GameContextValue {
@@ -763,8 +769,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   // ─ restoreFullProgress ───────────────────────────────────────────────────────
   // Silently overwrites game state from a recovery JSON.
-  // NO modals, NO emotes, NO animations. Wardrobe collections are reconstructed
-  // from the restored level when absent from the JSON.
+  // Restores the complete game state from a Game Restore JSON.
+  // Popups are replayed only when the corresponding popup flags are true.
+  // Wardrobe collections are reconstructed from the restored level when
+  // they are not explicitly included in the JSON.
   const restoreFullProgress = useCallback((data: FullProgressRestoreData) => {
     const level = Math.max(0, data.level ?? 0);
 
@@ -849,6 +857,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 const queue: ModalType[] = [];
 
 if (data.showXpPopup) queue.push("xp-gained");
+if (data.showSmallRewardPopup) queue.push("small-reward");
 if (data.showWeeklyBonusPopup) queue.push("weekly-bonus");
 if (data.showLevelUpPopup) queue.push("level-up");
 if (data.showEmoteRewardPopup) queue.push("emote-reward");
@@ -858,19 +867,59 @@ if (data.showBackgroundPopup) queue.push("background-popup");
 if (data.showReviewRewardPopup) queue.push("review-reward");
 if (data.showHeartPopup) queue.push("heart");
 
+const xpGained =
+  (data.dailyXp ?? 0) +
+  (data.practiceXp ?? 0) +
+  (data.reviewXp ?? 0) +
+  (data.bonusXp ?? 0);
+
+const levelBefore = data.showLevelUpPopup
+  ? Math.max(0, level - 1)
+  : level;
+
+const xpBefore =
+  data.showLevelUpPopup
+    ? Math.max(0, XP_PER_LEVEL - xpGained + xp)
+    : Math.max(0, xp - xpGained);
+
 setPopupCtx({
   ...DEFAULT_POPUP_CTX,
+
+  xpGained,
+  xpBefore,
+  xpAfterMod: xp,
+
+  levelBefore,
+  levelAfter: level,
+
+  smallRewardLabel:
+    (data.practiceXp ?? 0) > 0
+      ? "Practice Complete"
+      : "Daily Talk Complete",
+
+  emoteReward:
+    data.showEmoteRewardPopup
+      ? getEmoteReward(level)
+      : "smile",
+
+  reviewCountAfter: reviewCount,
+  reviewMax: MAX_REVIEW,
+
+  bonusXpGained: data.bonusXp ?? 0,
+
   newReviewRewardId:
-    data.showReviewRewardPopup && data.reviewRewardEarned
-      ? "review_reward_002"
+    data.showReviewRewardPopup && unlockedReviewRewards.length > 0
+      ? unlockedReviewRewards[unlockedReviewRewards.length - 1]
       : null,
+
   newOutfitEmoteKey:
-    data.showOutfitPopup && data.level !== undefined
-      ? getWardrobeRewardsForLevel(data.level).outfitEmoteKey ?? null
+    data.showOutfitPopup
+      ? getWardrobeRewardsForLevel(level).outfitEmoteKey ?? null
       : null,
+
   newBackgroundId:
-    data.showBackgroundPopup && data.level !== undefined
-      ? getBackgroundIdForLevel(data.level)
+    data.showBackgroundPopup
+      ? getBackgroundIdForLevel(level)
       : null,
 });
 

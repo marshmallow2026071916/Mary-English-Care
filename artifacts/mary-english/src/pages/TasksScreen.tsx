@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Copy, CheckCircle2, Upload, X,
-  ChevronDown, ChevronUp, AlertCircle, CheckCircle, Gift, RefreshCw, Trash2,
+  ChevronDown, ChevronUp, AlertCircle, CheckCircle, Gift, Download, Trash2,
 } from "lucide-react";
 import { getActiveIconImage } from "@/lib/maryAssets";
 import { BottomNav } from "@/components/BottomNav";
@@ -110,59 +110,42 @@ function ProgressRow({
 
 // ─── Version footer ───────────────────────────────────────────────────────────
 function VersionFooter() {
-  const { checkForUpdate, forceRefresh, resetAssetCache } = usePwaUpdate();
-  const [busy, setBusy] = useState<"check" | "force" | "assets" | null>(null);
+  const { resetAssetCache } = usePwaUpdate();
+  const [busy, setBusy] = useState(false);
 
-  const run = (key: "check" | "force" | "assets", fn: () => Promise<void> | void) => async () => {
+  const handleResetAssets = async () => {
     if (busy) return;
-    setBusy(key);
-    try { await fn(); } finally { setBusy(null); }
+
+    setBusy(true);
+
+    try {
+      await resetAssetCache();
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
     <div className="mt-5 space-y-2.5">
-      {/* Version label */}
       <div className="flex items-baseline gap-2">
         <span className="text-xs text-muted-foreground/60 font-medium">
           Mary English v{APP_VERSION}
         </span>
+
         <span className="text-[10px] text-muted-foreground/40">
           Build: {APP_BUILD}
         </span>
       </div>
 
-      {/* Three action buttons */}
-      <div className="flex flex-col gap-1.5">
-        <button
-          onClick={run("check", checkForUpdate)}
-          disabled={!!busy}
-          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary disabled:opacity-40 transition-colors w-fit"
-          data-testid="check-update-btn"
-        >
-          <RefreshCw className={`w-3 h-3 ${busy === "check" ? "animate-spin" : ""}`} />
-          {busy === "check" ? "Checking…" : "Check for update"}
-        </button>
-
-        <button
-          onClick={run("force", forceRefresh)}
-          disabled={!!busy}
-          className="flex items-center gap-1.5 text-xs text-muted-foreground/55 hover:text-destructive disabled:opacity-40 transition-colors w-fit"
-          data-testid="force-refresh-btn"
-        >
-          <RefreshCw className={`w-3 h-3 ${busy === "force" ? "animate-spin" : ""}`} />
-          {busy === "force" ? "Clearing…" : "Force refresh app"}
-        </button>
-
-        <button
-          onClick={run("assets", resetAssetCache)}
-          disabled={!!busy}
-          className="flex items-center gap-1.5 text-xs text-muted-foreground/55 hover:text-amber-600 disabled:opacity-40 transition-colors w-fit"
-          data-testid="reset-assets-btn"
-        >
-          <RefreshCw className={`w-3 h-3 ${busy === "assets" ? "animate-spin" : ""}`} />
-          {busy === "assets" ? "Clearing…" : "Reset downloaded assets"}
-        </button>
-      </div>
+      <button
+        onClick={handleResetAssets}
+        disabled={busy}
+        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-amber-600 disabled:opacity-40 transition-colors w-fit"
+        data-testid="reset-assets-btn"
+      >
+        <Download className="w-3 h-3" />
+        {busy ? "Clearing…" : "Reset downloaded assets"}
+      </button>
     </div>
   );
 }
@@ -806,9 +789,10 @@ export default function TasksScreen() {
                     </div>
 
                     <button
-                      onClick={() => handleCopy(cmd.text)}
+                      onClick={() => handleCopy(cmd.label)}
                       className="p-3 bg-secondary hover:bg-secondary/80 rounded-xl text-secondary-foreground transition-colors active:scale-95 shrink-0"
                       data-testid={`btn-copy-${cmd.id}`}
+                      aria-label={`Copy ${cmd.label} command`}
                     >
                       <Copy className="w-5 h-5" />
                     </button>

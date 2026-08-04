@@ -107,7 +107,13 @@ function parseRestoreJSON(
       reviewTasksCompleted: numOr("reviewTasksCompleted", "reviewCount"),
       reviewRewardEarned: boolOr("reviewRewardEarned"),
       currentOutfit: strOr("currentOutfit", "equippedOutfit"),
+      // XP values used by popup display
+      dailyXp: numOr("dailyXp"),
+      practiceXp: numOr("practiceXp"),
+      reviewXp: numOr("reviewXp"),
+      bonusXp: numOr("bonusXp"),
       showXpPopup: boolOr("showXpPopup"),
+      showSmallRewardPopup: boolOr("showSmallRewardPopup"),
       showWeeklyBonusPopup: boolOr("showWeeklyBonusPopup"),
       showLevelUpPopup: boolOr("showLevelUpPopup"),
       showEmoteRewardPopup: boolOr("showEmoteRewardPopup"),

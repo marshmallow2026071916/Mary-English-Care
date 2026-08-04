@@ -153,13 +153,35 @@ export function usePwaUpdate(): PwaUpdateResult {
   // ── Reset downloaded assets: delete only the asset cache.
   //    localStorage, Review Log, XP, wardrobe are untouched.
   const resetAssetCache = useCallback(async () => {
-    console.log("[App] Downloaded assets reset.");
-    try {
-      await caches.delete(ASSET_CACHE_NAME);
-    } catch { /* ignore */ }
-    // Reload so assets re-download cleanly.
-    window.location.reload();
-  }, []);
+  console.log("[App] Downloaded assets reset.");
+
+  try {
+    const keys = await caches.keys();
+    console.log("[App] Cache keys:", keys);
+
+    const assetCacheKeys = keys.filter(
+      (key) =>
+        key.includes("asset") ||
+        key.includes("image") ||
+        key.includes("avatar") ||
+        key.includes("audio") ||
+        key.includes("sound")
+    );
+
+    await Promise.all(
+      assetCacheKeys.map((key) => {
+        console.log(`[App] Deleting asset cache: ${key}`);
+        return caches.delete(key);
+            })
+          );
+        } catch (error) {
+          console.error("[App] Failed to reset downloaded assets.", error);
+        }
+
+        const rootUrl = new URL(import.meta.env.BASE_URL, window.location.origin);
+        rootUrl.searchParams.set("assets", Date.now().toString());
+        window.location.replace(rootUrl.toString());
+      }, []);
 
   return { updateAvailable, applyUpdate, checkForUpdate, forceRefresh, resetAssetCache };
 }
