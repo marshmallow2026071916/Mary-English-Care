@@ -13,6 +13,17 @@ import { useReviewLog } from "@/hooks/useReviewLog";
 import { usePwaUpdate } from "@/hooks/usePwaUpdate";
 import { APP_VERSION, APP_BUILD } from "@/lib/version";
 
+const STANDBY_COMMAND = `We'll switch to Mary English now.
+
+Please enter Standby Mode.
+
+Do not start any conversation mode yet.
+Do not generate Mary's introduction yet.
+Do not count any rallies.
+Do not modify the Review Log or the Game state.
+
+Wait until I attach the required files and send the official start command.`;
+
 const COMMANDS = [
   { id: "daily",    label: "Daily Talk",       text: "Let's have our daily English conversation." },
   { id: "practice", label: "Practice Talk",    text: "Let's do a practice talk session." },
@@ -761,6 +772,38 @@ export default function TasksScreen() {
                 Yay!<br />
                 Let's talk today, Eikichi!
               </p>
+            </motion.div>
+          </div>
+
+          {/* Standby Mode */}
+          <div>
+            <h2 className="text-lg font-bold text-foreground mb-4 pl-2 border-l-4 border-primary">
+              Standby Mode
+            </h2>
+
+            <motion.div
+              className="bg-card p-4 rounded-2xl shadow-sm border border-border"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <div className="text-sm font-bold text-muted-foreground mb-2">
+                Enter Standby Mode
+              </div>
+
+              <div className="flex items-start gap-2">
+                <div className="bg-secondary/50 font-mono text-sm p-3 rounded-xl flex-1 text-foreground border border-border/50 whitespace-pre-wrap break-words">
+                  {STANDBY_COMMAND}
+                </div>
+
+                <button
+                  onClick={() => handleCopy(STANDBY_COMMAND)}
+                  className="p-3 bg-secondary hover:bg-secondary/80 rounded-xl text-secondary-foreground transition-colors active:scale-95 shrink-0"
+                  data-testid="btn-copy-standby"
+                  aria-label="Copy Standby Mode command"
+                >
+                  <Copy className="w-5 h-5" />
+                </button>
+              </div>
             </motion.div>
           </div>
 
