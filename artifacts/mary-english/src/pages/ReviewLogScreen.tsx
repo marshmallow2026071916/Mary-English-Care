@@ -8,7 +8,7 @@ import {
   type Message,
 } from "@/hooks/useReviewLog";
 import { useGame } from "@/context/GameContext";
-import { getActiveIconImage, getLogLevelIconImage, getOutfitIconImage } from "@/lib/maryAssets";
+import { getActiveIconImage, getLogLevelIconImage } from "@/lib/maryAssets";
 
 // ─── Task type helpers ────────────────────────────────────────────────────────
 
@@ -93,10 +93,8 @@ function speakText(text: string, onEnd: () => void): void {
 }
 
 // ─── Small Mary avatar badge ──────────────────────────────────────────────────
-function MaryBadge({ level, levelOutfit }: { level: number; levelOutfit?: string }) {
-  const iconSrc = levelOutfit
-    ? getOutfitIconImage(levelOutfit)
-    : getLogLevelIconImage(level);
+function MaryBadge({ level }: { level: number }) {
+  const iconSrc = getLogLevelIconImage(level);
   return (
     <div className="w-11 h-13 shrink-0 rounded-xl overflow-hidden shadow-sm bg-gradient-to-br from-primary/20 to-accent/20">
       <img
@@ -317,7 +315,7 @@ function MaryBubble({
       {elem.showAvatar && (
         // Column: avatar on top, speaker button directly below
         <div className="flex flex-col items-center gap-1 shrink-0 w-11">
-          <MaryBadge level={level} levelOutfit={levelOutfit} />
+          <MaryBadge level={level} />
           <SpeakerButton text={elem.text} isSpeaking={isSpeaking} onSpeak={onSpeak} />
         </div>
       )}
