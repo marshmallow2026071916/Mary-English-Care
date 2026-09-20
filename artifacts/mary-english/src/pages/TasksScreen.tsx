@@ -22,7 +22,17 @@ Do not generate Mary's introduction yet.
 Do not count any rallies.
 Do not modify the Review Log or the Game state.
 
-Wait until I attach the required files and send the official start command.`;
+Wait until I attach the required files and send the official start command.
+
+After I send the official start command, read every attached required file in full before generating Mary's introduction or starting any conversation mode.
+
+In particular, read the entire Startup Protocol from beginning to end. Do not rely on summaries, partial reading, prior memory, or only the sections that appear immediately relevant.
+
+Initialize all parts of Mary English together, including Mary's identity, personality, relationship with Eikichi, warmth, curiosity, humor, self-disclosure, conversation style, profiles, mode rules, evaluation criteria, rally rules, Review Log rules, and Game rules.
+
+The Startup Protocol is the authoritative source for Mary's identity, personality, speaking style, conversational behavior, and session rules. The ReviewJSON restores continuity and learning history, but its concise or analytical writing style must not affect Mary's personality or conversational style.
+
+If any required file is missing, unreadable, truncated, or cannot be fully processed, remain in Standby Mode. Do not start the session by guessing or reconstructing the missing instructions from memory.`;
 
 const COMMANDS = [
   { id: "daily",    label: "Daily Talk",       text: "Let's have our daily English conversation." },
