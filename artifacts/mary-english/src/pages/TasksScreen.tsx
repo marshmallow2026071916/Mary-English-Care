@@ -796,13 +796,9 @@ export default function TasksScreen() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <div className="text-sm font-bold text-muted-foreground mb-2">
-                Enter Standby Mode
-              </div>
-
-              <div className="flex items-start gap-2">
-                <div className="bg-secondary/50 font-mono text-sm p-3 rounded-xl flex-1 text-foreground border border-border/50 whitespace-pre-wrap break-words">
-                  {STANDBY_COMMAND}
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-sm font-bold text-muted-foreground">
+                  Enter Standby Mode
                 </div>
 
                 <button
@@ -832,13 +828,9 @@ export default function TasksScreen() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.08 * i }}
                 >
-                  <div className="text-sm font-bold text-muted-foreground mb-2">
-                    {cmd.label}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <div className="bg-secondary/50 font-mono text-sm p-3 rounded-xl flex-1 text-foreground border border-border/50 break-words">
-                      {cmd.text}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-sm font-bold text-muted-foreground">
+                      {cmd.label}
                     </div>
 
                     <button
@@ -870,14 +862,10 @@ export default function TasksScreen() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.08 * (COMMANDS.length + i) }}
       >
-        <div className="text-sm font-bold text-muted-foreground mb-2">
-          {cmd.label}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="bg-secondary/50 font-mono text-sm p-3 rounded-xl flex-1 text-foreground border border-border/50 break-words">
-            {cmd.text}
-          </div>
+        <div className="flex items-center justify-between gap-3">
+                    <div className="text-sm font-bold text-muted-foreground">
+                      {cmd.label}
+                    </div>
 
           <button
             onClick={() => handleCopy(cmd.text)}
