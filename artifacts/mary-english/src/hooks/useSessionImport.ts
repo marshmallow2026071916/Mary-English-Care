@@ -127,6 +127,7 @@ function parseRestoreJSON(
       unlockedEmotes: arrOr("unlockedEmotes"),
       unlockedBackgrounds: arrOr("unlockedBackgrounds"),
       unlockedReviewRewards: arrOr("unlockedReviewRewards"),
+      reviewRewardUnlockedCount: numOr("reviewRewardUnlockedCount"),
     },
   };
 }
@@ -667,7 +668,7 @@ export const SAMPLE_JSON = {
           // value, never a delta. They fully replace the corresponding unlock sets.
           outfitUnlockedLevel: 1,
           backgroundUnlockedLevel: 0,
-          reviewRewardUnlockedCount: 0,
+          reviewRewardUnlockedCount: 1, // total includes the initial Reward 1
           // Popup/Presentation flags — purely cosmetic. Set to true only on the
           // JSON part where that popup should be shown to the player; they never
           // change XP, level, hearts, counts, unlocks, or selections themselves.

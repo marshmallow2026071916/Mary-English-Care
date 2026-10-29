@@ -108,7 +108,7 @@ export interface SessionImportData {
   hearts?: number;                    // current heart count (0..MAX_HEARTS) — preferred over "heart"
   outfitUnlockedLevel?: number;       // highest outfit/emote unlock level reached
   backgroundUnlockedLevel?: number;   // highest background unlock level reached (multiple of 5)
-  reviewRewardUnlockedCount?: number; // review rewards earned AFTER the default review_reward_001
+  reviewRewardUnlockedCount?: number; // total unlocked review rewards, INCLUDING the default review_reward_001
   // Exact current task-progress snapshot for the level, restored verbatim — never
   // recalculated or incremented from practiceTalkCompleted/reviewChallengeCompleted.
   // "Remaining" counterparts are accepted for authoring convenience but are not
@@ -179,6 +179,7 @@ export interface FullProgressRestoreData {
   unlockedEmotes?: string[];            // maps to unlockedOutfitEmotes
   unlockedBackgrounds?: string[];
   unlockedReviewRewards?: string[];
+  reviewRewardUnlockedCount?: number; // total including the initial reward; overrides the collection
   // XP values (used for popup display)
 dailyXp?: number;
 practiceXp?: number;
@@ -454,15 +455,15 @@ function reconstructBackgroundsForLevel(backgroundUnlockedLevel: number): string
   return [...backgrounds];
 }
 
-// review_reward_001 is unlocked by default (count 0). Each additional count
-// unlocks the next sequential reward id.
+// Total unlocked rewards, INCLUDING the initial review_reward_001.
+// Explicit 0 restores an empty collection; 10 restores exactly rewards 001..010.
 function reconstructReviewRewardsForCount(reviewRewardUnlockedCount: number): string[] {
-  const clamped = Math.max(0, reviewRewardUnlockedCount);
-  const rewards = ["review_reward_001"];
-  for (let i = 1; i <= clamped; i++) {
-    rewards.push(`review_reward_${String(i + 1).padStart(3, "0")}`);
-  }
-  return rewards;
+  const count = Number.isFinite(reviewRewardUnlockedCount)
+    ? Math.max(0, Math.floor(reviewRewardUnlockedCount))
+    : 0;
+  return Array.from({ length: count }, (_, i) =>
+    `review_reward_${String(i + 1).padStart(3, "0")}`
+  );
 }
 
 // Returns the background id newly reached at a given backgroundUnlockedLevel
@@ -811,7 +812,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
     let unlockedOutfits = data.unlockedOutfits ?? wardrobeBase.unlockedOutfits;
     const unlockedOutfitEmotes = data.unlockedEmotes ?? wardrobeBase.unlockedOutfitEmotes;
     const unlockedBackgrounds = data.unlockedBackgrounds ?? wardrobeBase.unlockedBackgrounds;
-    const unlockedReviewRewards = data.unlockedReviewRewards ?? wardrobeBase.unlockedReviewRewards;
+    const unlockedReviewRewards = data.reviewRewardUnlockedCount !== undefined
+      ? reconstructReviewRewardsForCount(data.reviewRewardUnlockedCount)
+      : data.unlockedReviewRewards ?? wardrobeBase.unlockedReviewRewards;
 
     // Honor reviewRewardEarned → seasonal outfit
     if (data.reviewRewardEarned && !unlockedOutfits.includes("seasonal")) {
@@ -1108,6 +1111,10 @@ setModalQueue(queue);
       };
     }
 
+    // An authoritative snapshot can remove a previously selected excess reward.
+    if (state.selectedReviewReward && !state.unlockedReviewRewards.includes(state.selectedReviewReward)) {
+      state = { ...state, selectedReviewReward: null };
+    }
     update(state);
 
     // ── 7. Build ordered popup queue — driven by the imported session-result
@@ -1133,8 +1140,8 @@ setModalQueue(queue);
 
     // ── 8. Set popup context so each modal component can read session-specific data
     const newReviewRewardId =
-      data.showReviewRewardPopup && data.reviewRewardUnlockedCount !== undefined
-        ? `review_reward_${String(data.reviewRewardUnlockedCount + 1).padStart(3, "0")}`
+      data.showReviewRewardPopup && state.unlockedReviewRewards.length > 0
+        ? state.unlockedReviewRewards[state.unlockedReviewRewards.length - 1]
         : null;
     const newOutfitEmoteKey =
       data.showOutfitPopup && data.outfitUnlockedLevel !== undefined
